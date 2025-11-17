@@ -40,7 +40,7 @@ const translations = {
         service_card_description: 'MCPサービスの登録、編集、削除を行います。サブドメインや共通ヘッダーの設定が可能です。',
         account_card_title: '👥 接続アカウント管理',
         account_card_description: 'MCPサービスに接続するアカウントの登録、編集、削除を行います。Bearerトークンの発行が可能です。',
-        mcp_mcp_template_card_title: '📦 テンプレート管理',
+        mcp_template_card_title: '📦 テンプレート管理',
         mcp_template_card_description: 'APIサービスの標準テンプレートとカスタムテンプレートを管理します。テンプレートからサービスを簡単に作成できます。',
         
         // テンプレート一覧
@@ -316,7 +316,7 @@ const translations = {
         service_card_description: 'Register, edit, and delete MCP services. Configure subdomains and common headers.',
         account_card_title: '👥 Account Management',
         account_card_description: 'Register, edit, and delete accounts that can connect to MCP services. Issue Bearer tokens.',
-        mcp_mcp_template_card_title: '📦 Template Management',
+        mcp_template_card_title: '📦 Template Management',
         mcp_template_card_description: 'Manage built-in and custom API service templates. Easily create services from templates.',
         
         // Template List

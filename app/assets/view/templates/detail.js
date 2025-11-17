@@ -84,7 +84,7 @@ async function exportTemplate() {
 }
 
 async function deleteTemplate() {
-    if (!confirm(t('template_delete_confirm'))) return;
+    if (!confirm(t('mcp_template_delete_confirm'))) return;
     
     try {
         const response = await fetch(`/api/mcp-templates/${TEMPLATE_ID}`, {

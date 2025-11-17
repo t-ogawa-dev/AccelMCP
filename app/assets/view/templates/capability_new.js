@@ -132,7 +132,7 @@ document.getElementById('capability-form').addEventListener('submit', async (e) 
         
         if (response.ok) {
             const capability = await response.json();
-            window.location.href = `/templates/${TEMPLATE_ID}/capabilities?message=${encodeURIComponent(t('capability_registered'))}`;        } else {
+            window.location.href = `/mcp-templates/${TEMPLATE_ID}/capabilities?message=${encodeURIComponent(t('capability_registered'))}`;        } else {
             const error = await response.json();
             alert(t('capability_register_failed') + ': ' + (error.error || 'Unknown error'));
         }

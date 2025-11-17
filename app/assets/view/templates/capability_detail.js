@@ -90,7 +90,7 @@ async function deleteCapability() {
         });
         
         if (response.ok) {
-            window.location.href = `/templates/${TEMPLATE_ID}/capabilities?message=${encodeURIComponent('削除しました')}`;
+            window.location.href = `/mcp-templates/${TEMPLATE_ID}/capabilities?message=${encodeURIComponent('削除しました')}`;
         } else {
             const error = await response.json();
             alert('削除に失敗しました: ' + (error.error || 'Unknown error'));

@@ -24,7 +24,7 @@ async function loadTemplates(type) {
         container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">📦</div>
-                <p data-i18n="template_empty">${t('template_empty')}</p>
+                <p data-i18n="mcp_template_empty">${t('mcp_template_empty')}</p>
             </div>
         `;
         return;
@@ -55,10 +55,10 @@ async function loadTemplates(type) {
             <div class="template-description">${template.description || ''}</div>
             <div class="template-meta">
                 <div class="template-capabilities">
-                    <span data-i18n="template_capabilities_count">${t('template_capabilities_count')}</span>: ${template.capabilities.length}
+                    <span data-i18n="mcp_template_capabilities_count">${t('mcp_template_capabilities_count')}</span>: ${template.capabilities.length}
                 </div>
                 <div class="template-actions">
-                    <button class="btn-small btn-use" onclick="useTemplate(${template.id}, event)" data-i18n="template_use_button">${t('template_use_button')}</button>
+                    <button class="btn-small btn-use" onclick="useTemplate(${template.id}, event)" data-i18n="mcp_template_use_button">${t('mcp_template_use_button')}</button>
                 </div>
             </div>
         </div>
@@ -214,18 +214,18 @@ async function exportTemplate(templateId, event) {
 
 function editTemplate(templateId, event) {
     event.stopPropagation();
-    window.location.href = `/templates/${templateId}/edit`;
+    window.location.href = `/mcp-templates/${templateId}/edit`;
 }
 
 function viewCapabilities(templateId, event) {
     event.stopPropagation();
-    window.location.href = `/templates/${templateId}/capabilities`;
+    window.location.href = `/mcp-templates/${templateId}/capabilities`;
 }
 
 async function deleteTemplate(templateId, event) {
     event.stopPropagation();
     
-    if (!confirm(t('template_delete_confirm'))) return;
+    if (!confirm(t('mcp_template_delete_confirm'))) return;
     
     try {
         const response = await fetch(`/api/mcp-templates/${templateId}`, {method: 'DELETE'});

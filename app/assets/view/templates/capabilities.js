@@ -77,12 +77,12 @@ async function loadCapabilities() {
 }
 
 function viewCapability(capabilityId) {
-    window.location.href = `/templates/${TEMPLATE_ID}/capabilities/${capabilityId}`;
+    window.location.href = `/mcp-templates/${TEMPLATE_ID}/capabilities/${capabilityId}`;
 }
 
 function editCapability(capabilityId, event) {
     event.stopPropagation();
-    window.location.href = `/templates/${TEMPLATE_ID}/capabilities/${capabilityId}/edit`;
+    window.location.href = `/mcp-templates/${TEMPLATE_ID}/capabilities/${capabilityId}/edit`;
 }
 
 async function deleteCapability(capabilityId, event) {
@@ -119,6 +119,6 @@ async function deleteCapability(capabilityId, event) {
     if (message) {
         showFlashMessage(decodeURIComponent(message));
         // Remove message from URL
-        window.history.replaceState({}, '', `/templates/${TEMPLATE_ID}/capabilities`);
+        window.history.replaceState({}, '', `/mcp-templates/${TEMPLATE_ID}/capabilities`);
     }
 })();
