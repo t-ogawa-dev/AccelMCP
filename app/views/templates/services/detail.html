@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}サービス詳細 - Accel MCP{% endblock %}
+
+{% block breadcrumb %}
+<nav class="breadcrumb">
+    <a href="/dashboard" data-i18n="breadcrumb_home">ホーム</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="/services" data-i18n="breadcrumb_service_list">サービス一覧</a>
+    <span class="breadcrumb-separator">›</span>
+    <span class="breadcrumb-current" data-i18n="breadcrumb_service_detail">サービス詳細</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h2 data-i18n="service_detail_title">サービス詳細</h2>
+            <p data-i18n="service_detail_desc">サービスの詳細情報</p>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <a href="/services/{{ service_id }}/capabilities" class="btn btn-primary" data-i18n="service_capabilities_manage">Capabilities管理</a>
+            <a href="/services/{{ service_id }}/edit" class="btn btn-secondary" data-i18n="button_edit">編集</a>
+        </div>
+    </div>
+</div>
+
+<div id="service-detail" class="detail-card"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/assets/view/services/detail.js"></script>
+{% endblock %}

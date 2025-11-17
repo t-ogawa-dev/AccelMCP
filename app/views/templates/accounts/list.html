@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}接続アカウント一覧 - Accel MCP{% endblock %}
+
+{% block breadcrumb %}
+<nav class="breadcrumb">
+    <a href="/dashboard" data-i18n="breadcrumb_home">ホーム</a>
+    <span class="breadcrumb-separator">›</span>
+    <span class="breadcrumb-current" data-i18n="breadcrumb_account_list">接続アカウント一覧</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h2 data-i18n="account_list_title">接続アカウント一覧</h2>
+            <p data-i18n="account_list_desc">MCPサービスに接続できるアカウントの管理</p>
+        </div>
+        <a href="/accounts/new" class="btn btn-primary" data-i18n="account_new_button">新規アカウント登録</a>
+    </div>
+</div>
+
+<div id="accounts-list"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/assets/view/accounts/list.js"></script>
+{% endblock %}

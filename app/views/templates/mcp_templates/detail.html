@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}テンプレート詳細{% endblock %}
+
+{% block breadcrumb %}
+<nav class="breadcrumb">
+    <a href="/" data-i18n="breadcrumb_home">ホーム</a>
+    <span class="separator">/</span>
+    <a href="/mcp-templates" data-i18n="mcp_template_list_title">テンプレート一覧</a>
+    <span class="separator">/</span>
+    <span id="breadcrumb-name">テンプレート詳細</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-left">
+        <h1 id="template-name"></h1>
+        <p id="template-description"></p>
+    </div>
+    <div class="header-actions">
+        <button class="btn btn-secondary" onclick="window.location.href='/templates/{{ template_id }}/edit'" id="edit-btn" data-i18n="button_edit">編集</button>
+        <button class="btn btn-secondary" onclick="window.location.href='/templates/{{ template_id }}/capabilities'" data-i18n="service_capabilities_button">Capabilities</button>
+        <button class="btn btn-secondary" onclick="exportTemplate()" id="export-btn" data-i18n="mcp_template_export_button">エクスポート</button>
+        <button class="btn btn-danger" onclick="deleteTemplate()" id="delete-btn" data-i18n="button_delete">削除</button>
+    </div>
+</div>
+
+<div class="details-container">
+    <div class="detail-section">
+        <h2 data-i18n="mcp_template_basic_info">基本情報</h2>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span class="detail-label" data-i18n="mcp_template_name_label">テンプレート名</span>
+                <span class="detail-value" id="detail-name"></span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label" data-i18n="service_type_label">サービスタイプ</span>
+                <span class="detail-value" id="detail-service-type"></span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label" data-i18n="mcp_template_category_label">カテゴリ</span>
+                <span class="detail-value" id="detail-category"></span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label" data-i18n="mcp_template_icon_label">アイコン</span>
+                <span class="detail-value" id="detail-icon"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="detail-section">
+        <h2 data-i18n="service_common_headers">共通ヘッダー</h2>
+        <div id="headers-list" class="headers-list"></div>
+    </div>
+
+    <div class="detail-section">
+        <h2 data-i18n="mcp_template_capabilities_list">Capabilities</h2>
+        <div id="capabilities-list" class="capabilities-list"></div>
+    </div>
+</div>
+
+<style>
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.header-left h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.header-left p {
+    color: #666;
+    font-size: 14px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.header-actions .btn {
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.details-container {
+    max-width: 1000px;
+}
+
+.detail-section {
+    background: white;
+    padding: 24px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.detail-section h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.detail-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #999;
+    text-transform: uppercase;
+}
+
+.detail-value {
+    font-size: 15px;
+    color: #333;
+}
+
+.headers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.header-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 14px;
+}
+
+.header-key {
+    font-weight: 600;
+    color: #667eea;
+}
+
+.header-value {
+    color: #666;
+}
+
+.capabilities-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.capability-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border-left: 4px solid #667eea;
+}
+
+.capability-info {
+    flex: 1;
+}
+
+.capability-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.capability-type {
+    font-size: 13px;
+    color: #999;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const TEMPLATE_ID = {{ template_id }};
+</script>
+<script src="/assets/view/templates/detail.js"></script>
+{% endblock %}

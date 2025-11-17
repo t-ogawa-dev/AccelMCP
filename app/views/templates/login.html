@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Accel MCP</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 400px;
+            min-height: 420px;
+            position: relative;
+        }
+        .language-selector {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+        .language-selector select {
+            padding: 6px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 13px;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        .language-selector select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+            margin-top: 10px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+            height: 24px;
+            line-height: 24px;
+        }
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            height: 48px;
+            line-height: 24px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="language-selector">
+            <select id="language-select" onchange="changeLanguage(this.value)">
+                <option value="ja">🇯🇵 日本語</option>
+                <option value="en">🇺🇸 English</option>
+            </select>
+        </div>
+        
+        <h1>Accel MCP</h1>
+        
+        {% if error %}
+        <div class="error" id="error-message">{{ error }}</div>
+        {% endif %}
+        
+        <form method="POST" action="/login">
+            <div class="form-group">
+                <label for="username" id="label-username">Username</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password" id="label-password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit" class="btn" id="btn-login">Login</button>
+        </form>
+    </div>
+    
+    <script>
+        const translations = {
+            ja: {
+                title: 'ログイン - Accel MCP',
+                username: 'ユーザー名',
+                password: 'パスワード',
+                login: 'ログイン',
+                error_invalid: 'ユーザー名またはパスワードが正しくありません'
+            },
+            en: {
+                title: 'Login - Accel MCP',
+                username: 'Username',
+                password: 'Password',
+                login: 'Login',
+                error_invalid: 'Invalid username or password'
+            }
+        };
+        
+        // ブラウザの言語設定を取得
+        function detectBrowserLanguage() {
+            const browserLang = navigator.language || navigator.userLanguage;
+            return browserLang.startsWith('ja') ? 'ja' : 'en';
+        }
+        
+        // ローカルストレージから言語設定を取得
+        function getStoredLanguage() {
+            return localStorage.getItem('login_language') || detectBrowserLanguage();
+        }
+        
+        // 言語を変更
+        function changeLanguage(lang) {
+            localStorage.setItem('login_language', lang);
+            applyLanguage(lang);
+        }
+        
+        // 言語を適用
+        function applyLanguage(lang) {
+            const t = translations[lang];
+            
+            document.title = t.title;
+            document.getElementById('label-username').textContent = t.username;
+            document.getElementById('label-password').textContent = t.password;
+            document.getElementById('btn-login').textContent = t.login;
+            
+            // エラーメッセージの翻訳
+            const errorElement = document.getElementById('error-message');
+            if (errorElement) {
+                const errorText = errorElement.textContent.trim();
+                // サーバーからのエラーメッセージを翻訳
+                if (errorText.includes('ユーザー名') || errorText.includes('パスワード') || 
+                    errorText.includes('Invalid') || errorText.includes('username')) {
+                    errorElement.textContent = t.error_invalid;
+                }
+            }
+            
+            // セレクトボックスの選択状態を更新
+            document.getElementById('language-select').value = lang;
+        }
+        
+        // ページロード時に言語を適用
+        const currentLang = getStoredLanguage();
+        applyLanguage(currentLang);
+    </script>
+</body>
+</html>

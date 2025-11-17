@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Capability詳細 - Accel MCP{% endblock %}
+
+{% block breadcrumb %}
+<nav class="breadcrumb" id="breadcrumb">
+    <a href="/dashboard" data-i18n="breadcrumb_home">ホーム</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="/services" data-i18n="breadcrumb_service_list">サービス一覧</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="#" id="service-link" data-i18n="breadcrumb_service_detail">サービス詳細</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="#" id="capabilities-link" data-i18n="breadcrumb_capabilities">Capabilities</a>
+    <span class="breadcrumb-separator">›</span>
+    <span class="breadcrumb-current" data-i18n="breadcrumb_capability_detail">Capability詳細</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h2 data-i18n="capability_detail_title">Capability 詳細</h2>
+            <p data-i18n="capability_detail_desc">Capabilityの詳細情報</p>
+        </div>
+        <a href="#" id="edit-link" class="btn btn-primary" data-i18n="button_edit">編集</a>
+    </div>
+</div>
+
+<div id="capability-detail" class="detail-card"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/assets/view/capabilities/detail.js"></script>
+{% endblock %}

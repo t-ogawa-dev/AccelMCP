@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Accel MCP{% endblock %}</title>
+    <link rel="stylesheet" href="/assets/style.css">
+    <script src="/assets/i18n.js"></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="header">
+        <h1><a href="/dashboard">Accel MCP</a></h1>
+        <div class="header-actions">
+            <a href="/logout" class="btn btn-danger" data-i18n="logout">ログアウト</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        {% block breadcrumb %}{% endblock %}
+        
+        {% block content %}{% endblock %}
+    </div>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

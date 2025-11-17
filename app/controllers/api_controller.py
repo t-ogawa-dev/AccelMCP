@@ -1,0 +1,660 @@
+"""
+API Controller
+Handles RESTful API endpoints for services, capabilities, accounts, and permissions
+"""
+import json
+import secrets
+from flask import Blueprint, request, jsonify
+from app.controllers.auth_controller import login_required
+
+from app.models.models import db, ConnectionAccount, Service, Capability, AccountPermission, AdminSettings
+
+api_bp = Blueprint('api', __name__)
+
+
+# ============= Service API =============
+
+@api_bp.route('/services/test-connection', methods=['POST'])
+@login_required
+def test_service_connection():
+    """Test MCP server connection"""
+    data = request.get_json()
+    mcp_url = data.get('mcp_url')
+    
+    if not mcp_url:
+        return jsonify({'success': False, 'error': 'MCP URL is required'}), 400
+    
+    try:
+        import requests
+        from requests.adapters import HTTPAdapter
+        from urllib3.util.retry import Retry
+        
+        # Setup session with timeout and retries
+        session = requests.Session()
+        retry = Retry(total=2, backoff_factor=0.1)
+        adapter = HTTPAdapter(max_retries=retry)
+        session.mount('http://', adapter)
+        session.mount('https://', adapter)
+        
+        # Test connection with a simple GET request
+        response = session.get(mcp_url, timeout=5)
+        
+        # Check if response is valid
+        if response.status_code == 200:
+            return jsonify({'success': True, 'message': 'Connection successful'})
+        else:
+            return jsonify({
+                'success': False, 
+                'error': f'Server returned status code {response.status_code}'
+            })
+    
+    except requests.exceptions.Timeout:
+        return jsonify({'success': False, 'error': 'Connection timeout'}), 200
+    except requests.exceptions.ConnectionError:
+        return jsonify({'success': False, 'error': 'Cannot connect to server'}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 200
+
+
+@api_bp.route('/services', methods=['GET', 'POST'])
+@login_required
+def services():
+    """Get all services or create new service"""
+    if request.method == 'GET':
+        services = Service.query.all()
+        return jsonify([s.to_dict() for s in services])
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        service = Service(
+            name=data['name'],
+            subdomain=data['subdomain'],
+            service_type=data.get('service_type', 'api'),
+            mcp_url=data.get('mcp_url'),
+            common_headers=json.dumps(data.get('common_headers', {})),
+            description=data.get('description', '')
+        )
+        db.session.add(service)
+        db.session.commit()
+        
+        # MCPタイプの場合、自動でCapabilityを検出
+        if service.service_type == 'mcp' and service.mcp_url:
+            from app.services.mcp_discovery import discover_mcp_capabilities
+            try:
+                discover_mcp_capabilities(service.id, service.mcp_url)
+            except Exception as e:
+                # エラーがあってもサービス登録は完了させる
+                print(f"MCP capability discovery failed: {e}")
+        
+        return jsonify(service.to_dict()), 201
+
+
+@api_bp.route('/services/<int:service_id>', methods=['GET', 'PUT', 'DELETE'])
+@login_required
+def service_detail(service_id):
+    """Get, update, or delete a specific service"""
+    service = Service.query.get_or_404(service_id)
+    
+    if request.method == 'GET':
+        return jsonify(service.to_dict())
+    
+    elif request.method == 'PUT':
+        data = request.get_json()
+        service.name = data.get('name', service.name)
+        service.subdomain = data.get('subdomain', service.subdomain)
+        service.service_type = data.get('service_type', service.service_type)
+        service.mcp_url = data.get('mcp_url', service.mcp_url)
+        service.common_headers = json.dumps(data.get('common_headers', {}))
+        service.description = data.get('description', service.description)
+        db.session.commit()
+        
+        # MCPタイプに変更された場合、自動でCapabilityを検出
+        if service.service_type == 'mcp' and service.mcp_url:
+            from app.services.mcp_discovery import discover_mcp_capabilities
+            try:
+                discover_mcp_capabilities(service.id, service.mcp_url)
+            except Exception as e:
+                print(f"MCP capability discovery failed: {e}")
+        
+        return jsonify(service.to_dict())
+    
+    elif request.method == 'DELETE':
+        db.session.delete(service)
+        db.session.commit()
+        return '', 204
+
+
+# ============= Capability API =============
+
+@api_bp.route('/services/<int:service_id>/capabilities', methods=['GET', 'POST'])
+@login_required
+def capabilities(service_id):
+    """Get all capabilities for a service or create new capability"""
+    service = Service.query.get_or_404(service_id)
+    
+    if request.method == 'GET':
+        capabilities = Capability.query.filter_by(service_id=service_id).all()
+        return jsonify([c.to_dict() for c in capabilities])
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        capability = Capability(
+            service_id=service_id,
+            name=data['name'],
+            capability_type=data['capability_type'],  # 'tool', 'resource', 'prompt', 'mcp_tool'
+            url=data.get('url'),
+            headers=json.dumps(data.get('headers', {})),
+            body_params=json.dumps(data.get('body_params', {})),
+            template_content=data.get('template_content'),
+            description=data.get('description', '')
+        )
+        db.session.add(capability)
+        db.session.flush()  # IDを取得するためにflush
+        
+        # 権限設定
+        if 'account_ids' in data:
+            for account_id in data['account_ids']:
+                permission = AccountPermission(
+                    capability_id=capability.id,
+                    account_id=account_id
+                )
+                db.session.add(permission)
+        
+        db.session.commit()
+        return jsonify(capability.to_dict()), 201
+
+
+@api_bp.route('/capabilities/<int:capability_id>', methods=['GET', 'PUT', 'DELETE'])
+@login_required
+def capability_detail(capability_id):
+    """Get, update, or delete a specific capability"""
+    capability = Capability.query.get_or_404(capability_id)
+    
+    if request.method == 'GET':
+        return jsonify(capability.to_dict())
+    
+    elif request.method == 'PUT':
+        data = request.get_json()
+        capability.name = data.get('name', capability.name)
+        capability.capability_type = data.get('capability_type', capability.capability_type)
+        capability.url = data.get('url', capability.url)
+        capability.headers = json.dumps(data.get('headers', {}))
+        capability.body_params = json.dumps(data.get('body_params', {}))
+        capability.template_content = data.get('template_content', capability.template_content)
+        capability.description = data.get('description', capability.description)
+        
+        # 権限設定を更新
+        if 'account_ids' in data:
+            # 既存の権限を削除
+            AccountPermission.query.filter_by(capability_id=capability.id).delete()
+            # 新しい権限を追加
+            for account_id in data['account_ids']:
+                permission = AccountPermission(
+                    capability_id=capability.id,
+                    account_id=account_id
+                )
+                db.session.add(permission)
+        
+        db.session.commit()
+        return jsonify(capability.to_dict())
+    
+    elif request.method == 'DELETE':
+        db.session.delete(capability)
+        db.session.commit()
+        return '', 204
+
+
+@api_bp.route('/capabilities/<int:capability_id>/toggle', methods=['POST'])
+@login_required
+def toggle_capability(capability_id):
+    """Toggle capability enabled/disabled status"""
+    capability = Capability.query.get_or_404(capability_id)
+    capability.is_enabled = not capability.is_enabled
+    db.session.commit()
+    return jsonify(capability.to_dict())
+
+
+# ============= Connection Account API =============
+
+@api_bp.route('/accounts', methods=['GET', 'POST'])
+@login_required
+def accounts():
+    """Get all connection accounts or create new account"""
+    if request.method == 'GET':
+        accounts = ConnectionAccount.query.all()
+        return jsonify([a.to_dict() for a in accounts])
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        
+        account = ConnectionAccount(
+            name=data['name'],
+            bearer_token=secrets.token_urlsafe(32),
+            notes=data.get('notes', '')
+        )
+        db.session.add(account)
+        db.session.commit()
+        return jsonify(account.to_dict()), 201
+
+
+@api_bp.route('/accounts/<int:account_id>', methods=['GET', 'PUT', 'DELETE'])
+@login_required
+def account_detail(account_id):
+    """Get, update, or delete a specific connection account"""
+    account = ConnectionAccount.query.get_or_404(account_id)
+    
+    if request.method == 'GET':
+        return jsonify(account.to_dict())
+    
+    elif request.method == 'PUT':
+        data = request.get_json()
+        account.name = data.get('name', account.name)
+        account.notes = data.get('notes', account.notes)
+        
+        db.session.commit()
+        return jsonify(account.to_dict())
+    
+    elif request.method == 'DELETE':
+        db.session.delete(account)
+        db.session.commit()
+        return '', 204
+
+
+@api_bp.route('/accounts/<int:account_id>/regenerate_token', methods=['POST'])
+@login_required
+def regenerate_token(account_id):
+    """Regenerate account's bearer token"""
+    account = ConnectionAccount.query.get_or_404(account_id)
+    account.bearer_token = secrets.token_urlsafe(32)
+    db.session.commit()
+    return jsonify(account.to_dict())
+
+
+# ============= Permission API =============
+
+@api_bp.route('/accounts/<int:account_id>/permissions', methods=['GET', 'POST'])
+@login_required
+def account_permissions(account_id):
+    """Get account permissions or add new permission"""
+    account = ConnectionAccount.query.get_or_404(account_id)
+    
+    if request.method == 'GET':
+        permissions = AccountPermission.query.filter_by(account_id=account_id).all()
+        return jsonify([p.to_dict() for p in permissions])
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        capability_id = data['capability_id']
+        
+        # Check if permission already exists
+        existing = AccountPermission.query.filter_by(
+            account_id=account_id, 
+            capability_id=capability_id
+        ).first()
+        
+        if existing:
+            return jsonify({'error': 'この権限は既に付与されています'}), 400
+        
+        permission = AccountPermission(account_id=account_id, capability_id=capability_id)
+        db.session.add(permission)
+        db.session.commit()
+        return jsonify(permission.to_dict()), 201
+
+
+@api_bp.route('/permissions/<int:permission_id>', methods=['DELETE'])
+@login_required
+def permission_delete(permission_id):
+    """Delete a permission"""
+    permission = AccountPermission.query.get_or_404(permission_id)
+    db.session.delete(permission)
+    db.session.commit()
+    return '', 204
+
+
+@api_bp.route('/capabilities/<int:capability_id>/permissions', methods=['GET', 'PUT'])
+@login_required
+def capability_permissions(capability_id):
+    """Get or update permissions for a capability"""
+    capability = Capability.query.get_or_404(capability_id)
+    
+    if request.method == 'GET':
+        # Get all accounts with permissions for this capability
+        permissions = AccountPermission.query.filter_by(capability_id=capability_id).all()
+        enabled_account_ids = [p.account_id for p in permissions]
+        
+        # Get enabled accounts (with permission)
+        enabled_accounts = ConnectionAccount.query.filter(
+            ConnectionAccount.id.in_(enabled_account_ids)
+        ).all()
+        
+        # Get disabled accounts (without permission)
+        disabled_accounts = ConnectionAccount.query.filter(
+            ~ConnectionAccount.id.in_(enabled_account_ids)
+        ).all()
+        
+        return jsonify({
+            'enabled': [a.to_dict() for a in enabled_accounts],
+            'disabled': [a.to_dict() for a in disabled_accounts]
+        })
+    
+    elif request.method == 'PUT':
+        data = request.get_json()
+        account_ids = data.get('account_ids', [])
+        
+        # Delete all existing permissions for this capability
+        AccountPermission.query.filter_by(capability_id=capability_id).delete()
+        
+        # Add new permissions
+        for account_id in account_ids:
+            # Verify account exists
+            account = ConnectionAccount.query.filter_by(id=account_id).first()
+            if account:
+                permission = AccountPermission(account_id=account_id, capability_id=capability_id)
+                db.session.add(permission)
+        
+        db.session.commit()
+        return jsonify({'message': '権限設定を更新しました'}), 200
+
+
+# ============= Settings API =============
+
+@api_bp.route('/settings/language', methods=['GET', 'POST'])
+@login_required
+def language_setting():
+    """Get or set language preference"""
+    if request.method == 'GET':
+        setting = AdminSettings.query.filter_by(setting_key='language').first()
+        if setting:
+            language = setting.setting_value
+            is_initialized = True
+        else:
+            language = None
+            is_initialized = False
+        return jsonify({'language': language, 'is_initialized': is_initialized})
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        language = data.get('language', 'ja')
+        
+        # Validate language
+        if language not in ['ja', 'en']:
+            return jsonify({'error': 'Invalid language'}), 400
+        
+        # Update or create setting
+        setting = AdminSettings.query.filter_by(setting_key='language').first()
+        if setting:
+            setting.setting_value = language
+        else:
+            setting = AdminSettings(setting_key='language', setting_value=language)
+            db.session.add(setting)
+        
+        db.session.commit()
+        return jsonify({'message': 'Language setting updated', 'language': language}), 200
+
+
+# ============= Template API =============
+
+@api_bp.route('/mcp-templates', methods=['GET'])
+@login_required
+def templates():
+    """Get all service templates"""
+    from app.models.models import McpServiceTemplate
+    
+    template_type = request.args.get('type')  # 'builtin' or 'custom'
+    category = request.args.get('category')
+    
+    query = McpServiceTemplate.query
+    if template_type:
+        query = query.filter_by(template_type=template_type)
+    if category:
+        query = query.filter_by(category=category)
+    
+    templates = query.all()
+    return jsonify([t.to_dict() for t in templates])
+
+
+@api_bp.route('/mcp-templates/<int:template_id>', methods=['GET', 'PUT', 'DELETE'])
+@login_required
+def template_detail(template_id):
+    """Get, update, or delete a specific template"""
+    from app.models.models import McpServiceTemplate
+    
+    template = McpServiceTemplate.query.get_or_404(template_id)
+    
+    if request.method == 'GET':
+        result = template.to_dict()
+        # Include capability templates
+        result['capabilities'] = [c.to_dict() for c in template.capability_templates]
+        return jsonify(result)
+    
+    elif request.method == 'PUT':
+        # Only custom templates can be updated
+        if template.template_type != 'custom':
+            return jsonify({'error': 'Cannot modify builtin templates'}), 403
+        
+        data = request.get_json()
+        template.name = data.get('name', template.name)
+        template.service_type = data.get('service_type', template.service_type)
+        template.description = data.get('description', template.description)
+        template.common_headers = json.dumps(data.get('common_headers', {}))
+        template.icon = data.get('icon', template.icon)
+        template.category = data.get('category', template.category)
+        db.session.commit()
+        return jsonify(template.to_dict())
+    
+    elif request.method == 'DELETE':
+        # Only custom templates can be deleted
+        if template.template_type != 'custom':
+            return jsonify({'error': 'Cannot delete builtin templates'}), 403
+        
+        db.session.delete(template)
+        db.session.commit()
+        return '', 204
+
+
+@api_bp.route('/mcp-templates', methods=['POST'])
+@login_required
+def create_template():
+    """Create a new custom template"""
+    from app.models.models import McpServiceTemplate, McpCapabilityTemplate
+    
+    data = request.get_json()
+    
+    template = McpServiceTemplate(
+        name=data['name'],
+        template_type='custom',
+        service_type=data.get('service_type', 'api'),
+        description=data.get('description', ''),
+        common_headers=json.dumps(data.get('common_headers', {})),
+        icon=data.get('icon', '📦'),
+        category=data.get('category', 'Custom')
+    )
+    db.session.add(template)
+    db.session.flush()  # Get template ID
+    
+    # Add capability templates
+    for cap_data in data.get('capabilities', []):
+        capability = McpCapabilityTemplate(
+            service_template_id=template.id,
+            name=cap_data['name'],
+            capability_type=cap_data.get('capability_type', 'tool'),
+            url=cap_data.get('url', ''),
+            headers=json.dumps(cap_data.get('headers', {})),
+            body_params=json.dumps(cap_data.get('body_params', {})),
+            template_content=cap_data.get('template_content', ''),
+            description=cap_data.get('description', '')
+        )
+        db.session.add(capability)
+    
+    db.session.commit()
+    return jsonify(template.to_dict()), 201
+
+
+@api_bp.route('/mcp-templates/<int:template_id>/capabilities', methods=['GET', 'POST'])
+@login_required
+def template_capabilities(template_id):
+    """Get or add capabilities to a template"""
+    from app.models.models import McpServiceTemplate, McpCapabilityTemplate
+    
+    template = McpServiceTemplate.query.get_or_404(template_id)
+    
+    if request.method == 'GET':
+        capabilities = McpCapabilityTemplate.query.filter_by(service_template_id=template_id).all()
+        return jsonify([c.to_dict() for c in capabilities])
+    
+    elif request.method == 'POST':
+        # Only custom templates can be modified
+        if template.template_type != 'custom':
+            return jsonify({'error': 'Cannot modify builtin templates'}), 403
+        
+        data = request.get_json()
+        capability = McpCapabilityTemplate(
+            service_template_id=template_id,
+            name=data['name'],
+            capability_type=data.get('capability_type', 'tool'),
+            url=data.get('url', ''),
+            headers=json.dumps(data.get('headers', {})),
+            body_params=json.dumps(data.get('body_params', {})),
+            template_content=data.get('template_content', ''),
+            description=data.get('description', '')
+        )
+        db.session.add(capability)
+        db.session.commit()
+        return jsonify(capability.to_dict()), 201
+
+
+@api_bp.route('/mcp-template-capabilities/<int:capability_id>', methods=['GET', 'PUT', 'DELETE'])
+@login_required
+def template_capability_detail(capability_id):
+    """Get, update, or delete a template capability"""
+    from app.models.models import McpCapabilityTemplate
+    
+    capability = McpCapabilityTemplate.query.get_or_404(capability_id)
+    
+    if request.method == 'GET':
+        return jsonify(capability.to_dict())
+    
+    elif request.method == 'PUT':
+        # Check if parent template is custom
+        if capability.service_template.template_type != 'custom':
+            return jsonify({'error': 'Cannot modify builtin templates'}), 403
+        
+        data = request.get_json()
+        capability.name = data.get('name', capability.name)
+        capability.capability_type = data.get('capability_type', capability.capability_type)
+        capability.url = data.get('url', capability.url)
+        capability.headers = json.dumps(data.get('headers', {}))
+        capability.body_params = json.dumps(data.get('body_params', {}))
+        capability.template_content = data.get('template_content', capability.template_content)
+        capability.description = data.get('description', capability.description)
+        db.session.commit()
+        return jsonify(capability.to_dict())
+    
+    elif request.method == 'DELETE':
+        # Check if parent template is custom
+        if capability.service_template.template_type != 'custom':
+            return jsonify({'error': 'Cannot delete builtin templates'}), 403
+        
+        db.session.delete(capability)
+        db.session.commit()
+        return '', 204
+
+
+@api_bp.route('/mcp-templates/<int:template_id>/export', methods=['GET'])
+@login_required
+def export_template(template_id):
+    """Export template as JSON"""
+    from app.models.models import McpServiceTemplate
+    
+    template = McpServiceTemplate.query.get_or_404(template_id)
+    return jsonify(template.to_export_dict())
+
+
+@api_bp.route('/mcp-templates/import', methods=['POST'])
+@login_required
+def import_template():
+    """Import template from JSON"""
+    from app.models.models import McpServiceTemplate, McpCapabilityTemplate
+    
+    data = request.get_json()
+    
+    # Create template as custom
+    template = McpServiceTemplate(
+        name=data['name'],
+        template_type='custom',
+        service_type=data.get('service_type', 'api'),
+        description=data.get('description', ''),
+        common_headers=json.dumps(data.get('common_headers', {})),
+        icon=data.get('icon', '📦'),
+        category=data.get('category', 'Custom')
+    )
+    db.session.add(template)
+    db.session.flush()
+    
+    # Add capabilities
+    for cap_data in data.get('capabilities', []):
+        capability = McpCapabilityTemplate(
+            service_template_id=template.id,
+            name=cap_data['name'],
+            capability_type=cap_data.get('capability_type', 'tool'),
+            url=cap_data.get('url', ''),
+            headers=json.dumps(cap_data.get('headers', {})),
+            body_params=json.dumps(cap_data.get('body_params', {})),
+            template_content=cap_data.get('template_content', ''),
+            description=cap_data.get('description', '')
+        )
+        db.session.add(capability)
+    
+    db.session.commit()
+    return jsonify(template.to_dict()), 201
+
+
+@api_bp.route('/mcp-templates/<int:template_id>/apply', methods=['POST'])
+@login_required
+def apply_template(template_id):
+    """Apply template to create a new service"""
+    from app.models.models import McpServiceTemplate
+    
+    template = McpServiceTemplate.query.get_or_404(template_id)
+    data = request.get_json()
+    
+    subdomain = data.get('subdomain')
+    if not subdomain:
+        return jsonify({'error': 'Subdomain is required'}), 400
+    
+    # Check if subdomain already exists
+    existing_service = Service.query.filter_by(subdomain=subdomain).first()
+    if existing_service:
+        return jsonify({'error': 'Subdomain already exists'}), 409
+    
+    try:
+        # Create service from template
+        service = Service(
+            name=data.get('name', template.name),
+            subdomain=subdomain,
+            service_type=template.service_type,
+            common_headers=template.common_headers,
+            description=data.get('description', template.description)
+        )
+        db.session.add(service)
+        db.session.flush()
+        
+        # Create capabilities from template
+        for cap_template in template.capability_templates:
+            capability = Capability(
+                service_id=service.id,
+                name=cap_template.name,
+                capability_type=cap_template.capability_type,
+                url=cap_template.url,
+                headers=cap_template.headers,
+                body_params=cap_template.body_params,
+                template_content=cap_template.template_content,
+                description=cap_template.description
+            )
+            db.session.add(capability)
+        
+        db.session.commit()
+        return jsonify(service.to_dict()), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500

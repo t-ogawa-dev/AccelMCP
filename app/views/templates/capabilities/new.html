@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Capability新規登録 - Accel MCP{% endblock %}
+
+{% block breadcrumb %}
+<nav class="breadcrumb">
+    <a href="/dashboard" data-i18n="breadcrumb_home">ホーム</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="/services" data-i18n="breadcrumb_service_list">サービス一覧</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="/services/{{ service_id }}" data-i18n="breadcrumb_service_detail">サービス詳細</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="/services/{{ service_id }}/capabilities" data-i18n="breadcrumb_capabilities">Capabilities</a>
+    <span class="breadcrumb-separator">›</span>
+    <span class="breadcrumb-current" data-i18n="breadcrumb_service_new">新規登録</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <h2 data-i18n="capability_new_title">Capability 新規登録</h2>
+    <p data-i18n="capability_new_desc">新しいCapabilityを登録します</p>
+</div>
+
+<div class="form-card">
+    <form id="capability-form">
+        <div class="form-group">
+            <label for="name"><span data-i18n="capability_name_label">Capability名</span> *</label>
+            <input type="text" id="name" name="name" required>
+            <small data-i18n="capability_mcp_tool_name">MCP Toolとして公開される名前</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="method"><span data-i18n="capability_http_method">HTTPメソッド</span> *</label>
+            <select id="method" name="method" required onchange="toggleBodyType()">
+                <option value="POST">POST</option>
+                <option value="GET">GET</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="url"><span data-i18n="capability_connection_url">接続先URL</span> *</label>
+            <input type="url" id="url" name="url" required placeholder="https://api.example.com/endpoint">
+        </div>
+        
+        <div class="form-group">
+            <label for="description" data-i18n="service_description_label">説明</label>
+            <textarea id="description" name="description" rows="3"></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label data-i18n="capability_header_params">ヘッダーパラメータ</label>
+            <div id="headers-container"></div>
+            <button type="button" onclick="addHeaderRow()" class="btn btn-sm btn-secondary" style="margin-top: 10px;" data-i18n="button_add_header">+ ヘッダーを追加</button>
+            <small data-i18n="capability_header_params_hint">個別のヘッダーパラメータ（サービス共通ヘッダーに追加されます）</small>
+        </div>
+        
+        <div class="form-group">
+            <label data-i18n="capability_body_params">Bodyパラメータ</label>
+            <div id="body-key-value" style="display: none;">
+                <div id="body-container"></div>
+                <button type="button" onclick="addBodyRow()" class="btn btn-sm btn-secondary" style="margin-top: 10px;" data-i18n="capability_body_params_add">+ パラメータを追加</button>
+                <small data-i18n="capability_body_params_hint">クエリパラメータまたはフォームデータ</small>
+            </div>
+            <div id="body-json">
+                <textarea id="body_json" name="body_json" rows="8" placeholder='{"key": "value"}'></textarea>
+                <small data-i18n="capability_body_json_hint">JSON形式のリクエストボディ</small>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="form-card" style="margin-top: 20px;">
+    <h3 data-i18n="capability_account_management">接続可能アカウント管理</h3>
+    <p class="text-muted" data-i18n="capability_account_management_desc">このCapabilityに接続できるアカウントを設定します</p>
+    
+    <div style="display: flex; gap: 20px; align-items: flex-start; margin-top: 20px;">
+        <div style="flex: 1;">
+            <h4 data-i18n="capability_enabled_accounts">接続可能アカウント</h4>
+            <select id="enabled-accounts" multiple size="10" style="width: 100%; padding: 10px; height: 300px; box-sizing: border-box;">
+            </select>
+            <p class="text-muted" style="margin-top: 5px; font-size: 0.85rem;">
+                <span id="enabled-count">0</span><span data-i18n="capability_items_count">件</span>
+            </p>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 10px; align-self: center;">
+            <button onclick="moveToEnabled()" type="button" class="btn btn-primary" title="選択したアカウントを接続可能にする">←</button>
+            <button onclick="moveAllToEnabled()" type="button" class="btn btn-primary" title="全てのアカウントを接続可能にする">←←</button>
+            <button onclick="moveToDisabled()" type="button" class="btn btn-secondary" title="選択したアカウントの接続を解除">→</button>
+            <button onclick="moveAllToDisabled()" type="button" class="btn btn-secondary" title="全てのアカウントの接続を解除">→→</button>
+        </div>
+        
+        <div style="flex: 1;">
+            <h4 data-i18n="capability_disabled_accounts">未設定アカウント</h4>
+            <select id="disabled-accounts" multiple size="10" style="width: 100%; padding: 10px; height: 300px; box-sizing: border-box;">
+            </select>
+            <p class="text-muted" style="margin-top: 5px; font-size: 0.85rem;">
+                <span id="disabled-count">0</span><span data-i18n="capability_items_count">件</span>
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="form-card" style="margin-top: 20px;">
+    <div class="form-actions">
+        <button type="submit" form="capability-form" class="btn btn-primary" data-i18n="button_register">登録</button>
+        <a href="/services/{{ service_id }}/capabilities" class="btn btn-secondary" data-i18n="button_cancel">キャンセル</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/assets/view/capabilities/new.js"></script>
+{% endblock %}

@@ -1,0 +1,244 @@
+"""
+Database models for MCP Server
+"""
+import json
+from datetime import datetime
+from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()
+
+
+class ConnectionAccount(db.Model):
+    """接続アカウント - MCPサービスに接続するためのアカウント"""
+    __tablename__ = 'connection_accounts'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    bearer_token = db.Column(db.String(100), unique=True, nullable=False)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    permissions = db.relationship('AccountPermission', back_populates='account', cascade='all, delete-orphan')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'bearer_token': self.bearer_token,
+            'notes': self.notes,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
+class Service(db.Model):
+    __tablename__ = 'services'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    subdomain = db.Column(db.String(50), unique=True, nullable=False)
+    service_type = db.Column(db.String(20), nullable=False)  # 'api' or 'mcp'
+    mcp_url = db.Column(db.String(500))  # MCP接続先URL (service_type='mcp'の場合)
+    common_headers = db.Column(db.Text)  # JSON string
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    capabilities = db.relationship('Capability', back_populates='service', cascade='all, delete-orphan')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'subdomain': self.subdomain,
+            'service_type': self.service_type,
+            'mcp_url': self.mcp_url,
+            'common_headers': json.loads(self.common_headers) if self.common_headers else {},
+            'description': self.description,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
+class Capability(db.Model):
+    __tablename__ = 'capabilities'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    service_id = db.Column(db.Integer, db.ForeignKey('services.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    capability_type = db.Column(db.String(50), nullable=False)  # 'tool', 'resource', 'prompt' (API), or 'mcp_tool' (MCP)
+    url = db.Column(db.String(500))  # endpoint (for tool/resource)
+    headers = db.Column(db.Text)  # JSON string (for tool)
+    body_params = db.Column(db.Text)  # JSON string (for tool)
+    template_content = db.Column(db.Text)  # prompt template (for prompt)
+    description = db.Column(db.Text)
+    is_enabled = db.Column(db.Boolean, default=True, nullable=False)  # 有効/無効フラグ
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    service = db.relationship('Service', back_populates='capabilities')
+    permissions = db.relationship('AccountPermission', back_populates='capability', cascade='all, delete-orphan')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'service_id': self.service_id,
+            'name': self.name,
+            'capability_type': self.capability_type,
+            'url': self.url,
+            'headers': json.loads(self.headers) if self.headers else {},
+            'body_params': json.loads(self.body_params) if self.body_params else {},
+            'template_content': self.template_content,
+            'description': self.description,
+            'is_enabled': self.is_enabled,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
+class AccountPermission(db.Model):
+    """接続アカウントの権限管理"""
+    __tablename__ = 'account_permissions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey('connection_accounts.id'), nullable=False)
+    capability_id = db.Column(db.Integer, db.ForeignKey('capabilities.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    account = db.relationship('ConnectionAccount', back_populates='permissions')
+    capability = db.relationship('Capability', back_populates='permissions')
+    
+    # Unique constraint
+    __table_args__ = (
+        db.UniqueConstraint('account_id', 'capability_id', name='uq_account_capability'),
+    )
+    
+    def to_dict(self):
+        capability_dict = self.capability.to_dict() if self.capability else None
+        if capability_dict and self.capability.service:
+            capability_dict['service_name'] = self.capability.service.name
+        
+        return {
+            'id': self.id,
+            'account_id': self.account_id,
+            'capability_id': self.capability_id,
+            'capability': capability_dict,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
+class AdminSettings(db.Model):
+    """管理者設定 - 言語設定などを保存"""
+    __tablename__ = 'admin_settings'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    setting_key = db.Column(db.String(50), unique=True, nullable=False)
+    setting_value = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'setting_key': self.setting_key,
+            'setting_value': self.setting_value,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
+class McpServiceTemplate(db.Model):
+    """MCPサービステンプレート - 標準搭載とカスタムテンプレート"""
+    __tablename__ = 'mcp_service_templates'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    template_type = db.Column(db.String(20), nullable=False)  # 'builtin' or 'custom'
+    service_type = db.Column(db.String(20), nullable=False)  # 'api' or 'mcp'
+    description = db.Column(db.Text)
+    common_headers = db.Column(db.Text)  # JSON string
+    icon = db.Column(db.String(10))  # emoji icon
+    category = db.Column(db.String(50))  # e.g., 'Communication', 'Cloud', 'AI', etc.
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    capability_templates = db.relationship('McpCapabilityTemplate', back_populates='service_template', cascade='all, delete-orphan')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'template_type': self.template_type,
+            'service_type': self.service_type,
+            'description': self.description,
+            'common_headers': json.loads(self.common_headers) if self.common_headers else {},
+            'icon': self.icon,
+            'category': self.category,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+    
+    def to_export_dict(self):
+        """エクスポート用の辞書"""
+        return {
+            'name': self.name,
+            'service_type': self.service_type,
+            'description': self.description,
+            'common_headers': json.loads(self.common_headers) if self.common_headers else {},
+            'icon': self.icon,
+            'category': self.category,
+            'capabilities': [cap.to_export_dict() for cap in self.capability_templates]
+        }
+
+
+class McpCapabilityTemplate(db.Model):
+    """Capabilityテンプレート - サービステンプレートに紐付く"""
+    __tablename__ = 'mcp_capability_templates'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    service_template_id = db.Column(db.Integer, db.ForeignKey('mcp_service_templates.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    capability_type = db.Column(db.String(50), nullable=False)  # 'tool', 'resource', 'prompt'
+    url = db.Column(db.String(500))  # endpoint URL
+    headers = db.Column(db.Text)  # JSON string
+    body_params = db.Column(db.Text)  # JSON string
+    template_content = db.Column(db.Text)  # prompt template
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    service_template = db.relationship('McpServiceTemplate', back_populates='capability_templates')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'service_template_id': self.service_template_id,
+            'name': self.name,
+            'capability_type': self.capability_type,
+            'url': self.url,
+            'headers': json.loads(self.headers) if self.headers else {},
+            'body_params': json.loads(self.body_params) if self.body_params else {},
+            'template_content': self.template_content,
+            'description': self.description,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+    
+    def to_export_dict(self):
+        """エクスポート用の辞書"""
+        return {
+            'name': self.name,
+            'capability_type': self.capability_type,
+            'url': self.url,
+            'headers': json.loads(self.headers) if self.headers else {},
+            'body_params': json.loads(self.body_params) if self.body_params else {},
+            'template_content': self.template_content,
+            'description': self.description
+        }

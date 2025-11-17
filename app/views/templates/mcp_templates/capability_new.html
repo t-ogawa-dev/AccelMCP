@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}新規Capability{% endblock %}
+
+{% block breadcrumb %}
+<nav class="breadcrumb">
+    <a href="/" data-i18n="breadcrumb_home">ホーム</a>
+    <span class="separator">/</span>
+    <a href="/mcp-templates" data-i18n="mcp_template_list_title">テンプレート一覧</a>
+    <span class="separator">/</span>
+    <a href="/mcp-templates/{{ template_id }}" data-i18n="mcp_template_detail_title">テンプレート詳細</a>
+    <span class="separator">/</span>
+    <a href="/mcp-templates/{{ template_id }}/capabilities">Capabilities</a>
+    <span class="separator">/</span>
+    <span data-i18n="capability_new_title">新規Capability</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 data-i18n="capability_new_title">新規Capability</h1>
+    <p data-i18n="capability_new_description">新しいCapabilityを作成します</p>
+</div>
+
+<div class="form-container">
+    <form id="capability-form">
+        <div class="form-section">
+            <h2 data-i18n="capability_basic_info">基本情報</h2>
+            
+            <div class="form-group">
+                <label for="name" data-i18n="capability_name_label">名前 *</label>
+                <input type="text" id="name" name="name" required 
+                       data-i18n-placeholder="capability_name_placeholder">
+            </div>
+
+            <div class="form-group">
+                <label for="capability_type" data-i18n="capability_type_label">タイプ *</label>
+                <select id="capability_type" name="capability_type" required>
+                    <option value="tool">Tool</option>
+                    <option value="resource">Resource</option>
+                    <option value="prompt">Prompt</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="url" data-i18n="capability_url_label">URL</label>
+                <input type="text" id="url" name="url"
+                       data-i18n-placeholder="capability_url_placeholder">
+                <small data-i18n="capability_url_hint">APIエンドポイントのURL</small>
+            </div>
+
+            <div class="form-group">
+                <label for="description" data-i18n="capability_description_label">説明</label>
+                <textarea id="description" name="description" rows="3"
+                          data-i18n-placeholder="capability_description_placeholder"></textarea>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2 data-i18n="capability_headers_label">ヘッダー</h2>
+            <div id="headers-container"></div>
+            <button type="button" class="btn btn-secondary" onclick="addHeader()" data-i18n="button_add_header">+ ヘッダーを追加</button>
+        </div>
+
+        <div class="form-section">
+            <h2 data-i18n="capability_body_params_label">ボディパラメータ</h2>
+            <div id="params-container"></div>
+            <button type="button" class="btn btn-secondary" onclick="addParam()" data-i18n="button_add_param">+ パラメータを追加</button>
+        </div>
+
+        <div class="form-section" id="template-section">
+            <h2 data-i18n="capability_template_content_label">テンプレートコンテンツ</h2>
+            <small class="section-hint" data-i18n="capability_template_hint">Promptタイプの場合に使用します</small>
+            <textarea id="template_content" name="template_content" rows="15"
+                      data-i18n-placeholder="capability_template_content_placeholder"></textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="window.history.back()" data-i18n="button_cancel">キャンセル</button>
+            <button type="submit" class="btn btn-primary" data-i18n="button_register">登録</button>
+        </div>
+    </form>
+</div>
+
+<style>
+.form-container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.form-section {
+    margin-bottom: 30px;
+    padding-bottom: 30px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.form-section:last-of-type {
+    border-bottom: none;
+}
+
+.form-section h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.section-hint {
+    display: block;
+    margin-bottom: 16px;
+    color: #999;
+    font-size: 13px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #333;
+}
+
+.form-group input[type="text"],
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 6px;
+    color: #999;
+    font-size: 13px;
+}
+
+.header-row,
+.param-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    align-items: center;
+}
+
+.header-row input,
+.param-row input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.header-row button,
+.param-row button {
+    padding: 10px 15px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.header-row button:hover,
+.param-row button:hover {
+    background: #dc2626;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+}
+
+#template_content {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 13px;
+    width: 100%;
+    min-height: 300px;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const TEMPLATE_ID = {{ template_id }};
+</script>
+<script src="/assets/view/templates/capability_new.js"></script>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}接続アカウント詳細 - Accel MCP{% endblock %}
+
+{% block breadcrumb %}
+<nav class="breadcrumb">
+    <a href="/dashboard" data-i18n="breadcrumb_home">ホーム</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="/accounts" data-i18n="breadcrumb_account_list">接続アカウント一覧</a>
+    <span class="breadcrumb-separator">›</span>
+    <span class="breadcrumb-current" data-i18n="breadcrumb_account_detail">アカウント詳細</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <h2 data-i18n="account_detail_title">接続アカウント詳細</h2>
+    <p data-i18n="account_detail_desc">アカウントの詳細情報とCapability一覧</p>
+</div>
+
+<div id="account-detail" class="detail-card"></div>
+
+<div class="detail-card" style="margin-top: 20px;">
+    <h3 data-i18n="account_capabilities_title">このアカウントが使用できるCapability</h3>
+    <div id="permissions-list"></div>
+</div>
+
+<div class="detail-card" style="margin-top: 20px;">
+    <h3 data-i18n="account_edit_info">アカウント情報の編集</h3>
+    <form id="edit-form">
+        <div class="form-group">
+            <label for="name" data-i18n="account_name_label">アカウント名</label>
+            <input type="text" id="name" name="name">
+        </div>
+        
+        <div class="form-group">
+            <label for="notes" data-i18n="account_notes_label">備考</label>
+            <textarea id="notes" name="notes" rows="4"></textarea>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" data-i18n="button_save">保存</button>
+            <button type="button" onclick="regenerateToken()" class="btn btn-warning" data-i18n="account_regenerate_token">トークン再発行</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/assets/view/accounts/detail.js"></script>
+{% endblock %}

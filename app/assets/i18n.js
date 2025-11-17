@@ -1,0 +1,690 @@
+/**
+ * 国際化(i18n)ユーティリティ
+ * 言語切り替え機能とブラウザ言語検出
+ */
+
+const translations = {
+    ja: {
+        // ヘッダー
+        app_title: 'Accel MCP',
+        logout: 'ログアウト',
+        
+        // パンくずリスト
+        breadcrumb_home: 'ホーム',
+        breadcrumb_service_list: 'サービス一覧',
+        breadcrumb_service_detail: 'サービス詳細',
+        breadcrumb_service_new: '新規登録',
+        breadcrumb_service_edit: '編集',
+        breadcrumb_capabilities: 'Capabilities',
+        breadcrumb_capability_detail: 'Capability詳細',
+        breadcrumb_account_list: '接続アカウント一覧',
+        breadcrumb_account_detail: 'アカウント詳細',
+        
+        // ボタン
+        button_details: '詳細',
+        button_edit: '編集',
+        button_delete: '削除',
+        button_save: '保存',
+        button_cancel: 'キャンセル',
+        button_register: '登録',
+        button_add_header: '+ ヘッダーを追加',
+        button_add_permission: '+ 権限を追加',
+        button_copy: 'コピー',
+        button_close: '閉じる',
+        button_back: '戻る',
+        
+        // ダッシュボード
+        dashboard_title: 'ダッシュボード',
+        dashboard_description: '各機能へのアクセスはこちらから',
+        service_card_title: '📡 サービス管理',
+        service_card_description: 'MCPサービスの登録、編集、削除を行います。サブドメインや共通ヘッダーの設定が可能です。',
+        account_card_title: '👥 接続アカウント管理',
+        account_card_description: 'MCPサービスに接続するアカウントの登録、編集、削除を行います。Bearerトークンの発行が可能です。',
+        mcp_mcp_template_card_title: '📦 テンプレート管理',
+        mcp_template_card_description: 'APIサービスの標準テンプレートとカスタムテンプレートを管理します。テンプレートからサービスを簡単に作成できます。',
+        
+        // テンプレート一覧
+        mcp_template_list_title: 'テンプレート一覧',
+        mcp_template_list_desc: 'サービステンプレートの管理',
+        mcp_template_tab_builtin: 'WebService',
+        mcp_template_tab_custom: 'カスタム',
+        mcp_template_new_button: '新規カスタムテンプレート',
+        mcp_template_new_title: '新規カスタムテンプレート',
+        mcp_template_new_description: 'カスタムAPIテンプレートを作成します',
+        mcp_template_edit_title: 'テンプレート編集',
+        mcp_template_edit_description: 'カスタムテンプレートを編集します',
+        mcp_template_detail_title: 'テンプレート詳細',
+        mcp_template_empty: 'テンプレートがありません',
+        mcp_template_category: 'カテゴリ',
+        mcp_template_capabilities_count: 'Capabilities',
+        mcp_template_capabilities_list: 'Capabilities一覧',
+        mcp_template_use_button: '使用する',
+        mcp_template_use_modal_title: 'テンプレートを使用',
+        mcp_template_use_modal_description: 'このテンプレートからサービスを作成します。サブドメインを入力してください。',
+        mcp_template_use_success_title: '登録しました',
+        mcp_template_use_go_to_services: 'サービス一覧へ',
+        mcp_template_export_button: 'エクスポート',
+        mcp_template_import_button: 'インポート',
+        mcp_template_import_title: 'テンプレートをインポート',
+        mcp_template_import_description: 'エクスポートしたJSONファイルをドラッグ&ドロップまたは選択してください',
+        mcp_template_import_drop_hint: 'ここにJSONファイルをドロップ',
+        mcp_template_import_or: 'または',
+        mcp_template_import_select_file: 'ファイルを選択',
+        button_clear: 'クリア',
+        mcp_template_import_button: 'インポート',
+        mcp_template_delete_confirm: 'このテンプレートを削除してもよろしいですか?',
+        mcp_template_builtin_cannot_edit: '標準搭載テンプレートは編集できません',
+        mcp_template_builtin_cannot_delete: '標準搭載テンプレートは削除できません',
+        mcp_template_name_label: 'テンプレート名',
+        mcp_template_icon_label: 'アイコン',
+        mcp_template_icon_hint: '絵文字1文字（省略可）',
+        mcp_template_category_label: 'カテゴリ',
+        mcp_template_description_label: '説明',
+        mcp_template_type_label: 'テンプレートタイプ',
+        mcp_template_basic_info: '基本情報',
+        
+        // Capability管理
+        capability_management_title: 'Capabilities管理',
+        capability_management_description: 'テンプレートのCapabilityを管理します',
+        capability_new_button: '新規Capability',
+        capability_basic_info: '基本情報',
+        capability_name_label: '名前',
+        capability_type_label: 'タイプ',
+        capability_url_label: 'URL',
+        capability_headers_label: 'ヘッダー',
+        capability_body_params_label: 'ボディパラメータ',
+        capability_mcp_template_content_label: 'テンプレートコンテンツ',
+        capability_delete_confirm: 'このCapabilityを削除してもよろしいですか?',
+        capability_empty: 'Capabilitiesが登録されていません',
+        capability_no_headers: 'ヘッダーが設定されていません',
+        capability_no_params: 'ボディパラメータが設定されていません',
+        status_enabled: '有効',
+        status_disabled: '無効',
+        
+        // サービス一覧
+        service_list_title: 'サービス一覧',
+        service_list_desc: '登録されているMCPサービスの管理',
+        service_new_button: '新規サービス登録',
+        service_empty: 'サービスが登録されていません',
+        service_subdomain: 'サブドメイン',
+        service_registered: '登録',
+        service_capabilities_button: 'Capabilities',
+        service_delete_confirm: 'このサービスを削除してもよろしいですか?',
+        
+        // サービス詳細
+        service_detail_title: 'サービス詳細',
+        service_detail_desc: 'サービスの詳細情報',
+        service_capabilities_manage: 'Capabilities管理',
+        service_basic_info: '基本情報',
+        service_subdomain_label: 'サブドメイン',
+        service_mcp_endpoint: 'MCPエンドポイント',
+        service_registered_at: '登録日時',
+        service_updated_at: '更新日時',
+        service_common_headers: '共通ヘッダー',
+        
+        // サービス新規登録
+        service_new_title: 'サービス新規登録',
+        service_new_desc: '新しいMCPサービスを登録します',
+        service_name_label: 'サービス名',
+        service_subdomain_input: 'サブドメイン',
+        service_subdomain_hint: '小文字英数字とハイフンのみ使用可能',
+        service_subdomain_pattern_hint: '小文字英数字とハイフンのみ使用可能',
+        service_subdomain_url_hint: 'MCP接続URL: http://{subdomain}.lvh.me:5001/mcp (例: http://myservice.lvh.me:5001/mcp)',
+        service_description_label: '説明',
+        service_type_label: 'サービスタイプ',
+        service_type_api: 'API (手動登録)',
+        service_type_mcp: 'MCP (自動検出)',
+        service_mcp_url_label: 'MCP接続URL',
+        service_mcp_url_hint: 'MCPサーバーのSSEエンドポイントURLを入力してください',
+        service_test_connection: '接続テスト',
+        service_mcp_url_required: 'MCP接続URLを入力してください',
+        service_testing_connection: '接続テスト中...',
+        service_connection_success: '接続成功',
+        service_connection_failed: '接続失敗',
+        service_connection_error: '接続エラー',
+        service_common_headers_label: '共通ヘッダー',
+        service_common_headers_hint: '全てのCapabilityで使用される共通ヘッダー',
+        service_register_failed: '登録に失敗しました',
+        service_update_failed: '更新に失敗しました',
+        
+        // サービス編集
+        service_edit_title: 'サービス編集',
+        service_edit_desc: 'サービス情報を編集します',
+        
+        // Capabilities一覧
+        capabilities_title: 'Capabilities一覧',
+        capabilities_desc: 'サービスのCapability管理',
+        capability_new_button: '新規Capability登録',
+        capability_empty: 'Capabilityが登録されていません',
+        capability_type: 'タイプ',
+        capability_endpoint: 'エンドポイント',
+        capability_method: 'メソッド',
+        capability_delete_confirm: 'このCapabilityを削除してもよろしいですか?',
+        
+        // Capability詳細
+        capability_detail_title: 'Capability詳細',
+        capability_detail_desc: 'Capabilityの詳細情報',
+        capability_basic_info: '基本情報',
+        capability_name_label: 'Capability名',
+        capability_type_label: 'タイプ',
+        capability_type_detail: 'Capabilityタイプ',
+        capability_method_label: 'HTTPメソッド',
+        capability_url_label: '接続先URL',
+        capability_endpoint_label: 'エンドポイント',
+        capability_input_schema: '入力スキーマ',
+        capability_output_schema: '出力スキーマ',
+        capability_headers: 'ヘッダー',
+        capability_headers_params: 'ヘッダーパラメータ',
+        capability_body_params_label: 'Bodyパラメータ',
+        capability_registered_at: '登録日時',
+        capability_updated_at: '更新日時',
+        
+        // Capability新規登録
+        capability_new_title: '新規Capability登録',
+        capability_new_description: '新しいCapabilityを作成します',
+        capability_new_desc: '新しいCapabilityを登録します',
+        capability_input_schema_label: '入力スキーマ (JSON)',
+        capability_output_schema_label: '出力スキーマ (JSON)',
+        capability_headers_label: 'ヘッダー',
+        capability_register_failed: '登録に失敗しました',
+        capability_update_failed: '更新に失敗しました',
+        capability_mcp_tool_name: 'MCP Toolとして公開される名前',
+        capability_http_method: 'HTTPメソッド',
+        capability_connection_url: '接続先URL',
+        capability_header_params: 'ヘッダーパラメータ',
+        capability_header_params_hint: '個別のヘッダーパラメータ（サービス共通ヘッダーに追加されます）',
+        capability_body_params: 'Bodyパラメータ',
+        capability_body_params_add: '+ パラメータを追加',
+        capability_body_params_hint: 'クエリパラメータまたはフォームデータ',
+        capability_body_json_hint: 'JSON形式のリクエストボディ',
+        capability_account_management: '接続可能アカウント管理',
+        capability_account_management_desc: 'このCapabilityに接続できるアカウントを設定します',
+        capability_enabled_accounts: '接続可能アカウント',
+        capability_disabled_accounts: '未設定アカウント',
+        capability_items_count: '件',
+        capability_url_hint: 'APIエンドポイントのURL',
+        capability_mcp_template_hint: 'Promptタイプの場合に使用します',
+        capability_description_label: '説明',
+        capability_header_key: 'キー',
+        capability_header_value: '値',
+        capability_param_key: 'キー',
+        capability_param_value: '値',
+        button_add_header: '+ ヘッダーを追加',
+        button_add_param: '+ パラメータを追加',
+        button_remove: '削除',
+        capability_name_placeholder: '例: get_user_info',
+        capability_url_placeholder: '例: https://api.example.com/users/{id}',
+        capability_description_placeholder: 'このCapabilityの説明を入力してください',
+        capability_mcp_template_content_placeholder: 'Promptタイプの場合、テンプレートコンテンツを入力してください',
+        capability_registered: '登録しました',
+        
+        // Capability編集
+        capability_edit_title: 'Capability編集',
+        capability_edit_desc: 'Capability情報を編集します',
+        capability_json_error: 'JSON形式が正しくありません',
+        
+        // アカウント一覧
+        account_list_title: '接続アカウント一覧',
+        account_list_desc: 'MCP接続に使用するアカウント管理',
+        account_new_button: '新規アカウント登録',
+        account_empty: 'アカウントが登録されていません',
+        account_service: 'サービス',
+        account_permissions: '権限',
+        account_created: '作成日',
+        account_delete_confirm: 'このアカウントを削除してもよろしいですか?',
+        
+        // アカウント詳細
+        account_detail_title: 'アカウント詳細',
+        account_detail_desc: 'アカウントの詳細情報',
+        account_capabilities_title: 'このアカウントが使用できるCapability',
+        account_edit_info: 'アカウント情報の編集',
+        account_basic_info: '基本情報',
+        account_name_label: 'アカウント名',
+        account_notes_label: '備考',
+        account_service_label: 'サービス',
+        account_api_key_label: 'APIキー',
+        account_permissions_label: '権限設定',
+        account_capability_label: 'Capability',
+        account_all_capabilities: '全てのCapability',
+        account_permission_type: '権限タイプ',
+        account_permission_allow: '許可',
+        account_permission_deny: '拒否',
+        account_created_at: '作成日時',
+        account_updated_at: '更新日時',
+        account_bearer_token: 'Bearer トークン',
+        account_copy_token: 'コピー',
+        account_token_copied: 'トークンをコピーしました',
+        account_regenerate_token: 'トークン再発行',
+        account_regenerate_confirm: 'トークンを再発行してもよろしいですか? 既存のトークンは無効になります。',
+        account_token_regenerated: 'トークンを再発行しました',
+        account_update_success: '保存しました',
+        account_no_capabilities: 'Capabilityが設定されていません',
+        account_unknown_service: '不明なサービス',
+        
+        // アカウント新規登録
+        account_new_title: '新規アカウント登録',
+        account_new_desc: '新しい接続アカウントを登録します',
+        account_notes_placeholder: 'このアカウントに関する備考を記入できます',
+        account_permissions_hint: 'Capabilityごとにアクセス権限を設定できます',
+        account_register_failed: '登録に失敗しました',
+        account_update_failed: '更新に失敗しました',
+        
+        // 共通フォーム
+        form_required: '必須',
+        form_optional: '任意',
+        form_key_placeholder: 'キー (例: Authorization)',
+        form_value_placeholder: '値 (例: Bearer xxx)',
+        form_json_placeholder: 'JSON形式で入力',
+        
+        // メッセージ
+        error_unknown: '不明なエラー',
+        confirm_delete: '削除してもよろしいですか?',
+    },
+    en: {
+        // Header
+        app_title: 'Accel MCP',
+        logout: 'Logout',
+        
+        // Breadcrumb
+        breadcrumb_home: 'Home',
+        breadcrumb_service_list: 'Services',
+        breadcrumb_service_detail: 'Service Detail',
+        breadcrumb_service_new: 'New',
+        breadcrumb_service_edit: 'Edit',
+        breadcrumb_capabilities: 'Capabilities',
+        breadcrumb_capability_detail: 'Capability Detail',
+        breadcrumb_account_list: 'Accounts',
+        breadcrumb_account_detail: 'Account Detail',
+        
+        // Buttons
+        button_details: 'Details',
+        button_edit: 'Edit',
+        button_delete: 'Delete',
+        button_save: 'Save',
+        button_cancel: 'Cancel',
+        button_register: 'Register',
+        button_add_header: '+ Add Header',
+        button_add_permission: '+ Add Permission',
+        button_copy: 'Copy',
+        button_close: 'Close',
+        button_back: 'Back',
+        
+        // Dashboard
+        dashboard_title: 'Dashboard',
+        dashboard_description: 'Access to each function',
+        service_card_title: '📡 Service Management',
+        service_card_description: 'Register, edit, and delete MCP services. Configure subdomains and common headers.',
+        account_card_title: '👥 Account Management',
+        account_card_description: 'Register, edit, and delete accounts that can connect to MCP services. Issue Bearer tokens.',
+        mcp_mcp_template_card_title: '📦 Template Management',
+        mcp_template_card_description: 'Manage built-in and custom API service templates. Easily create services from templates.',
+        
+        // Template List
+        mcp_template_list_title: 'Template List',
+        mcp_template_list_desc: 'Service template management',
+        mcp_template_tab_builtin: 'WebService',
+        mcp_template_tab_custom: 'Custom',
+        mcp_template_new_button: 'New Custom Template',
+        mcp_template_new_title: 'New Custom Template',
+        mcp_template_new_description: 'Create a custom API template',
+        mcp_template_edit_title: 'Edit Template',
+        mcp_template_edit_description: 'Edit custom template',
+        mcp_template_detail_title: 'Template Detail',
+        mcp_template_empty: 'No templates available',
+        mcp_template_category: 'Category',
+        mcp_template_capabilities_count: 'Capabilities',
+        mcp_template_capabilities_list: 'Capabilities List',
+        mcp_template_use_button: 'Use',
+        mcp_template_use_modal_title: 'Use Template',
+        mcp_template_use_modal_description: 'Create a service from this template. Please enter a subdomain.',
+        mcp_template_use_success_title: 'Registered Successfully',
+        mcp_template_use_go_to_services: 'Go to Services',
+        mcp_template_export_button: 'Export',
+        mcp_template_import_button: 'Import',
+        mcp_template_import_title: 'Import Template',
+        mcp_template_import_description: 'Drag and drop or select an exported JSON file',
+        mcp_template_import_drop_hint: 'Drop JSON file here',
+        mcp_template_import_or: 'or',
+        mcp_template_import_select_file: 'Select File',
+        button_clear: 'Clear',
+        mcp_template_import_button: 'Import',
+        mcp_template_delete_confirm: 'Are you sure you want to delete this template?',
+        mcp_template_builtin_cannot_edit: 'Built-in templates cannot be edited',
+        mcp_template_builtin_cannot_delete: 'Built-in templates cannot be deleted',
+        mcp_template_name_label: 'Template Name',
+        mcp_template_icon_label: 'Icon',
+        mcp_template_icon_hint: 'Emoji character (optional)',
+        mcp_template_category_label: 'Category',
+        mcp_template_description_label: 'Description',
+        mcp_template_type_label: 'Template Type',
+        mcp_template_basic_info: 'Basic Information',
+        
+        // Capability Management
+        capability_management_title: 'Capability Management',
+        capability_management_description: 'Manage template capabilities',
+        capability_new_button: 'New Capability',
+        capability_basic_info: 'Basic Information',
+        capability_name_label: 'Name',
+        capability_type_label: 'Type',
+        capability_url_label: 'URL',
+        capability_headers_label: 'Headers',
+        capability_body_params_label: 'Body Parameters',
+        capability_mcp_template_content_label: 'Template Content',
+        capability_delete_confirm: 'Are you sure you want to delete this capability?',
+        capability_empty: 'No capabilities registered',
+        capability_no_headers: 'No headers configured',
+        capability_no_params: 'No body parameters configured',
+        status_enabled: 'Enabled',
+        status_disabled: 'Disabled',
+        
+        // Service List
+        service_list_title: 'Services',
+        service_list_desc: 'Manage registered MCP services',
+        service_new_button: 'New Service',
+        service_empty: 'No services registered',
+        service_subdomain: 'Subdomain',
+        service_registered: 'Registered',
+        service_capabilities_button: 'Capabilities',
+        service_delete_confirm: 'Are you sure you want to delete this service?',
+        
+        // Service Detail
+        service_detail_title: 'Service Detail',
+        service_detail_desc: 'Service information',
+        service_capabilities_manage: 'Manage Capabilities',
+        service_basic_info: 'Basic Information',
+        service_subdomain_label: 'Subdomain',
+        service_mcp_endpoint: 'MCP Endpoint',
+        service_registered_at: 'Registered At',
+        service_updated_at: 'Updated At',
+        service_common_headers: 'Common Headers',
+        
+        // Service New
+        service_new_title: 'New Service',
+        service_new_desc: 'Register a new MCP service',
+        service_name_label: 'Service Name',
+        service_subdomain_input: 'Subdomain',
+        service_subdomain_hint: 'Only lowercase alphanumeric characters and hyphens allowed',
+        service_subdomain_pattern_hint: 'Only lowercase alphanumeric characters and hyphens allowed',
+        service_subdomain_url_hint: 'MCP Connection URL: http://{subdomain}.lvh.me:5001/mcp (e.g., http://myservice.lvh.me:5001/mcp)',
+        service_description_label: 'Description',
+        service_type_label: 'Service Type',
+        service_type_api: 'API (Manual Registration)',
+        service_type_mcp: 'MCP (Auto Detection)',
+        service_mcp_url_label: 'MCP Connection URL',
+        service_mcp_url_hint: 'Enter the SSE endpoint URL of the MCP server',
+        service_test_connection: 'Test Connection',
+        service_mcp_url_required: 'Please enter MCP connection URL',
+        service_testing_connection: 'Testing connection...',
+        service_connection_success: 'Connection successful',
+        service_connection_failed: 'Connection failed',
+        service_connection_error: 'Connection error',
+        service_common_headers_label: 'Common Headers',
+        service_common_headers_hint: 'Headers used by all capabilities',
+        service_register_failed: 'Registration failed',
+        service_update_failed: 'Update failed',
+        
+        // Service Edit
+        service_edit_title: 'Edit Service',
+        service_edit_desc: 'Edit service information',
+        
+        // Capabilities List
+        capabilities_title: 'Capabilities',
+        capabilities_desc: 'Manage service capabilities',
+        capability_new_button: 'New Capability',
+        capability_empty: 'No capabilities registered',
+        capability_type: 'Type',
+        capability_endpoint: 'Endpoint',
+        capability_method: 'Method',
+        capability_delete_confirm: 'Are you sure you want to delete this capability?',
+        
+        // Capability Detail
+        capability_detail_title: 'Capability Detail',
+        capability_detail_desc: 'Capability information',
+        capability_basic_info: 'Basic Information',
+        capability_name_label: 'Capability Name',
+        capability_type_label: 'Type',
+        capability_type_detail: 'Capability Type',
+        capability_method_label: 'HTTP Method',
+        capability_url_label: 'Connection URL',
+        capability_endpoint_label: 'Endpoint',
+        capability_input_schema: 'Input Schema',
+        capability_output_schema: 'Output Schema',
+        capability_headers: 'Headers',
+        capability_headers_params: 'Header Parameters',
+        capability_body_params_label: 'Body Parameters',
+        capability_registered_at: 'Registered At',
+        capability_updated_at: 'Updated At',
+        
+        // Capability New
+        capability_new_title: 'New Capability',
+        capability_new_description: 'Create a new capability',
+        capability_new_desc: 'Register a new capability',
+        capability_input_schema_label: 'Input Schema (JSON)',
+        capability_output_schema_label: 'Output Schema (JSON)',
+        capability_headers_label: 'Headers',
+        capability_register_failed: 'Registration failed',
+        capability_update_failed: 'Update failed',
+        capability_mcp_tool_name: 'Name published as MCP Tool',
+        capability_http_method: 'HTTP Method',
+        capability_connection_url: 'Connection URL',
+        capability_header_params: 'Header Parameters',
+        capability_header_params_hint: 'Individual header parameters (added to service common headers)',
+        capability_body_params: 'Body Parameters',
+        capability_body_params_add: '+ Add Parameter',
+        capability_body_params_hint: 'Query parameters or form data',
+        capability_body_json_hint: 'Request body in JSON format',
+        capability_account_management: 'Connectable Account Management',
+        capability_account_management_desc: 'Configure accounts that can connect to this capability',
+        capability_enabled_accounts: 'Connectable Accounts',
+        capability_disabled_accounts: 'Unset Accounts',
+        capability_items_count: 'items',
+        capability_url_hint: 'API endpoint URL',
+        capability_mcp_template_hint: 'Used for Prompt type',
+        capability_description_label: 'Description',
+        capability_header_key: 'Key',
+        capability_header_value: 'Value',
+        capability_param_key: 'Key',
+        capability_param_value: 'Value',
+        button_add_header: '+ Add Header',
+        button_add_param: '+ Add Parameter',
+        button_remove: 'Remove',
+        capability_name_placeholder: 'e.g., get_user_info',
+        capability_url_placeholder: 'e.g., https://api.example.com/users/{id}',
+        capability_description_placeholder: 'Enter a description for this capability',
+        capability_mcp_template_content_placeholder: 'For Prompt type, enter template content here',
+        capability_registered: 'Registered successfully',
+        
+        // Capability Edit
+        capability_edit_title: 'Edit Capability',
+        capability_edit_desc: 'Edit capability information',
+        capability_json_error: 'Invalid JSON format',
+        
+        // Account List
+        account_list_title: 'Accounts',
+        account_list_desc: 'Manage MCP connection accounts',
+        account_new_button: 'New Account',
+        account_empty: 'No accounts registered',
+        account_service: 'Service',
+        account_permissions: 'Permissions',
+        account_created: 'Created',
+        account_delete_confirm: 'Are you sure you want to delete this account?',
+        
+        // Account Detail
+        account_detail_title: 'Account Detail',
+        account_detail_desc: 'Account information',
+        account_capabilities_title: 'Capabilities available to this account',
+        account_edit_info: 'Edit Account Information',
+        account_basic_info: 'Basic Information',
+        account_name_label: 'Account Name',
+        account_notes_label: 'Notes',
+        account_service_label: 'Service',
+        account_api_key_label: 'API Key',
+        account_permissions_label: 'Permissions',
+        account_capability_label: 'Capability',
+        account_all_capabilities: 'All Capabilities',
+        account_permission_type: 'Permission Type',
+        account_permission_allow: 'Allow',
+        account_permission_deny: 'Deny',
+        account_created_at: 'Created At',
+        account_updated_at: 'Updated At',
+        account_bearer_token: 'Bearer Token',
+        account_copy_token: 'Copy',
+        account_token_copied: 'Token copied to clipboard',
+        account_regenerate_token: 'Regenerate Token',
+        account_regenerate_confirm: 'Are you sure you want to regenerate the token? The existing token will be invalidated.',
+        account_token_regenerated: 'Token regenerated successfully',
+        account_update_success: 'Saved successfully',
+        account_no_capabilities: 'No capabilities configured',
+        account_unknown_service: 'Unknown Service',
+        
+        // Account New
+        account_new_title: 'New Account',
+        account_new_desc: 'Register a new connection account',
+        account_notes_placeholder: 'Add notes about this account',
+        account_permissions_hint: 'Set access permissions for each capability',
+        account_register_failed: 'Registration failed',
+        account_update_failed: 'Update failed',
+        
+        // Common Form
+        form_required: 'Required',
+        form_optional: 'Optional',
+        form_key_placeholder: 'Key (e.g., Authorization)',
+        form_value_placeholder: 'Value (e.g., Bearer xxx)',
+        form_json_placeholder: 'Enter in JSON format',
+        
+        // Messages
+        error_unknown: 'Unknown error',
+        confirm_delete: 'Are you sure you want to delete?',
+    }
+};
+
+let currentLanguage = 'ja';
+
+/**
+ * ブラウザの言語設定を取得（日本語以外は英語）
+ */
+function detectBrowserLanguage() {
+    const browserLang = navigator.language || navigator.userLanguage;
+    return browserLang.startsWith('ja') ? 'ja' : 'en';
+}
+
+/**
+ * サーバーから言語設定を取得
+ */
+async function getLanguageSetting() {
+    try {
+        const response = await fetch('/api/settings/language');
+        if (!response.ok) {
+            throw new Error('Failed to fetch language setting');
+        }
+        const data = await response.json();
+        
+        // DBに設定がない場合（初回アクセス）
+        if (!data.is_initialized || !data.language) {
+            // ブラウザ言語検出を使用（初回のみ）
+            const detectedLang = detectBrowserLanguage();
+            // DBに保存
+            await saveLanguageSetting(detectedLang);
+            return detectedLang;
+        }
+        
+        // DBに設定がある場合はそれを使用
+        return data.language;
+    } catch (error) {
+        console.error('Failed to get language setting:', error);
+        // エラー時はデフォルトで日本語を使用
+        return 'ja';
+    }
+}
+
+/**
+ * 言語設定をサーバーに保存
+ */
+async function saveLanguageSetting(language) {
+    try {
+        const response = await fetch('/api/settings/language', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ language })
+        });
+        return response.ok;
+    } catch (error) {
+        console.error('Failed to save language setting:', error);
+        return false;
+    }
+}
+
+/**
+ * 翻訳を取得
+ */
+function t(key) {
+    return translations[currentLanguage]?.[key] || key;
+}
+
+/**
+ * ページ内の翻訳可能な要素を自動翻訳
+ */
+function applyTranslations() {
+    // data-i18n属性を持つ要素を翻訳
+    document.querySelectorAll('[data-i18n]').forEach(element => {
+        const key = element.getAttribute('data-i18n');
+        element.textContent = t(key);
+    });
+    
+    // data-i18n-placeholder属性を持つ要素のplaceholderを翻訳
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+        const key = element.getAttribute('data-i18n-placeholder');
+        element.placeholder = t(key);
+    });
+    
+    // data-i18n-title属性を持つ要素のtitleを翻訳
+    document.querySelectorAll('[data-i18n-title]').forEach(element => {
+        const key = element.getAttribute('data-i18n-title');
+        element.title = t(key);
+    });
+}
+
+/**
+ * 言語を切り替え
+ */
+async function switchLanguage(language) {
+    if (language !== 'ja' && language !== 'en') {
+        language = 'ja';
+    }
+    
+    currentLanguage = language;
+    await saveLanguageSetting(language);
+    
+    // ページをリロード
+    window.location.reload();
+}
+
+/**
+ * 言語スイッチャーを初期化
+ */
+async function initLanguageSwitcher() {
+    // サーバーから言語設定を取得（初回の場合はブラウザ言語検出＆DB保存も実行）
+    currentLanguage = await getLanguageSetting();
+    
+    // 言語スイッチャーのHTMLを作成（セレクトボックス）
+    const switcher = document.createElement('div');
+    switcher.className = 'language-switcher';
+    switcher.innerHTML = `
+        <select onchange="switchLanguage(this.value)" class="lang-select">
+            <option value="ja" ${currentLanguage === 'ja' ? 'selected' : ''}>🇯🇵 日本語</option>
+            <option value="en" ${currentLanguage === 'en' ? 'selected' : ''}>🇺🇸 English</option>
+        </select>
+    `;
+    
+    // ヘッダーに追加
+    const headerActions = document.querySelector('.header-actions');
+    if (headerActions) {
+        headerActions.insertBefore(switcher, headerActions.firstChild);
+    }
+    
+    // ページ内の翻訳を適用
+    applyTranslations();
+}
+
+// 自動初期化は行わない（各画面で明示的に呼び出す）
+// これにより、各画面のload関数が実行される前に確実に言語が設定される

@@ -1,0 +1,478 @@
+{% extends "base.html" %}
+
+{% block title %}テンプレート一覧 - Accel MCP{% endblock %}
+
+{% block breadcrumb %}
+<nav class="breadcrumb">
+    <a href="/dashboard" data-i18n="breadcrumb_home">ホーム</a>
+    <span class="breadcrumb-separator">›</span>
+    <span class="breadcrumb-current" data-i18n="mcp_template_list_title">テンプレート一覧</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div id="flash-message" class="flash-message" style="display: none;"></div>
+
+<div class="page-title">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h2 data-i18n="mcp_template_list_title">テンプレート一覧</h2>
+            <p data-i18n="mcp_template_list_desc">サービステンプレートの管理</p>
+        </div>
+    </div>
+</div>
+
+<div class="tabs">
+    <button class="tab active" data-tab="builtin" data-i18n="mcp_template_tab_builtin">標準搭載</button>
+    <button class="tab" data-tab="custom" data-i18n="mcp_template_tab_custom">カスタム</button>
+</div>
+
+<div class="tab-content" id="builtin-tab">
+    <div id="builtin-templates" class="templates-grid"></div>
+</div>
+
+<div class="tab-content" id="custom-tab" style="display: none;">
+    <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+        <button onclick="window.location.href='/templates/new'" class="btn btn-primary" data-i18n="mcp_template_new_button">新規カスタムテンプレート</button>
+        <button onclick="openImportModal()" class="btn btn-secondary" data-i18n="mcp_template_import_button">インポート</button>
+    </div>
+    <div id="custom-templates" class="templates-grid"></div>
+</div>
+
+<!-- Modal for template usage -->
+<div id="use-template-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modal-title" data-i18n="mcp_template_use_modal_title">テンプレートを使用</h3>
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p id="modal-description" data-i18n="mcp_template_use_modal_description">このテンプレートからサービスを作成します。サブドメインを入力してください。</p>
+            <div id="modal-error" class="modal-error" style="display: none;"></div>
+            <div class="form-group">
+                <label for="modal-subdomain" data-i18n="service_subdomain_label">サブドメイン</label>
+                <input type="text" id="modal-subdomain" class="modal-input" placeholder="例: myservice" pattern="[a-z0-9-]+" required>
+                <small data-i18n="service_subdomain_hint">小文字英数字とハイフンのみ使用可能</small>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal()" data-i18n="button_cancel">キャンセル</button>
+            <button class="btn btn-primary" onclick="confirmTemplateUse()" data-i18n="button_register">登録</button>
+        </div>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div id="success-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="success-modal-title" data-i18n="mcp_template_use_success_title">登録しました</h3>
+        </div>
+        <div class="modal-body">
+            <div style="text-align: center; padding: 20px;">
+                <div style="font-size: 48px; color: #10b981; margin-bottom: 20px;">✓</div>
+                <p id="success-message" style="font-size: 16px; color: #333;"></p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeSuccessModal()" data-i18n="button_close">閉じる</button>
+            <button class="btn btn-primary" onclick="goToServiceList()" data-i18n="mcp_template_use_go_to_services">サービス一覧へ</button>
+        </div>
+    </div>
+</div>
+
+<!-- Import Modal -->
+<div id="import-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 data-i18n="mcp_template_import_title">テンプレートをインポート</h3>
+            <span class="modal-close" onclick="closeImportModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p data-i18n="mcp_template_import_description">エクスポートしたJSONファイルをドラッグ&ドロップまたは選択してください</p>
+            <div id="import-error" class="modal-error" style="display: none;"></div>
+            <div id="drop-zone" class="drop-zone">
+                <div class="drop-zone-content">
+                    <div class="drop-zone-icon">📁</div>
+                    <p data-i18n="mcp_template_import_drop_hint">ここにJSONファイルをドロップ</p>
+                    <p class="drop-zone-or" data-i18n="mcp_template_import_or">または</p>
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('file-input').click()" data-i18n="mcp_template_import_select_file">ファイルを選択</button>
+                    <input type="file" id="file-input" accept=".json" style="display: none;">
+                </div>
+                <div id="file-info" class="file-info" style="display: none;">
+                    <div class="file-info-icon">✓</div>
+                    <div class="file-info-name"></div>
+                    <button type="button" class="btn-small btn-secondary" onclick="clearFile()" data-i18n="button_clear">クリア</button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeImportModal()" data-i18n="button_cancel">キャンセル</button>
+            <button class="btn btn-primary" onclick="confirmImport()" id="import-btn" disabled data-i18n="mcp_template_import_button">インポート</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.flash-message {
+    padding: 16px 24px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    background-color: #d1fae5;
+    border: 1px solid #10b981;
+    color: #065f46;
+    font-size: 15px;
+    font-weight: 500;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.tab {
+    padding: 12px 24px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 500;
+    color: #666;
+    transition: all 0.3s;
+}
+
+.tab:hover {
+    color: #333;
+    background: #f5f5f5;
+}
+
+.tab.active {
+    color: #667eea;
+    border-bottom-color: #667eea;
+}
+
+.tab-content {
+    animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.templates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+.template-card {
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.3s;
+    cursor: pointer;
+}
+
+.template-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    transform: translateY(-2px);
+}
+
+.template-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.template-icon {
+    font-size: 32px;
+}
+
+.template-info {
+    flex: 1;
+}
+
+.template-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.template-category {
+    font-size: 13px;
+    color: #999;
+}
+
+.template-description {
+    color: #666;
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+.template-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.template-capabilities {
+    font-size: 13px;
+    color: #999;
+}
+
+.template-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 13px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-use {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-use:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.btn-export {
+    background: #f5f5f5;
+    color: #666;
+}
+
+.btn-export:hover {
+    background: #e0e0e0;
+}
+
+.btn-delete {
+    background: #fee;
+    color: #c33;
+}
+
+.btn-delete:hover {
+    background: #fdd;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+.empty-state-icon {
+    font-size: 64px;
+    margin-bottom: 20px;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    animation: fadeIn 0.3s;
+}
+
+.modal-content {
+    background-color: white;
+    margin: 10% auto;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.3s;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 20px;
+    color: #333;
+}
+
+.modal-close {
+    font-size: 28px;
+    font-weight: bold;
+    color: #999;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.modal-close:hover {
+    color: #333;
+}
+
+.modal-body {
+    padding: 24px;
+}
+
+.modal-body p {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.modal-error {
+    background-color: #fee;
+    border: 1px solid #fcc;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 20px;
+    color: #c33;
+    font-size: 14px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #333;
+}
+
+.modal-input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.3s;
+}
+
+.modal-input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 6px;
+    color: #999;
+    font-size: 13px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 20px 24px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.drop-zone {
+    border: 2px dashed #d0d0d0;
+    border-radius: 8px;
+    padding: 40px;
+    text-align: center;
+    transition: all 0.3s;
+    background: #fafafa;
+}
+
+.drop-zone.drag-over {
+    border-color: #667eea;
+    background: #f0f4ff;
+}
+
+.drop-zone-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.drop-zone-icon {
+    font-size: 48px;
+    margin-bottom: 8px;
+}
+
+.drop-zone-content p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.drop-zone-or {
+    color: #999;
+    font-size: 13px;
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: #e8f5e9;
+    border-radius: 6px;
+}
+
+.file-info-icon {
+    font-size: 24px;
+    color: #10b981;
+}
+
+.file-info-name {
+    flex: 1;
+    font-weight: 500;
+    color: #333;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="/assets/view/templates/list.js"></script>
+{% endblock %}

@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block title %}Capabilities管理{% endblock %}
+
+{% block breadcrumb %}
+<nav class="breadcrumb">
+    <a href="/" data-i18n="breadcrumb_home">ホーム</a>
+    <span class="separator">/</span>
+    <a href="/mcp-templates" data-i18n="mcp_template_list_title">テンプレート一覧</a>
+    <span class="separator">/</span>
+    <a href="/mcp-templates/{{ template_id }}" id="breadcrumb-template">テンプレート詳細</a>
+    <span class="separator">/</span>
+    <span>Capabilities</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div id="flash-message" class="flash-message" style="display: none;"></div>
+
+<div class="page-header">
+    <div class="header-left">
+        <h1 id="page-title" data-i18n="capability_management_title">Capabilities管理</h1>
+        <p id="page-description" data-i18n="capability_management_description">テンプレートのCapabilityを管理します</p>
+    </div>
+    <div class="header-actions">
+        <button class="btn btn-primary" onclick="window.location.href='/templates/{{ template_id }}/capabilities/new'" id="new-btn" data-i18n="capability_new_button">新規Capability</button>
+        <button class="btn btn-secondary" onclick="window.history.back()" data-i18n="button_back">戻る</button>
+    </div>
+</div>
+
+<div class="capabilities-container">
+    <div id="capabilities-list"></div>
+</div>
+
+<style>
+.flash-message {
+    padding: 16px 24px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    background-color: #d1fae5;
+    border: 1px solid #10b981;
+    color: #065f46;
+    font-size: 15px;
+    font-weight: 500;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.header-left h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.header-left p {
+    color: #666;
+    font-size: 14px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.capabilities-container {
+    max-width: 1200px;
+}
+
+.capability-card {
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    transition: all 0.3s;
+    cursor: pointer;
+}
+
+.capability-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    transform: translateY(-2px);
+}
+
+.capability-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.capability-info {
+    flex: 1;
+}
+
+.capability-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.capability-type {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.capability-type.tool {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.capability-type.resource {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.capability-type.prompt {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.capability-url {
+    color: #666;
+    font-size: 14px;
+    font-family: monospace;
+    margin-top: 8px;
+}
+
+.capability-description {
+    color: #666;
+    font-size: 14px;
+    line-height: 1.5;
+    margin-top: 8px;
+}
+
+.capability-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.capability-card.disabled {
+    opacity: 0.6;
+    background: #f9fafb;
+}
+
+.capability-card.disabled .capability-name {
+    color: #9ca3af;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+.status-badge.enabled {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-badge.disabled {
+    background: #fee;
+    color: #991b1b;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 24px;
+    margin: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.3s;
+    border-radius: 24px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background-color: #10b981;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border-radius: 12px;
+    border: 2px dashed #e0e0e0;
+}
+
+.empty-state-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.empty-state p {
+    color: #999;
+    font-size: 16px;
+}
+
+.builtin-notice {
+    background: #fef3c7;
+    border: 1px solid #fbbf24;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+    color: #92400e;
+    font-size: 14px;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const TEMPLATE_ID = {{ template_id }};
+</script>
+<script src="/assets/view/templates/capabilities.js"></script>
+{% endblock %}

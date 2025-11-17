@@ -1,0 +1,62 @@
+services:
+  web:
+    build: .
+    container_name: mcp_server
+    ports:
+      - "5001:5001"
+    environment:
+      - DOCKER_ENV=1
+    env_file:
+      - .env
+    volumes:
+      - ./app:/app/app
+      - ./run.py:/app/run.py
+      - ./tests:/app/tests
+      - ./pytest.ini:/app/pytest.ini
+    depends_on:
+      db:
+        condition: service_healthy
+    command: python run.py
+
+  e2e:
+    build:
+      context: .
+      dockerfile: Dockerfile.e2e
+    container_name: mcp_e2e
+    environment:
+      - DOCKER_ENV=1
+    env_file:
+      - .env
+    volumes:
+      - ./app:/app/app
+      - ./run.py:/app/run.py
+      - ./tests:/app/tests
+      - ./pytest.ini:/app/pytest.ini
+    depends_on:
+      - web
+      - db
+    profiles:
+      - e2e
+    command: python -m pytest tests/e2e/ -v
+
+  db:
+    image: mysql:8.4.3
+    container_name: mcp_mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_DATABASE=mcpdb
+      - MYSQL_USER=mcpuser
+      - MYSQL_PASSWORD=mcppassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysql_data:
