@@ -122,6 +122,52 @@ function addBodyRow(key = '', value = '') {
     bodyIndex++;
 }
 
+// JSON validation and formatting
+function validateJson() {
+    const textarea = document.getElementById('body_json');
+    const errorDiv = document.getElementById('json-validation-error');
+    const jsonText = textarea.value.trim();
+    
+    if (!jsonText) {
+        errorDiv.style.display = 'none';
+        return;
+    }
+    
+    try {
+        JSON.parse(jsonText);
+        errorDiv.style.display = 'block';
+        errorDiv.style.color = '#28a745';
+        errorDiv.innerHTML = '✓ ' + t('json_valid');
+        setTimeout(() => {
+            errorDiv.style.display = 'none';
+        }, 3000);
+    } catch (e) {
+        errorDiv.style.display = 'block';
+        errorDiv.style.color = '#dc3545';
+        errorDiv.innerHTML = '✗ ' + t('json_invalid') + ': ' + e.message;
+    }
+}
+
+function formatJson() {
+    const textarea = document.getElementById('body_json');
+    const errorDiv = document.getElementById('json-validation-error');
+    const jsonText = textarea.value.trim();
+    
+    if (!jsonText) {
+        return;
+    }
+    
+    try {
+        const parsed = JSON.parse(jsonText);
+        textarea.value = JSON.stringify(parsed, null, 2);
+        errorDiv.style.display = 'none';
+    } catch (e) {
+        errorDiv.style.display = 'block';
+        errorDiv.style.color = '#dc3545';
+        errorDiv.innerHTML = '✗ ' + t('json_invalid') + ': ' + e.message;
+    }
+}
+
 async function loadCapability() {
     const response = await fetch(`/api/capabilities/${capabilityId}`);
     const cap = await response.json();
@@ -214,7 +260,11 @@ async function loadCapability() {
                 try {
                     bodyParams = JSON.parse(jsonText);
                 } catch (e) {
-                    alert(t('capability_json_error') + ': ' + e.message);
+                    const errorDiv = document.getElementById('json-validation-error');
+                    errorDiv.style.display = 'block';
+                    errorDiv.style.color = '#dc3545';
+                    errorDiv.innerHTML = '✗ ' + t('json_invalid') + ': ' + e.message;
+                    document.getElementById('body_json').focus();
                     return;
                 }
             }

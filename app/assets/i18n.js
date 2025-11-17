@@ -32,6 +32,13 @@ const translations = {
         button_copy: 'コピー',
         button_close: '閉じる',
         button_back: '戻る',
+        button_validate_json: 'JSON構造チェック',
+        button_format_json: '整形',
+        
+        // JSON validation
+        json_valid: 'JSON構造は正しいです',
+        json_invalid: 'JSON構造にエラーがあります',
+        json_formatted: 'JSONを整形しました',
         
         // ダッシュボード
         dashboard_title: 'ダッシュボード',
@@ -308,6 +315,13 @@ const translations = {
         button_copy: 'Copy',
         button_close: 'Close',
         button_back: 'Back',
+        button_validate_json: 'Validate JSON',
+        button_format_json: 'Format',
+        
+        // JSON validation
+        json_valid: 'JSON structure is valid',
+        json_invalid: 'Invalid JSON structure',
+        json_formatted: 'JSON formatted successfully',
         
         // Dashboard
         dashboard_title: 'Dashboard',

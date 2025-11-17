@@ -58,6 +58,7 @@
         
         <div class="form-group">
             <label data-i18n="capability_body_params">Bodyパラメータ</label>
+            <small data-i18n="capability_body_json_hint" style="display:block; margin-bottom:6px; font-size:0.92em; color:#666;">JSON形式のリクエストボディ</small>
             <div id="body-key-value" style="display: none;">
                 <div id="body-container"></div>
                 <button type="button" onclick="addBodyRow()" class="btn btn-sm btn-secondary" style="margin-top: 10px;" data-i18n="capability_body_params_add">+ パラメータを追加</button>
@@ -65,10 +66,29 @@
             </div>
             <div id="body-json">
                 <textarea id="body_json" name="body_json" rows="8" placeholder='{"key": "value"}'></textarea>
-                <small data-i18n="capability_body_json_hint">JSON形式のリクエストボディ</small>
+                <div style="display: flex; gap: 10px; margin: 10px 0;">
+                    <button type="button" onclick="validateJson()" class="btn btn-sm btn-secondary">
+                        <span data-i18n="button_validate_json">JSON構造チェック</span>
+                    </button>
+                    <button type="button" onclick="formatJson()" class="btn btn-sm btn-secondary">
+                        <span data-i18n="button_format_json">整形</span>
+                    </button>
+                </div>
+                <div id="json-validation-error" style="color: #dc3545; margin-top: 8px; font-size: 0.9rem; display: none;"></div>
             </div>
         </div>
     </form>
+</div>
+
+<div class="form-card" style="margin-top: 20px;">
+    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+        <button type="button" onclick="validateJson()" class="btn btn-sm btn-secondary">
+            <span data-i18n="button_validate_json">JSON構造チェック</span>
+        </button>
+        <button type="button" onclick="formatJson()" class="btn btn-sm btn-secondary">
+            <span data-i18n="button_format_json">整形</span>
+        </button>
+    </div>
 </div>
 
 <div class="form-card" style="margin-top: 20px;">
