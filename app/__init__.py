@@ -8,6 +8,7 @@ from flask_cors import CORS
 # Import extensions
 from app.models.models import db
 from app.config.config import Config
+from flask_migrate import Migrate
 
 
 def create_app(config_class=Config):
@@ -25,6 +26,7 @@ def create_app(config_class=Config):
     
     # Initialize extensions
     db.init_app(app)
+    migrate = Migrate(app, db, directory='db/migrations')
     CORS(app)
     
     # Register blueprints
@@ -37,9 +39,5 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(mcp_bp)
-    
-    # Initialize database
-    with app.app_context():
-        db.create_all()
     
     return app

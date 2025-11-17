@@ -65,6 +65,10 @@ db.sqlite3-journal
 instance/
 .webassets-cache
 
+# Flask-Migrate
+# Keep db/migrations directory and version files in version control
+# Do NOT ignore: db/migrations/
+
 # Scrapy stuff:
 .scrapy
 
