@@ -9,12 +9,14 @@ from app.controllers.auth_controller import login_required
 
 from app.models.models import db, ConnectionAccount, Service, Capability, AccountPermission, AdminSettings
 
+# Service is now mapped to 'apps' table, but keep the class name for compatibility
+
 api_bp = Blueprint('api', __name__)
 
 
-# ============= Service API =============
+# ============= App API =============
 
-@api_bp.route('/services/test-connection', methods=['POST'])
+@api_bp.route('/apps/test-connection', methods=['POST'])
 @login_required
 def test_service_connection():
     """Test MCP server connection"""
@@ -56,10 +58,10 @@ def test_service_connection():
         return jsonify({'success': False, 'error': str(e)}), 200
 
 
-@api_bp.route('/services', methods=['GET', 'POST'])
+@api_bp.route('/apps', methods=['GET', 'POST'])
 @login_required
-def services():
-    """Get all services or create new service"""
+def apps():
+    """Get all apps or create new app"""
     if request.method == 'GET':
         services = Service.query.all()
         return jsonify([s.to_dict() for s in services])
@@ -89,10 +91,10 @@ def services():
         return jsonify(service.to_dict()), 201
 
 
-@api_bp.route('/services/<int:service_id>', methods=['GET', 'PUT', 'DELETE'])
+@api_bp.route('/apps/<int:service_id>', methods=['GET', 'PUT', 'DELETE'])
 @login_required
-def service_detail(service_id):
-    """Get, update, or delete a specific service"""
+def app_detail(service_id):
+    """Get, update, or delete a specific app"""
     service = Service.query.get_or_404(service_id)
     
     if request.method == 'GET':
@@ -124,22 +126,41 @@ def service_detail(service_id):
         return '', 204
 
 
+@api_bp.route('/apps/<int:service_id>/toggle', methods=['POST'])
+@login_required
+def toggle_app(service_id):
+    """Toggle app enabled/disabled status"""
+    service = Service.query.get_or_404(service_id)
+    service.is_enabled = not service.is_enabled
+    db.session.commit()
+    return jsonify(service.to_dict())
+
+
 # ============= Capability API =============
 
-@api_bp.route('/services/<int:service_id>/capabilities', methods=['GET', 'POST'])
+@api_bp.route('/apps/<int:service_id>/capabilities', methods=['GET', 'POST'])
 @login_required
 def capabilities(service_id):
     """Get all capabilities for a service or create new capability"""
     service = Service.query.get_or_404(service_id)
     
     if request.method == 'GET':
-        capabilities = Capability.query.filter_by(service_id=service_id).all()
+        capabilities = Capability.query.filter_by(app_id=service_id).all()
         return jsonify([c.to_dict() for c in capabilities])
     
     elif request.method == 'POST':
         data = request.get_json()
+        
+        # 同じアプリ内に同じ名前のCapabilityが存在しないかチェック
+        existing = Capability.query.filter_by(
+            app_id=service_id,
+            name=data['name']
+        ).first()
+        if existing:
+            return jsonify({'error': '同じ名前のCapabilityが既に存在します'}), 409
+        
         capability = Capability(
-            service_id=service_id,
+            app_id=service_id,
             name=data['name'],
             capability_type=data['capability_type'],  # 'tool', 'resource', 'prompt', 'mcp_tool'
             url=data.get('url'),
@@ -175,7 +196,18 @@ def capability_detail(capability_id):
     
     elif request.method == 'PUT':
         data = request.get_json()
-        capability.name = data.get('name', capability.name)
+        
+        # 名前を変更する場合、同じアプリ内に同じ名前のCapabilityが存在しないかチェック
+        new_name = data.get('name', capability.name)
+        if new_name != capability.name:
+            existing = Capability.query.filter_by(
+                app_id=capability.app_id,
+                name=new_name
+            ).filter(Capability.id != capability.id).first()
+            if existing:
+                return jsonify({'error': '同じ名前のCapabilityが既に存在します'}), 409
+        
+        capability.name = new_name
         capability.capability_type = data.get('capability_type', capability.capability_type)
         capability.url = data.get('url', capability.url)
         capability.headers = json.dumps(data.get('headers', {}))
@@ -642,7 +674,7 @@ def apply_template(template_id):
         # Create capabilities from template
         for cap_template in template.capability_templates:
             capability = Capability(
-                service_id=service.id,
+                app_id=service.id,
                 name=cap_template.name,
                 capability_type=cap_template.capability_type,
                 url=cap_template.url,

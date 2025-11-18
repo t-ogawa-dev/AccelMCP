@@ -20,7 +20,7 @@
     </div>
     <div class="header-actions">
         <button class="btn btn-secondary" onclick="window.location.href='/mcp-templates/{{ template_id }}/edit'" id="edit-btn" data-i18n="button_edit">編集</button>
-        <button class="btn btn-secondary" onclick="window.location.href='/mcp-templates/{{ template_id }}/capabilities'" data-i18n="service_capabilities_button">Capabilities</button>
+        <button class="btn btn-secondary" onclick="window.location.href='/mcp-templates/{{ template_id }}/capabilities'" data-i18n="mcp_template_capabilities_button">Capabilities</button>
         <button class="btn btn-secondary" onclick="exportTemplate()" id="export-btn" data-i18n="mcp_template_export_button">エクスポート</button>
         <button class="btn btn-danger" onclick="deleteTemplate()" id="delete-btn" data-i18n="button_delete">削除</button>
     </div>
@@ -35,7 +35,7 @@
                 <span class="detail-value" id="detail-name"></span>
             </div>
             <div class="detail-item">
-                <span class="detail-label" data-i18n="service_type_label">サービスタイプ</span>
+                <span class="detail-label" data-i18n="mcp_template_type_label">テンプレートタイプ</span>
                 <span class="detail-value" id="detail-service-type"></span>
             </div>
             <div class="detail-item">
@@ -50,7 +50,7 @@
     </div>
 
     <div class="detail-section">
-        <h2 data-i18n="service_common_headers">共通ヘッダー</h2>
+        <h2 data-i18n="mcp_template_common_headers">共通ヘッダー</h2>
         <div id="headers-list" class="headers-list"></div>
     </div>
 

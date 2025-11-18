@@ -36,7 +36,7 @@ function addHeaderRow(key = '', value = '') {
 }
 
 async function loadService() {
-    const response = await fetch(`/api/services/${serviceId}`);
+    const response = await fetch(`/api/apps/${serviceId}`);
     const service = await response.json();
     
     document.getElementById('name').value = service.name;
@@ -98,7 +98,7 @@ async function loadService() {
             });
         }
         
-        const response = await fetch(`/api/services/${serviceId}`, {
+        const response = await fetch(`/api/apps/${serviceId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -107,7 +107,7 @@ async function loadService() {
         if (response.ok) {
             window.location.href = `/services/${serviceId}`;
         } else {
-            alert(t('service_update_failed'));
+            alert(t('app_update_failed'));
         }
     });
 })();

@@ -2,7 +2,7 @@
 const serviceId = parseInt(window.location.pathname.split('/')[2]);
 
 async function loadService() {
-    const response = await fetch(`/api/services/${serviceId}`);
+    const response = await fetch(`/api/apps/${serviceId}`);
     const service = await response.json();
     
     const container = document.getElementById('service-detail');
@@ -13,14 +13,14 @@ async function loadService() {
         </div>
         
         <div class="detail-section">
-            <h3>${t('service_basic_info')}</h3>
+            <h3>${t('app_basic_info')}</h3>
             <table class="detail-table">
                 <tr>
-                    <th>${t('service_subdomain_label')}</th>
-                    <td><code>${service.subdomain}</code></td>
+                    <th>${t('app_subdomain_label')}</th>
+                    <td>${service.subdomain}</td>
                 </tr>
                 <tr>
-                    <th>${t('service_mcp_endpoint')}</th>
+                    <th>${t('app_mcp_endpoint')}</th>
                     <td>
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <code id="mcp-endpoint">http://${service.subdomain}.lvh.me:5001/mcp</code>
@@ -29,18 +29,18 @@ async function loadService() {
                     </td>
                 </tr>
                 <tr>
-                    <th>${t('service_registered_at')}</th>
+                    <th>${t('app_registered_at')}</th>
                     <td>${new Date(service.created_at).toLocaleString(currentLanguage === 'ja' ? 'ja-JP' : 'en-US')}</td>
                 </tr>
                 <tr>
-                    <th>${t('service_updated_at')}</th>
+                    <th>${t('app_updated_at')}</th>
                     <td>${new Date(service.updated_at).toLocaleString(currentLanguage === 'ja' ? 'ja-JP' : 'en-US')}</td>
                 </tr>
             </table>
         </div>
         
         <div class="detail-section">
-            <h3>${t('service_common_headers')}</h3>
+            <h3>${t('app_common_headers')}</h3>
             <pre class="code-block">${JSON.stringify(service.common_headers, null, 2)}</pre>
         </div>
     `;

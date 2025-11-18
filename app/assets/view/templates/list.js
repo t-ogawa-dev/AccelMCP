@@ -116,14 +116,14 @@ function confirmTemplateUse() {
     const subdomain = document.getElementById('modal-subdomain').value.trim();
     
     if (!subdomain) {
-        showModalError(t('service_subdomain_input') + ' is required');
+        showModalError(t('app_subdomain_input') + ' is required');
         return;
     }
     
     // Validate subdomain format
     const pattern = /^[a-z0-9-]+$/;
     if (!pattern.test(subdomain)) {
-        showModalError(t('service_subdomain_pattern_hint'));
+        showModalError(t('app_subdomain_hint'));
         return;
     }
     
@@ -183,12 +183,12 @@ async function applyTemplate(templateId, subdomain) {
             if (response.status === 409) {
                 showModalError('このサブドメインは既に使用されています。別のサブドメインを指定してください。');
             } else {
-                showModalError(t('service_register_failed') + ': ' + errorMessage);
+                showModalError(t('app_register_failed') + ': ' + errorMessage);
             }
         }
     } catch (e) {
         console.error('Apply template exception:', e);
-        showModalError(t('service_register_failed') + ': ' + e.message);
+        showModalError(t('app_register_failed') + ': ' + e.message);
     }
 }
 

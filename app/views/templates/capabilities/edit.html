@@ -6,15 +6,15 @@
 <nav class="breadcrumb" id="breadcrumb">
     <a href="/dashboard" data-i18n="breadcrumb_home">ホーム</a>
     <span class="breadcrumb-separator">›</span>
-    <a href="/services" data-i18n="breadcrumb_service_list">サービス一覧</a>
+    <a href="/services" data-i18n="breadcrumb_app_list">アプリ一覧</a>
     <span class="breadcrumb-separator">›</span>
-    <a href="#" id="service-link" data-i18n="breadcrumb_service_detail">サービス詳細</a>
+    <a href="#" id="service-link" data-i18n="breadcrumb_app_detail">アプリ詳細</a>
     <span class="breadcrumb-separator">›</span>
     <a href="#" id="capabilities-link" data-i18n="breadcrumb_capabilities">Capabilities</a>
     <span class="breadcrumb-separator">›</span>
     <a href="#" id="detail-link" data-i18n="breadcrumb_capability_detail">Capability詳細</a>
     <span class="breadcrumb-separator">›</span>
-    <span class="breadcrumb-current" data-i18n="breadcrumb_service_edit">編集</span>
+    <span class="breadcrumb-current" data-i18n="breadcrumb_app_edit">編集</span>
 </nav>
 {% endblock %}
 
@@ -45,7 +45,7 @@
         </div>
         
         <div class="form-group">
-            <label for="description" data-i18n="service_description_label">説明</label>
+            <label for="description" data-i18n="capability_description_label">説明</label>
             <textarea id="description" name="description" rows="3"></textarea>
         </div>
         
@@ -124,6 +124,7 @@
 </div>
 
 <div class="form-card" style="margin-top: 20px;">
+    <div id="form-error" style="display: none; padding: 15px; margin-bottom: 20px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;"></div>
     <div class="form-actions">
         <button type="submit" form="capability-form" class="btn btn-primary" data-i18n="button_save">保存</button>
         <a href="#" id="cancel-link" class="btn btn-secondary" data-i18n="button_cancel">キャンセル</a>

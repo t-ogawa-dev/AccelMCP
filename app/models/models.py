@@ -34,7 +34,7 @@ class ConnectionAccount(db.Model):
 
 
 class Service(db.Model):
-    __tablename__ = 'services'
+    __tablename__ = 'apps'
     
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -43,6 +43,7 @@ class Service(db.Model):
     mcp_url = db.Column(db.String(500))  # MCP接続先URL (service_type='mcp'の場合)
     common_headers = db.Column(db.Text)  # JSON string
     description = db.Column(db.Text)
+    is_enabled = db.Column(db.Boolean, default=True, nullable=False)  # 有効/無効フラグ
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -58,6 +59,7 @@ class Service(db.Model):
             'mcp_url': self.mcp_url,
             'common_headers': json.loads(self.common_headers) if self.common_headers else {},
             'description': self.description,
+            'is_enabled': self.is_enabled,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
@@ -65,9 +67,12 @@ class Service(db.Model):
 
 class Capability(db.Model):
     __tablename__ = 'capabilities'
+    __table_args__ = (
+        db.UniqueConstraint('app_id', 'name', name='uq_capability_app_name'),
+    )
     
     id = db.Column(db.Integer, primary_key=True)
-    service_id = db.Column(db.Integer, db.ForeignKey('services.id'), nullable=False)
+    app_id = db.Column(db.Integer, db.ForeignKey('apps.id'), nullable=False)
     name = db.Column(db.String(100), nullable=False)
     capability_type = db.Column(db.String(50), nullable=False)  # 'tool', 'resource', 'prompt' (API), or 'mcp_tool' (MCP)
     url = db.Column(db.String(500))  # endpoint (for tool/resource)
@@ -86,7 +91,7 @@ class Capability(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
-            'service_id': self.service_id,
+            'app_id': self.app_id,
             'name': self.name,
             'capability_type': self.capability_type,
             'url': self.url,

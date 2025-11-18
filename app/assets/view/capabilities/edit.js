@@ -3,6 +3,20 @@ const capabilityId = parseInt(window.location.pathname.split('/')[2]);
 let headerIndex = 0;
 let bodyIndex = 0;
 
+// Show error message
+function showError(message) {
+    const errorDiv = document.getElementById('form-error');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+    errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// Hide error message
+function hideError() {
+    const errorDiv = document.getElementById('form-error');
+    errorDiv.style.display = 'none';
+}
+
 // Load account permissions
 async function loadPermissions() {
     const response = await fetch(`/api/capabilities/${capabilityId}/permissions`);
@@ -223,6 +237,7 @@ async function loadCapability() {
     // Setup form submit handler
     document.getElementById('capability-form').addEventListener('submit', async (e) => {
         e.preventDefault();
+        hideError();
         
         const formData = new FormData(e.target);
         const method = formData.get('method');
@@ -293,7 +308,8 @@ async function loadCapability() {
         if (response.ok) {
             window.location.href = `/capabilities/${capabilityId}`;
         } else {
-            alert(t('capability_update_failed'));
+            const error = await response.json();
+            showError(t('capability_update_failed') + ': ' + (error.error || t('error_unknown')));
         }
     });
 })();

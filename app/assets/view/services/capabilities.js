@@ -2,7 +2,7 @@
 const serviceId = parseInt(window.location.pathname.split('/')[2]);
 
 async function loadCapabilities() {
-    const response = await fetch(`/api/services/${serviceId}/capabilities`);
+    const response = await fetch(`/api/apps/${serviceId}/capabilities`);
     const capabilities = await response.json();
     
     const container = document.getElementById('capabilities-list');

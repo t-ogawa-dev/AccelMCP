@@ -45,7 +45,7 @@ async function testConnection() {
         resultDiv.style.backgroundColor = '#fee';
         resultDiv.style.border = '1px solid #fcc';
         resultDiv.style.color = '#c33';
-        resultDiv.textContent = t('service_mcp_url_required') || 'MCP接続URLを入力してください';
+        resultDiv.textContent = t('app_mcp_url_required') || 'MCP接続URLを入力してください';
         return;
     }
     
@@ -56,10 +56,10 @@ async function testConnection() {
     resultDiv.style.backgroundColor = '#f0f9ff';
     resultDiv.style.border = '1px solid #bae6fd';
     resultDiv.style.color = '#0369a1';
-    resultDiv.textContent = t('service_testing_connection') || '接続テスト中...';
+    resultDiv.textContent = t('app_testing_connection') || '接続テスト中...';
     
     try {
-        const response = await fetch('/api/services/test-connection', {
+        const response = await fetch('/api/apps/test-connection', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ mcp_url: mcpUrl })
@@ -72,20 +72,20 @@ async function testConnection() {
             resultDiv.style.backgroundColor = '#d1fae5';
             resultDiv.style.border = '1px solid #10b981';
             resultDiv.style.color = '#065f46';
-            resultDiv.textContent = '✓ ' + (t('service_connection_success') || '接続成功');
+            resultDiv.textContent = '✓ ' + (t('app_connection_success') || '接続成功');
         } else {
             // Failure
             resultDiv.style.backgroundColor = '#fee';
             resultDiv.style.border = '1px solid #fcc';
             resultDiv.style.color = '#c33';
-            resultDiv.textContent = '✗ ' + (result.error || t('service_connection_failed') || '接続失敗');
+            resultDiv.textContent = '✗ ' + (result.error || t('app_connection_failed') || '接続失敗');
         }
     } catch (e) {
         // Error
         resultDiv.style.backgroundColor = '#fee';
         resultDiv.style.border = '1px solid #fcc';
         resultDiv.style.color = '#c33';
-        resultDiv.textContent = '✗ ' + (t('service_connection_error') || '接続エラー') + ': ' + e.message;
+        resultDiv.textContent = '✗ ' + (t('app_connection_error') || '接続エラー') + ': ' + e.message;
     }
 }
 
@@ -125,7 +125,7 @@ async function testConnection() {
             });
         }
         
-        const response = await fetch('/api/services', {
+        const response = await fetch('/api/apps', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -135,7 +135,7 @@ async function testConnection() {
             window.location.href = '/services';
         } else {
             const error = await response.json();
-            alert(t('service_register_failed') + ': ' + (error.error || t('error_unknown')));
+            alert(t('app_register_failed') + ': ' + (error.error || t('error_unknown')));
         }
     });
 })();

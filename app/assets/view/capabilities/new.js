@@ -3,6 +3,20 @@ const serviceId = parseInt(window.location.pathname.split('/')[2]);
 let headerIndex = 0;
 let bodyIndex = 0;
 
+// Show error message
+function showError(message) {
+    const errorDiv = document.getElementById('form-error');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+    errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// Hide error message
+function hideError() {
+    const errorDiv = document.getElementById('form-error');
+    errorDiv.style.display = 'none';
+}
+
 // Load accounts list
 async function loadAccounts() {
     const response = await fetch('/api/accounts');
@@ -175,6 +189,7 @@ function formatJson() {
     // Setup form submit handler
     document.getElementById('capability-form').addEventListener('submit', async (e) => {
         e.preventDefault();
+        hideError();
         
         const formData = new FormData(e.target);
         const method = formData.get('method');
@@ -236,7 +251,7 @@ function formatJson() {
         const accountIds = Array.from(enabledSelect.options).map(opt => parseInt(opt.value));
         data.account_ids = accountIds;
         
-        const response = await fetch(`/api/services/${serviceId}/capabilities`, {
+        const response = await fetch(`/api/apps/${serviceId}/capabilities`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -246,7 +261,7 @@ function formatJson() {
             window.location.href = `/services/${serviceId}/capabilities`;
         } else {
             const error = await response.json();
-            alert(t('capability_register_failed') + ': ' + (error.error || t('error_unknown')));
+            showError(t('capability_register_failed') + ': ' + (error.error || t('error_unknown')));
         }
     });
 })();

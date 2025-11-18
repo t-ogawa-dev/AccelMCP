@@ -6,13 +6,13 @@
 <nav class="breadcrumb">
     <a href="/dashboard" data-i18n="breadcrumb_home">ホーム</a>
     <span class="breadcrumb-separator">›</span>
-    <a href="/services" data-i18n="breadcrumb_service_list">サービス一覧</a>
+    <a href="/services" data-i18n="breadcrumb_app_list">アプリ一覧</a>
     <span class="breadcrumb-separator">›</span>
-    <a href="/services/{{ service_id }}" data-i18n="breadcrumb_service_detail">サービス詳細</a>
+    <a href="/services/{{ service_id }}" data-i18n="breadcrumb_app_detail">アプリ詳細</a>
     <span class="breadcrumb-separator">›</span>
     <a href="/services/{{ service_id }}/capabilities" data-i18n="breadcrumb_capabilities">Capabilities</a>
     <span class="breadcrumb-separator">›</span>
-    <span class="breadcrumb-current" data-i18n="breadcrumb_service_new">新規登録</span>
+    <span class="breadcrumb-current" data-i18n="breadcrumb_app_new">新規登録</span>
 </nav>
 {% endblock %}
 
@@ -44,7 +44,7 @@
         </div>
         
         <div class="form-group">
-            <label for="description" data-i18n="service_description_label">説明</label>
+            <label for="description" data-i18n="capability_description_label">説明</label>
             <textarea id="description" name="description" rows="3"></textarea>
         </div>
         
@@ -52,7 +52,7 @@
             <label data-i18n="capability_header_params">ヘッダーパラメータ</label>
             <div id="headers-container"></div>
             <button type="button" onclick="addHeaderRow()" class="btn btn-sm btn-secondary" style="margin-top: 10px;" data-i18n="button_add_header">+ ヘッダーを追加</button>
-            <small data-i18n="capability_header_params_hint">個別のヘッダーパラメータ（サービス共通ヘッダーに追加されます）</small>
+            <small data-i18n="capability_header_params_hint">個別のヘッダーパラメータ（アプリ共通ヘッダーに追加されます）</small>
         </div>
         
         <div class="form-group">
@@ -114,6 +114,7 @@
 </div>
 
 <div class="form-card" style="margin-top: 20px;">
+    <div id="form-error" style="display: none; padding: 15px; margin-bottom: 20px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;"></div>
     <div class="form-actions">
         <button type="submit" form="capability-form" class="btn btn-primary" data-i18n="button_register">登録</button>
         <a href="/services/{{ service_id }}/capabilities" class="btn btn-secondary" data-i18n="button_cancel">キャンセル</a>

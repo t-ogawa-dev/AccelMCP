@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}サービス一覧 - Accel MCP{% endblock %}
+{% block title %}アプリ一覧 - Accel MCP{% endblock %}
 
 {% block breadcrumb %}
 <nav class="breadcrumb">
     <a href="/dashboard" data-i18n="breadcrumb_home">ホーム</a>
     <span class="breadcrumb-separator">›</span>
-    <span class="breadcrumb-current" data-i18n="breadcrumb_service_list">サービス一覧</span>
+    <span class="breadcrumb-current" data-i18n="breadcrumb_app_list">アプリ一覧</span>
 </nav>
 {% endblock %}
 
@@ -14,10 +14,10 @@
 <div class="page-title">
     <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
-            <h2 data-i18n="service_list_title">サービス一覧</h2>
-            <p data-i18n="service_list_desc">登録されているMCPサービスの管理</p>
+            <h2 data-i18n="app_list_title">アプリ一覧</h2>
+            <p data-i18n="app_list_desc">登録されているMCPアプリの管理</p>
         </div>
-        <a href="/services/new" class="btn btn-primary" data-i18n="service_new_button">新規サービス登録</a>
+        <a href="/services/new" class="btn btn-primary" data-i18n="app_new_button">新規アプリ登録</a>
     </div>
 </div>
 
