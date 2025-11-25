@@ -120,9 +120,10 @@ class Capability(db.Model):
     permissions = db.relationship('AccountPermission', back_populates='capability', cascade='all, delete-orphan')
     
     def to_dict(self):
-        return {
+        result = {
             'id': self.id,
             'app_id': self.app_id,
+            'service_id': self.app_id,  # Alias for compatibility
             'name': self.name,
             'capability_type': self.capability_type,
             'url': self.url,
@@ -134,6 +135,10 @@ class Capability(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
+        # Include mcp_service_id from parent service
+        if self.service and self.service.mcp_service_id:
+            result['mcp_service_id'] = self.service.mcp_service_id
+        return result
 
 
 class AccountPermission(db.Model):
@@ -278,3 +283,70 @@ class McpCapabilityTemplate(db.Model):
             'template_content': self.template_content,
             'description': self.description
         }
+
+
+class Variable(db.Model):
+    """変数管理 - API Key等の秘匿情報を管理"""
+    __tablename__ = 'variables'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    value = db.Column(db.Text, nullable=False)  # 暗号化して保存
+    value_type = db.Column(db.String(20), nullable=False, default='string')  # 'string' or 'number'
+    description = db.Column(db.Text)
+    is_secret = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    @staticmethod
+    def encrypt_value(value):
+        """値を暗号化（簡易実装: Base64エンコード）"""
+        import base64
+        return base64.b64encode(value.encode('utf-8')).decode('utf-8')
+    
+    @staticmethod
+    def decrypt_value(encrypted_value):
+        """値を復号"""
+        import base64
+        return base64.b64decode(encrypted_value.encode('utf-8')).decode('utf-8')
+    
+    def set_value(self, plain_value):
+        """値を暗号化して設定"""
+        self.value = self.encrypt_value(plain_value)
+    
+    def get_value(self):
+        """復号した値を取得"""
+        return self.decrypt_value(self.value)
+    
+    def get_typed_value(self):
+        """型付きで値を取得（numberの場合は数値型で返す）"""
+        plain_value = self.get_value()
+        if self.value_type == 'number':
+            try:
+                # 整数か浮動小数点数かを判定
+                if '.' in plain_value:
+                    return float(plain_value)
+                return int(plain_value)
+            except ValueError:
+                return plain_value  # 変換できない場合は文字列のまま
+        return plain_value
+    
+    def to_dict(self, include_value=False):
+        """辞書形式で返す"""
+        result = {
+            'id': self.id,
+            'name': self.name,
+            'value_type': self.value_type,
+            'description': self.description,
+            'is_secret': self.is_secret,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+        if include_value:
+            result['value'] = self.get_value()
+        elif self.is_secret:
+            result['value'] = '********'  # マスク表示
+        else:
+            result['value'] = self.get_value()
+        return result
+

@@ -16,10 +16,6 @@
     <span class="breadcrumb-separator">›</span>
     <a href="#" id="capabilities-link" data-i18n="breadcrumb_capabilities">Capabilities</a>
     <span class="breadcrumb-separator">›</span>
-    <a href="#" id="service-link" data-i18n="breadcrumb_app_detail">アプリ詳細</a>
-    <span class="breadcrumb-separator">›</span>
-    <a href="#" id="capabilities-link" data-i18n="breadcrumb_capabilities">Capabilities</a>
-    <span class="breadcrumb-separator">›</span>
     <a href="#" id="detail-link" data-i18n="breadcrumb_capability_detail">Capability詳細</a>
     <span class="breadcrumb-separator">›</span>
     <span class="breadcrumb-current" data-i18n="breadcrumb_app_edit">編集</span>
@@ -48,7 +44,12 @@
         </div>
         
         <div class="form-group">
-            <label for="url"><span data-i18n="capability_connection_url">接続先URL</span> *</label>
+            <label for="url">
+                <span data-i18n="capability_connection_url">接続先URL</span> *
+                <span class="variable-hint" title="Variablesが使用できます。例: https://api.example.com/&#123;&#123;API_KEY&#125;&#125;">
+                    <span class="variable-icon">🔐</span>
+                </span>
+            </label>
             <input type="url" id="url" name="url" required>
         </div>
         
@@ -58,14 +59,24 @@
         </div>
         
         <div class="form-group">
-            <label data-i18n="capability_header_params">ヘッダーパラメータ</label>
+            <label>
+                <span data-i18n="capability_headers_label">ヘッダーパラメータ</span>
+                <span class="variable-hint" title="Variablesが使用できます。例: Bearer &#123;&#123;OPENAI_API_KEY&#125;&#125;">
+                    <span class="variable-icon">🔐</span>
+                </span>
+            </label>
             <div id="headers-container"></div>
             <button type="button" onclick="addHeaderRow()" class="btn btn-sm btn-secondary" style="margin-top: 10px;" data-i18n="button_add_header">+ ヘッダーを追加</button>
             <small data-i18n="capability_header_params_hint">個別のヘッダーパラメータ（サービス共通ヘッダーに追加されます）</small>
         </div>
         
         <div class="form-group">
-            <label data-i18n="capability_body_params">Bodyパラメータ</label>
+            <label>
+                <span data-i18n="capability_body_params_label">Bodyパラメータ</span>
+                <span class="variable-hint" title="Variablesが使用できます。例: &#123;&#123;SERVICE_KEY&#125;&#125;">
+                    <span class="variable-icon">🔐</span>
+                </span>
+            </label>
             <small data-i18n="capability_body_json_hint" style="display:block; margin-bottom:6px; font-size:0.92em; color:#666;">JSON形式のリクエストボディ</small>
             <div id="body-key-value" style="display: none;">
                 <div id="body-container"></div>
@@ -86,17 +97,6 @@
             </div>
         </div>
     </form>
-</div>
-
-<div class="form-card" style="margin-top: 20px;">
-    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-        <button type="button" onclick="validateJson()" class="btn btn-sm btn-secondary">
-            <span data-i18n="button_validate_json">JSON構造チェック</span>
-        </button>
-        <button type="button" onclick="formatJson()" class="btn btn-sm btn-secondary">
-            <span data-i18n="button_format_json">整形</span>
-        </button>
-    </div>
 </div>
 
 <div class="form-card" style="margin-top: 20px;">
@@ -138,6 +138,66 @@
         <a href="#" id="cancel-link" class="btn btn-secondary" data-i18n="button_cancel">キャンセル</a>
     </div>
 </div>
+
+<style>
+.variable-hint {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 8px;
+    cursor: help;
+    position: relative;
+}
+
+.variable-icon {
+    font-size: 14px;
+    opacity: 0.7;
+    transition: all 0.2s;
+}
+
+.variable-hint:hover .variable-icon {
+    opacity: 1;
+    transform: scale(1.2);
+}
+
+.variable-hint::before {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    background: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.variable-hint::after {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-2px);
+    border: 6px solid transparent;
+    border-top-color: #333;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 1000;
+}
+
+.variable-hint:hover::before,
+.variable-hint:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-4px);
+}
+</style>
 {% endblock %}
 
 {% block scripts %}

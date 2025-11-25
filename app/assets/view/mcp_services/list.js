@@ -61,6 +61,116 @@ async function deleteMcpService(id) {
     loadMcpServices();
 }
 
+// Import Modal Functions
+let selectedFile = null;
+
+function openImportModal() {
+    document.getElementById('import-modal').style.display = 'block';
+    document.getElementById('import-error').style.display = 'none';
+    clearFile();
+}
+
+function closeImportModal() {
+    document.getElementById('import-modal').style.display = 'none';
+    clearFile();
+}
+
+function clearFile() {
+    selectedFile = null;
+    document.getElementById('file-input').value = '';
+    document.getElementById('file-info').style.display = 'none';
+    document.querySelector('.drop-zone-content').style.display = 'flex';
+    document.getElementById('import-btn').disabled = true;
+}
+
+function handleFileSelect(file) {
+    if (!file || !file.name.endsWith('.json')) {
+        showImportError(currentLanguage === 'ja' ? 'JSONファイルを選択してください' : 'Please select a JSON file');
+        return;
+    }
+    
+    selectedFile = file;
+    document.getElementById('file-info-name').textContent = file.name;
+    document.getElementById('file-info').style.display = 'flex';
+    document.querySelector('.drop-zone-content').style.display = 'none';
+    document.getElementById('import-btn').disabled = false;
+    document.getElementById('import-error').style.display = 'none';
+}
+
+function showImportError(message) {
+    const errorDiv = document.getElementById('import-error');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+}
+
+async function confirmImport() {
+    if (!selectedFile) return;
+    
+    try {
+        const text = await selectedFile.text();
+        const data = JSON.parse(text);
+        
+        const response = await fetch('/api/mcp-services/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Import failed');
+        }
+        
+        const result = await response.json();
+        
+        closeImportModal();
+        
+        // Show success message with subdomain change warning if applicable
+        let message = currentLanguage === 'ja' ? 'インポートしました' : 'Imported successfully';
+        if (result.subdomain_changed) {
+            message += currentLanguage === 'ja' 
+                ? `\n\nサブドメインが重複していたため、新しいサブドメイン「${result.mcp_service.subdomain}」が割り当てられました。`
+                : `\n\nSubdomain was changed to "${result.mcp_service.subdomain}" due to conflict.`;
+        }
+        alert(message);
+        
+        loadMcpServices();
+    } catch (error) {
+        console.error('Import error:', error);
+        showImportError(error.message || (currentLanguage === 'ja' ? 'インポートに失敗しました' : 'Import failed'));
+    }
+}
+
+// Setup drag and drop
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+if (dropZone) {
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('drag-over');
+    });
+    
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('drag-over');
+    });
+    
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        
+        const file = e.dataTransfer.files[0];
+        handleFileSelect(file);
+    });
+}
+
+if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        handleFileSelect(file);
+    });
+}
+
 // 言語初期化完了後にMCPサービス一覧を読み込む
 (async () => {
     await initLanguageSwitcher();

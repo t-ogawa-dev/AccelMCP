@@ -17,11 +17,205 @@
             <h2 data-i18n="mcp_service_list_title">MCPサービス一覧</h2>
             <p data-i18n="mcp_service_list_desc">登録されているMCPサービスの管理</p>
         </div>
-        <a href="/mcp-services/new" class="btn btn-primary" data-i18n="mcp_service_new_button">新規MCPサービス登録</a>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="openImportModal()" class="btn btn-secondary" data-i18n="mcp_service_import_button">インポート</button>
+            <a href="/mcp-services/new" class="btn btn-primary" data-i18n="mcp_service_new_button">新規MCPサービス登録</a>
+        </div>
     </div>
 </div>
 
 <div id="services-list"></div>
+
+<!-- Import Modal -->
+<div id="import-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 data-i18n="mcp_service_import_title">MCPサービスをインポート</h3>
+            <span class="modal-close" onclick="closeImportModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p data-i18n="mcp_service_import_description">エクスポートしたJSONファイルをドラッグ&ドロップまたは選択してください</p>
+            <div id="import-error" class="modal-error" style="display: none;"></div>
+            <div id="drop-zone" class="drop-zone">
+                <div class="drop-zone-content">
+                    <div class="drop-zone-icon">📁</div>
+                    <p data-i18n="mcp_service_import_drop_hint">ここにJSONファイルをドロップ</p>
+                    <p class="drop-zone-or" data-i18n="mcp_service_import_or">または</p>
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('file-input').click()" data-i18n="mcp_service_import_select_file">ファイルを選択</button>
+                    <input type="file" id="file-input" accept=".json" style="display: none;">
+                </div>
+                <div id="file-info" class="file-info" style="display: none;">
+                    <div class="file-info-icon">✓</div>
+                    <div class="file-info-name"></div>
+                    <button type="button" class="btn-small btn-secondary" onclick="clearFile()" data-i18n="button_clear">クリア</button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeImportModal()" data-i18n="button_cancel">キャンセル</button>
+            <button class="btn btn-primary" onclick="confirmImport()" id="import-btn" disabled data-i18n="mcp_service_import_button">インポート</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background-color: white;
+    margin: 10% auto;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.3s;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 20px;
+    color: #333;
+}
+
+.modal-close {
+    font-size: 28px;
+    font-weight: bold;
+    color: #999;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.modal-close:hover {
+    color: #333;
+}
+
+.modal-body {
+    padding: 24px;
+}
+
+.modal-body p {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.modal-error {
+    background-color: #fee;
+    border: 1px solid #fcc;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 20px;
+    color: #c33;
+    font-size: 14px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 20px 24px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.drop-zone {
+    border: 2px dashed #d0d0d0;
+    border-radius: 8px;
+    padding: 40px;
+    text-align: center;
+    transition: all 0.3s;
+    background: #fafafa;
+}
+
+.drop-zone.drag-over {
+    border-color: #667eea;
+    background: #f0f4ff;
+}
+
+.drop-zone-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.drop-zone-icon {
+    font-size: 48px;
+    margin-bottom: 8px;
+}
+
+.drop-zone-content p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.drop-zone-or {
+    color: #999;
+    font-size: 13px;
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: #e8f5e9;
+    border-radius: 6px;
+}
+
+.file-info-icon {
+    font-size: 24px;
+    color: #10b981;
+}
+
+.file-info-name {
+    flex: 1;
+    font-weight: 500;
+    color: #333;
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 13px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+</style>
 {% endblock %}
 
 {% block scripts %}

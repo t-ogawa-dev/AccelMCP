@@ -60,7 +60,12 @@
         
         <div id="common-headers-section">
             <div class="form-group">
-                <label data-i18n="app_common_headers_label">共通ヘッダー</label>
+                <label>
+                    <span data-i18n="app_common_headers_label">共通ヘッダー</span>
+                    <span class="variable-hint" title="Variablesが使用できます。例: Bearer &#123;&#123;OPENAI_API_KEY&#125;&#125;">
+                        <span class="variable-icon">🔐</span>
+                    </span>
+                </label>
                 <div id="headers-container"></div>
                 <button type="button" onclick="addHeaderRow()" class="btn btn-sm btn-secondary" style="margin-top: 10px;" data-i18n="button_add_header">+ ヘッダーを追加</button>
                 <small data-i18n="app_common_headers_hint">全てのCapabilityで使用される共通ヘッダー</small>
@@ -73,6 +78,66 @@
         </div>
     </form>
 </div>
+
+<style>
+.variable-hint {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 8px;
+    cursor: help;
+    position: relative;
+}
+
+.variable-icon {
+    font-size: 14px;
+    opacity: 0.7;
+    transition: all 0.2s;
+}
+
+.variable-hint:hover .variable-icon {
+    opacity: 1;
+    transform: scale(1.2);
+}
+
+.variable-hint::before {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    background: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.variable-hint::after {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-2px);
+    border: 6px solid transparent;
+    border-top-color: #333;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 1000;
+}
+
+.variable-hint:hover::before,
+.variable-hint:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-4px);
+}
+</style>
 {% endblock %}
 
 {% block scripts %}

@@ -20,7 +20,7 @@ from flask_migrate import init, migrate, upgrade, downgrade, current, history
 from app import create_app
 
 app = create_app()
-MIGRATION_DIR = 'migrations'
+MIGRATION_DIR = 'db/migrations'
 
 def main():
     if len(sys.argv) < 2:

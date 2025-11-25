@@ -288,6 +288,8 @@ class MCPHandler:
     
     def _execute_api_call(self, service, capability, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Execute API call"""
+        from app.services.variable_replacer import VariableReplacer
+        
         # Merge headers: service common headers + capability specific headers
         headers = {}
         if service.common_headers:
@@ -295,16 +297,36 @@ class MCPHandler:
         if capability.headers:
             headers.update(json.loads(capability.headers))
         
+        # Replace variables in headers (always as strings)
+        headers = VariableReplacer.replace_in_dict(headers)
+        
+        # Replace variables in URL (always as strings)
+        url = VariableReplacer.replace_in_string(capability.url)
+        
         # Merge body params with arguments
         body = {}
         if capability.body_params:
-            body.update(json.loads(capability.body_params))
+            # body_params can be string (JSON) or dict
+            body_params = capability.body_params
+            if isinstance(body_params, str):
+                # JSON string: replace with type preservation
+                body = VariableReplacer.replace_in_json(body_params)
+                if not isinstance(body, dict):
+                    body = {}
+            else:
+                # Dict: parse and replace
+                try:
+                    parsed = json.loads(body_params)
+                    body = VariableReplacer.replace_in_body_params(parsed)
+                except (json.JSONDecodeError, TypeError):
+                    body = {}
+        
         body.update(arguments)
         
         try:
             # Make HTTP request
             response = httpx.post(
-                capability.url,
+                url,
                 headers=headers,
                 json=body,
                 timeout=30.0

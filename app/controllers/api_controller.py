@@ -7,7 +7,7 @@ import secrets
 from flask import Blueprint, request, jsonify
 from app.controllers.auth_controller import login_required
 
-from app.models.models import db, ConnectionAccount, McpService, Service, Capability, AccountPermission, AdminSettings
+from app.models.models import db, ConnectionAccount, McpService, Service, Capability, AccountPermission, AdminSettings, Variable
 
 # Service is now mapped to 'apps' table, but keep the class name for compatibility
 
@@ -70,6 +70,116 @@ def toggle_mcp_service(mcp_service_id):
     mcp_service.is_enabled = not mcp_service.is_enabled
     db.session.commit()
     return jsonify(mcp_service.to_dict())
+
+
+@api_bp.route('/mcp-services/<int:mcp_service_id>/export', methods=['GET'])
+@login_required
+def export_mcp_service(mcp_service_id):
+    """Export MCP service with all apps and capabilities"""
+    mcp_service = McpService.query.get_or_404(mcp_service_id)
+    
+    # Build nested structure: service -> apps -> capabilities
+    export_data = {
+        'name': mcp_service.name,
+        'subdomain': mcp_service.subdomain,
+        'description': mcp_service.description,
+        'apps': []
+    }
+    
+    # Include all apps under this service
+    for app in mcp_service.apps:
+        app_data = {
+            'name': app.name,
+            'description': app.description,
+            'service_type': app.service_type,
+            'mcp_url': app.mcp_url,
+            'common_headers': json.loads(app.common_headers) if app.common_headers else {},
+            'capabilities': []
+        }
+        
+        # Include all capabilities under this app
+        for capability in app.capabilities:
+            cap_data = {
+                'name': capability.name,
+                'capability_type': capability.capability_type,
+                'description': capability.description,
+                'url': capability.url,
+                'headers': json.loads(capability.headers) if capability.headers else {},
+                'body_params': json.loads(capability.body_params) if capability.body_params else {},
+                'template_content': capability.template_content
+            }
+            app_data['capabilities'].append(cap_data)
+        
+        export_data['apps'].append(app_data)
+    
+    return jsonify(export_data)
+
+
+@api_bp.route('/mcp-services/import', methods=['POST'])
+@login_required
+def import_mcp_service():
+    """Import MCP service from exported JSON"""
+    import string
+    import random
+    
+    data = request.get_json()
+    
+    # Validate required fields
+    if not data.get('name') or not data.get('subdomain'):
+        return jsonify({'error': 'Missing required fields: name, subdomain'}), 400
+    
+    # Check for subdomain collision
+    original_subdomain = data['subdomain']
+    subdomain = original_subdomain
+    
+    # If subdomain exists, append random 5 characters
+    while McpService.query.filter_by(subdomain=subdomain).first():
+        random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=5))
+        subdomain = f"{original_subdomain}-{random_suffix}"
+    
+    # Create MCP service
+    mcp_service = McpService(
+        name=data['name'],
+        subdomain=subdomain,
+        description=data.get('description', '')
+    )
+    db.session.add(mcp_service)
+    db.session.flush()  # Get ID without committing
+    
+    # Import apps
+    for app_data in data.get('apps', []):
+        app = Service(
+            mcp_service_id=mcp_service.id,
+            name=app_data['name'],
+            description=app_data.get('description', ''),
+            service_type=app_data.get('service_type', 'api'),
+            mcp_url=app_data.get('mcp_url'),
+            common_headers=json.dumps(app_data.get('common_headers', {}))
+        )
+        db.session.add(app)
+        db.session.flush()  # Get ID without committing
+        
+        # Import capabilities
+        for cap_data in app_data.get('capabilities', []):
+            capability = Capability(
+                app_id=app.id,
+                name=cap_data['name'],
+                capability_type=cap_data.get('capability_type', 'resource'),
+                description=cap_data.get('description', ''),
+                url=cap_data.get('url', ''),
+                headers=json.dumps(cap_data.get('headers', {})),
+                body_params=json.dumps(cap_data.get('body_params', {})),
+                template_content=cap_data.get('template_content')
+            )
+            db.session.add(capability)
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'mcp_service': mcp_service.to_dict(),
+        'subdomain_changed': subdomain != original_subdomain
+    }), 201
 
 
 # ============= App API =============
@@ -783,3 +893,71 @@ def apply_template(template_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+
+# ============= Variables API =============
+
+@api_bp.route('/variables', methods=['GET', 'POST'])
+@login_required
+def variables():
+    """Get all variables or create new variable"""
+    if request.method == 'GET':
+        variables = Variable.query.all()
+        return jsonify([v.to_dict() for v in variables])
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        
+        # Check for duplicate name
+        if Variable.query.filter_by(name=data['name']).first():
+            return jsonify({'error': '同じ名前の変数が既に存在します'}), 409
+        
+        variable = Variable(
+            name=data['name'],
+            value_type=data.get('value_type', 'string'),
+            description=data.get('description', ''),
+            is_secret=data.get('is_secret', True)
+        )
+        variable.set_value(data['value'])
+        
+        db.session.add(variable)
+        db.session.commit()
+        return jsonify(variable.to_dict()), 201
+
+
+@api_bp.route('/variables/<int:variable_id>', methods=['GET', 'PUT', 'DELETE'])
+@login_required
+def variable_detail(variable_id):
+    """Get, update, or delete a specific variable"""
+    variable = Variable.query.get_or_404(variable_id)
+    
+    if request.method == 'GET':
+        # include_value=True to show actual value for editing
+        return jsonify(variable.to_dict(include_value=True))
+    
+    elif request.method == 'PUT':
+        data = request.get_json()
+        
+        # Check for duplicate name (exclude current variable)
+        new_name = data.get('name', variable.name)
+        if new_name != variable.name:
+            existing = Variable.query.filter_by(name=new_name).filter(Variable.id != variable.id).first()
+            if existing:
+                return jsonify({'error': '同じ名前の変数が既に存在します'}), 409
+        
+        variable.name = new_name
+        variable.value_type = data.get('value_type', variable.value_type)
+        variable.description = data.get('description', variable.description)
+        variable.is_secret = data.get('is_secret', variable.is_secret)
+        
+        if 'value' in data:
+            variable.set_value(data['value'])
+        
+        db.session.commit()
+        return jsonify(variable.to_dict())
+    
+    elif request.method == 'DELETE':
+        db.session.delete(variable)
+        db.session.commit()
+        return '', 204
+

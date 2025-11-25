@@ -126,6 +126,29 @@ def account_detail(account_id):
     return render_template('accounts/detail.html', account_id=account_id)
 
 
+# ============= Variables Management Routes =============
+
+@admin_bp.route('/variables')
+@login_required
+def variables_list():
+    """Variables list page"""
+    return render_template('variables/list.html')
+
+
+@admin_bp.route('/variables/new')
+@login_required
+def variable_new():
+    """New variable page"""
+    return render_template('variables/new.html')
+
+
+@admin_bp.route('/variables/<int:variable_id>/edit')
+@login_required
+def variable_edit(variable_id):
+    """Edit variable page"""
+    return render_template('variables/edit.html', variable_id=variable_id)
+
+
 # ============= Template Management Routes =============
 
 @admin_bp.route('/mcp-templates')

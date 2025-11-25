@@ -6,12 +6,27 @@ async function loadCapability() {
     const cap = await response.json();
     
     // Update breadcrumb links
-    // Set breadcrumb links
-    const mcpServiceId = cap.mcp_service_id || 1; // APIから取得するか、デフォルト値
-    document.getElementById('mcp-service-link').href = `/mcp-services/${mcpServiceId}`;
-    document.getElementById('apps-link').href = `/mcp-services/${mcpServiceId}/apps`;
-    document.getElementById('service-link').href = `/mcp-services/${mcpServiceId}/apps/${cap.service_id}`;
-    document.getElementById('capabilities-link').href = `/mcp-services/${mcpServiceId}/apps/${cap.service_id}/capabilities`;
+    if (cap.mcp_service_id && cap.service_id) {
+        const mcpServiceId = cap.mcp_service_id;
+        const serviceId = cap.service_id;
+        
+        document.getElementById('mcp-service-link').href = `/mcp-services/${mcpServiceId}`;
+        document.getElementById('apps-link').href = `/mcp-services/${mcpServiceId}/apps`;
+        document.getElementById('service-link').href = `/mcp-services/${mcpServiceId}/apps/${serviceId}`;
+        document.getElementById('capabilities-link').href = `/mcp-services/${mcpServiceId}/apps/${serviceId}/capabilities`;
+        
+        // Fetch service name for breadcrumb
+        try {
+            const serviceResponse = await fetch(`/api/apps/${serviceId}`);
+            const service = await serviceResponse.json();
+            if (service.mcp_service_name) {
+                document.getElementById('mcp-service-link').textContent = service.mcp_service_name;
+            }
+        } catch (e) {
+            console.error('Failed to fetch service info for breadcrumb:', e);
+        }
+    }
+    
     document.getElementById('edit-link').href = `/capabilities/${capabilityId}/edit`;
     
     const container = document.getElementById('capability-detail');

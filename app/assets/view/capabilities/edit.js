@@ -148,7 +148,9 @@ function validateJson() {
     }
     
     try {
-        JSON.parse(jsonText);
+        // Replace {{VARIABLE}} placeholders with dummy values for validation
+        const testJson = jsonText.replace(/\{\{[^}]+\}\}/g, '"__VARIABLE__"');
+        JSON.parse(testJson);
         errorDiv.style.display = 'block';
         errorDiv.style.color = '#28a745';
         errorDiv.innerHTML = '✓ ' + t('json_valid');
@@ -172,8 +174,22 @@ function formatJson() {
     }
     
     try {
-        const parsed = JSON.parse(jsonText);
-        textarea.value = JSON.stringify(parsed, null, 2);
+        // Extract variables before formatting
+        const variables = [];
+        const testJson = jsonText.replace(/\{\{([^}]+)\}\}/g, (match, varName) => {
+            variables.push({ match, varName });
+            return '"__VARIABLE_' + (variables.length - 1) + '__"';
+        });
+        
+        const parsed = JSON.parse(testJson);
+        let formatted = JSON.stringify(parsed, null, 2);
+        
+        // Restore variables in formatted JSON
+        variables.forEach((v, index) => {
+            formatted = formatted.replace('"__VARIABLE_' + index + '__"', v.match);
+        });
+        
+        textarea.value = formatted;
         errorDiv.style.display = 'none';
     } catch (e) {
         errorDiv.style.display = 'block';
@@ -277,7 +293,11 @@ async function loadCapability() {
             const jsonText = document.getElementById('body_json').value.trim();
             if (jsonText) {
                 try {
-                    bodyParams = JSON.parse(jsonText);
+                    // Replace {{VARIABLE}} placeholders with dummy values for validation
+                    const testJson = jsonText.replace(/\{\{[^}]+\}\}/g, '"__VARIABLE__"');
+                    bodyParams = JSON.parse(testJson);
+                    // Store original JSON with variables intact
+                    bodyParams = jsonText;
                 } catch (e) {
                     const errorDiv = document.getElementById('json-validation-error');
                     errorDiv.style.display = 'block';

@@ -48,6 +48,34 @@ function copyEndpoint(btn) {
     }
 }
 
+async function exportMcpService() {
+    try {
+        const response = await fetch(`/api/mcp-services/${mcpServiceId}/export`);
+        if (!response.ok) throw new Error('Export failed');
+        
+        const data = await response.json();
+        
+        // Download as JSON file
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${data.name}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        // Show success message
+        const successMsg = currentLanguage === 'ja' ? 'エクスポートしました' : 'Exported successfully';
+        alert(successMsg);
+    } catch (error) {
+        console.error('Export failed:', error);
+        const errorMsg = currentLanguage === 'ja' ? 'エクスポートに失敗しました' : 'Export failed';
+        alert(errorMsg);
+    }
+}
+
 async function loadMcpService() {
     const response = await fetch(`/api/mcp-services/${mcpServiceId}`);
     const service = await response.json();

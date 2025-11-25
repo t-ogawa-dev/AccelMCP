@@ -19,7 +19,8 @@
             <h2 id="service-name" data-i18n="mcp_service_detail_title">MCPサービス詳細</h2>
             <p data-i18n="mcp_service_detail_desc">MCPサービスの詳細情報</p>
         </div>
-        <div>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="exportMcpService()" class="btn btn-secondary" data-i18n="mcp_service_export_button">エクスポート</button>
             <a href="/mcp-services/{{ mcp_service_id }}/edit" class="btn btn-secondary" data-i18n="button_edit">編集</a>
         </div>
     </div>
