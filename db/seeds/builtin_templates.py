@@ -182,6 +182,105 @@ BUILTIN_TEMPLATES = [
                 'description': 'Create a new calendar event'
             }
         ]
+    },
+    {
+        'name': 'Filesystem MCP',
+        'service_type': 'mcp',
+        'description': 'Local filesystem operations via MCP server',
+        'icon': '📁',
+        'category': 'System',
+        'capabilities': [
+            {
+                'name': 'read_file',
+                'capability_type': 'tool',
+                'url': 'mcp://filesystem',
+                'headers': {},
+                'body_params': {'path': '/path/to/file.txt'},
+                'description': 'Read contents of a file'
+            },
+            {
+                'name': 'write_file',
+                'capability_type': 'tool',
+                'url': 'mcp://filesystem',
+                'headers': {},
+                'body_params': {'path': '/path/to/file.txt', 'content': 'File content'},
+                'description': 'Write content to a file'
+            },
+            {
+                'name': 'list_directory',
+                'capability_type': 'tool',
+                'url': 'mcp://filesystem',
+                'headers': {},
+                'body_params': {'path': '/path/to/directory'},
+                'description': 'List files in a directory'
+            }
+        ]
+    },
+    {
+        'name': 'Database MCP',
+        'service_type': 'mcp',
+        'description': 'Database query execution via MCP server',
+        'icon': '🗄️',
+        'category': 'Data',
+        'capabilities': [
+            {
+                'name': 'execute_query',
+                'capability_type': 'tool',
+                'url': 'mcp://database',
+                'headers': {},
+                'body_params': {'query': 'SELECT * FROM users LIMIT 10'},
+                'description': 'Execute SQL query'
+            },
+            {
+                'name': 'list_tables',
+                'capability_type': 'tool',
+                'url': 'mcp://database',
+                'headers': {},
+                'body_params': {},
+                'description': 'List all database tables'
+            },
+            {
+                'name': 'describe_table',
+                'capability_type': 'tool',
+                'url': 'mcp://database',
+                'headers': {},
+                'body_params': {'table': 'users'},
+                'description': 'Get table schema information'
+            }
+        ]
+    },
+    {
+        'name': 'Git MCP',
+        'service_type': 'mcp',
+        'description': 'Git repository operations via MCP server',
+        'icon': '🌿',
+        'category': 'Development',
+        'capabilities': [
+            {
+                'name': 'git_status',
+                'capability_type': 'tool',
+                'url': 'mcp://git',
+                'headers': {},
+                'body_params': {'repository': '/path/to/repo'},
+                'description': 'Get repository status'
+            },
+            {
+                'name': 'git_commit',
+                'capability_type': 'tool',
+                'url': 'mcp://git',
+                'headers': {},
+                'body_params': {'repository': '/path/to/repo', 'message': 'Commit message'},
+                'description': 'Create a git commit'
+            },
+            {
+                'name': 'git_log',
+                'capability_type': 'tool',
+                'url': 'mcp://git',
+                'headers': {},
+                'body_params': {'repository': '/path/to/repo', 'limit': 10},
+                'description': 'Get commit history'
+            }
+        ]
     }
 ]
 
