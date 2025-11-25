@@ -510,6 +510,7 @@ select[multiple] option:checked {
     width: 50px;
     height: 24px;
     margin-right: 10px;
+    align-self: center;
 }
 
 .toggle-switch input {

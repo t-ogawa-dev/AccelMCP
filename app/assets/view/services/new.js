@@ -93,6 +93,17 @@ async function testConnection() {
 (async () => {
     await initLanguageSwitcher();
     
+    // URLからMCPサービスIDを取得
+    const pathParts = window.location.pathname.split('/');
+    const mcpServiceId = pathParts[2]; // /mcp-services/{id}/apps/new
+    
+    if (!mcpServiceId) {
+        console.error('MCP Service ID not found in URL');
+        alert('MCPサービスIDが見つかりません');
+        window.location.href = '/mcp-services';
+        return;
+    }
+    
     // Add initial header row
     addHeaderRow();
     
@@ -104,10 +115,10 @@ async function testConnection() {
         const serviceType = formData.get('service_type');
         const data = {
             name: formData.get('name'),
-            subdomain: formData.get('subdomain'),
             description: formData.get('description'),
             service_type: serviceType,
-            common_headers: {}
+            common_headers: {},
+            mcp_service_id: mcpServiceId
         };
         
         if (serviceType === 'mcp') {
@@ -132,7 +143,7 @@ async function testConnection() {
         });
         
         if (response.ok) {
-            window.location.href = '/services';
+            window.location.href = `/mcp-services/${mcpServiceId}/apps`;
         } else {
             const error = await response.json();
             alert(t('app_register_failed') + ': ' + (error.error || t('error_unknown')));

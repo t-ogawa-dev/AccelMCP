@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}MCPサービス編集 - Accel MCP{% endblock %}
+
+{% block breadcrumb %}
+<nav class="breadcrumb">
+    <a href="/dashboard" data-i18n="breadcrumb_home">ホーム</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="/mcp-services" data-i18n="mcp_service_list_title">MCPサービス一覧</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="/mcp-services/{{ mcp_service_id }}" data-i18n="mcp_service_detail_title">MCPサービス詳細</a>
+    <span class="breadcrumb-separator">›</span>
+    <span class="breadcrumb-current" data-i18n="breadcrumb_app_edit">編集</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <h2 data-i18n="mcp_service_edit_title">MCPサービス編集</h2>
+    <p data-i18n="mcp_service_edit_desc">MCPサービス情報を編集します</p>
+</div>
+
+<div class="form-card">
+    <form id="mcp-service-form">
+        <div class="form-group">
+            <label for="name"><span data-i18n="mcp_service_name_label">サービス名</span> *</label>
+            <input type="text" id="name" name="name" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="subdomain"><span data-i18n="mcp_service_subdomain_input">サブドメイン</span> *</label>
+            <input type="text" id="subdomain" name="subdomain" required pattern="[a-z0-9-]+" 
+                   data-i18n-title="mcp_service_subdomain_hint">
+            <small data-i18n="mcp_service_subdomain_url_hint">MCP接続URL: http://{subdomain}.lvh.me:5001/mcp (例: http://myservice.lvh.me:5001/mcp)</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="description" data-i18n="mcp_service_description_label">説明</label>
+            <textarea id="description" name="description" rows="3"></textarea>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" data-i18n="button_save">保存</button>
+            <a href="/mcp-services/{{ mcp_service_id }}" class="btn btn-secondary" data-i18n="button_cancel">キャンセル</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/assets/view/mcp_services/edit.js"></script>
+{% endblock %}

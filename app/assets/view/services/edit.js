@@ -1,5 +1,7 @@
 // services/edit.js - Service Edit Page
-const serviceId = parseInt(window.location.pathname.split('/')[2]);
+const pathParts = window.location.pathname.split('/');
+const mcpServiceId = parseInt(pathParts[2]); // /mcp-services/{id}/apps/{app_id}/edit
+const serviceId = parseInt(pathParts[4]);
 let headerIndex = 0;
 
 function toggleServiceType() {
@@ -40,7 +42,6 @@ async function loadService() {
     const service = await response.json();
     
     document.getElementById('name').value = service.name;
-    document.getElementById('subdomain').value = service.subdomain;
     document.getElementById('description').value = service.description || '';
     
     // Set service type
@@ -77,7 +78,6 @@ async function loadService() {
         const serviceType = formData.get('service_type');
         const data = {
             name: formData.get('name'),
-            subdomain: formData.get('subdomain'),
             description: formData.get('description'),
             service_type: serviceType,
             common_headers: {}
@@ -105,7 +105,7 @@ async function loadService() {
         });
         
         if (response.ok) {
-            window.location.href = `/services/${serviceId}`;
+            window.location.href = `/mcp-services/${mcpServiceId}/apps/${serviceId}`;
         } else {
             alert(t('app_update_failed'));
         }

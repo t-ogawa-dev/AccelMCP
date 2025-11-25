@@ -6,7 +6,11 @@
 <nav class="breadcrumb">
     <a href="/dashboard" data-i18n="breadcrumb_home">ホーム</a>
     <span class="breadcrumb-separator">›</span>
-    <a href="/services" data-i18n="breadcrumb_app_list">アプリ一覧</a>
+    <a href="/mcp-services" data-i18n="mcp_service_list_title">MCPサービス一覧</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="/mcp-services/{{ mcp_service_id }}" id="mcp-service-link">MCPサービス</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="/mcp-services/{{ mcp_service_id }}/apps" data-i18n="breadcrumb_app_list">アプリ一覧</a>
     <span class="breadcrumb-separator">›</span>
     <span class="breadcrumb-current" data-i18n="breadcrumb_app_detail">アプリ詳細</span>
 </nav>
@@ -20,8 +24,8 @@
             <p data-i18n="app_detail_desc">アプリの詳細情報</p>
         </div>
         <div style="display: flex; gap: 10px;">
-            <a href="/services/{{ service_id }}/capabilities" class="btn btn-primary" data-i18n="app_capabilities_manage">Capabilities管理</a>
-            <a href="/services/{{ service_id }}/edit" class="btn btn-secondary" data-i18n="button_edit">編集</a>
+            <a href="/mcp-services/{{ mcp_service_id }}/apps/{{ service_id }}/capabilities" class="btn btn-primary" data-i18n="app_capabilities_manage">Capabilities管理</a>
+            <a href="/mcp-services/{{ mcp_service_id }}/apps/{{ service_id }}/edit" class="btn btn-secondary" data-i18n="button_edit">編集</a>
         </div>
     </div>
 </div>

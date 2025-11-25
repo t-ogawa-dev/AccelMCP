@@ -23,12 +23,17 @@
 </div>
 
 <div class="tabs">
-    <button class="tab active" data-tab="builtin" data-i18n="mcp_template_tab_builtin">標準搭載</button>
+    <button class="tab active" data-tab="api" data-i18n="mcp_template_tab_api">WebService(API)</button>
+    <button class="tab" data-tab="mcp" data-i18n="mcp_template_tab_mcp">WebService(MCP)</button>
     <button class="tab" data-tab="custom" data-i18n="mcp_template_tab_custom">カスタム</button>
 </div>
 
-<div class="tab-content" id="builtin-tab">
-    <div id="builtin-templates" class="templates-grid"></div>
+<div class="tab-content" id="api-tab">
+    <div id="api-templates" class="templates-grid"></div>
+</div>
+
+<div class="tab-content" id="mcp-tab" style="display: none;">
+    <div id="mcp-templates" class="templates-grid"></div>
 </div>
 
 <div class="tab-content" id="custom-tab" style="display: none;">

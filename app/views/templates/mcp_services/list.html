@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}MCPサービス一覧 - Accel MCP{% endblock %}
+
+{% block breadcrumb %}
+<nav class="breadcrumb">
+    <a href="/dashboard" data-i18n="breadcrumb_home">ホーム</a>
+    <span class="breadcrumb-separator">›</span>
+    <span class="breadcrumb-current" data-i18n="mcp_service_list_title">MCPサービス一覧</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h2 data-i18n="mcp_service_list_title">MCPサービス一覧</h2>
+            <p data-i18n="mcp_service_list_desc">登録されているMCPサービスの管理</p>
+        </div>
+        <a href="/mcp-services/new" class="btn btn-primary" data-i18n="mcp_service_new_button">新規MCPサービス登録</a>
+    </div>
+</div>
+
+<div id="services-list"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/assets/view/mcp_services/list.js"></script>
+{% endblock %}

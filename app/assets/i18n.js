@@ -30,10 +30,14 @@ const translations = {
         button_add_header: '+ ヘッダーを追加',
         button_add_permission: '+ 権限を追加',
         button_copy: 'コピー',
+        button_copied: 'コピーしました',
         button_close: '閉じる',
         button_back: '戻る',
         button_validate_json: 'JSON構造チェック',
         button_format_json: '整形',
+        
+        // Copy/Paste
+        copy_failed: 'コピーに失敗しました',
         
         // JSON validation
         json_valid: 'JSON構造は正しいです',
@@ -43,6 +47,8 @@ const translations = {
         // ダッシュボード
         dashboard_title: 'ダッシュボード',
         dashboard_description: '各機能へのアクセスはこちらから',
+        mcp_service_card_title: '🌐 MCPサービス管理',
+        mcp_service_card_description: 'MCPサービスの登録、編集、削除を行います。サブドメインの設定と複数のアプリを管理できます。',
         app_card_title: '📡 アプリ管理',
         app_card_description: 'MCPアプリの登録、編集、削除を行います。サブドメインや共通ヘッダーの設定が可能です。',
         account_card_title: '👥 接続アカウント管理',
@@ -50,10 +56,45 @@ const translations = {
         mcp_template_card_title: '📦 テンプレート管理',
         mcp_template_card_description: 'APIアプリの標準テンプレートとカスタムテンプレートを管理します。テンプレートからアプリを簡単に作成できます。',
         
+        // MCPサービス一覧
+        mcp_service_list_title: 'MCPサービス一覧',
+        mcp_service_list_desc: '登録されているMCPサービスの管理',
+        mcp_service_new_button: '新規MCPサービス登録',
+        mcp_service_empty: 'MCPサービスが登録されていません',
+        mcp_service_subdomain: 'サブドメイン',
+        mcp_service_apps_count: 'アプリ数',
+        mcp_service_delete_confirm: 'このMCPサービスを削除してもよろしいですか？配下のアプリもすべて削除されます。',
+        
+        // MCPサービス詳細
+        mcp_service_detail_title: 'MCPサービス詳細',
+        mcp_service_detail_desc: 'MCPサービスの詳細情報',
+        mcp_service_apps_manage: 'アプリ管理',
+        mcp_service_apps_button: 'アプリ',
+        mcp_service_basic_info: '基本情報',
+        mcp_service_subdomain_label: 'サブドメイン',
+        mcp_service_mcp_endpoint: 'MCPエンドポイント',
+        mcp_service_apps_list: '配下のアプリ',
+        
+        // MCPサービス新規登録
+        mcp_service_new_title: 'MCPサービス新規登録',
+        mcp_service_new_desc: '新しいMCPサービスを登録します',
+        mcp_service_name_label: 'サービス名',
+        mcp_service_subdomain_input: 'サブドメイン',
+        mcp_service_subdomain_hint: '小文字英数字とハイフンのみ使用可能',
+        mcp_service_subdomain_url_hint: 'MCP接続URL: http://{subdomain}.lvh.me:5001/mcp (例: http://myservice.lvh.me:5001/mcp)',
+        mcp_service_description_label: '説明',
+        mcp_service_register_failed: '登録に失敗しました',
+        mcp_service_update_failed: '更新に失敗しました',
+        
+        // MCPサービス編集
+        mcp_service_edit_title: 'MCPサービス編集',
+        mcp_service_edit_desc: 'MCPサービス情報を編集します',
+        
         // テンプレート一覧
         mcp_template_list_title: 'テンプレート一覧',
         mcp_template_list_desc: 'サービステンプレートの管理',
-        mcp_template_tab_builtin: 'WebService',
+        mcp_template_tab_api: 'WebService(API)',
+        mcp_template_tab_mcp: 'WebService(MCP)',
         mcp_template_tab_custom: 'カスタム',
         mcp_template_new_button: '新規カスタムテンプレート',
         mcp_template_new_title: '新規カスタムテンプレート',
@@ -315,10 +356,14 @@ const translations = {
         button_add_header: '+ Add Header',
         button_add_permission: '+ Add Permission',
         button_copy: 'Copy',
+        button_copied: 'Copied',
         button_close: 'Close',
         button_back: 'Back',
         button_validate_json: 'Validate JSON',
         button_format_json: 'Format',
+        
+        // Copy/Paste
+        copy_failed: 'Failed to copy',
         
         // JSON validation
         json_valid: 'JSON structure is valid',
@@ -328,6 +373,8 @@ const translations = {
         // Dashboard
         dashboard_title: 'Dashboard',
         dashboard_description: 'Access to each function',
+        mcp_service_card_title: '🌐 MCP Service Management',
+        mcp_service_card_description: 'Register, edit, and delete MCP services. Configure subdomains and manage multiple apps.',
         app_card_title: '📡 App Management',
         app_card_description: 'Register, edit, and delete MCP apps. Configure subdomains and common headers.',
         account_card_title: '👥 Account Management',
@@ -335,10 +382,45 @@ const translations = {
         mcp_template_card_title: '📦 Template Management',
         mcp_template_card_description: 'Manage built-in and custom API app templates. Easily create apps from templates.',
         
+        // MCP Service List
+        mcp_service_list_title: 'MCP Services',
+        mcp_service_list_desc: 'Manage registered MCP services',
+        mcp_service_new_button: 'New MCP Service',
+        mcp_service_empty: 'No MCP services registered',
+        mcp_service_subdomain: 'Subdomain',
+        mcp_service_apps_count: 'Apps',
+        mcp_service_delete_confirm: 'Are you sure you want to delete this MCP service? All apps under it will also be deleted.',
+        
+        // MCP Service Detail
+        mcp_service_detail_title: 'MCP Service Detail',
+        mcp_service_detail_desc: 'MCP service details',
+        mcp_service_apps_manage: 'Manage Apps',
+        mcp_service_apps_button: 'Apps',
+        mcp_service_basic_info: 'Basic Information',
+        mcp_service_subdomain_label: 'Subdomain',
+        mcp_service_mcp_endpoint: 'MCP Endpoint',
+        mcp_service_apps_list: 'Apps',
+        
+        // MCP Service New
+        mcp_service_new_title: 'New MCP Service',
+        mcp_service_new_desc: 'Register a new MCP service',
+        mcp_service_name_label: 'Service Name',
+        mcp_service_subdomain_input: 'Subdomain',
+        mcp_service_subdomain_hint: 'Only lowercase alphanumeric characters and hyphens allowed',
+        mcp_service_subdomain_url_hint: 'MCP connection URL: http://{subdomain}.lvh.me:5001/mcp (e.g., http://myservice.lvh.me:5001/mcp)',
+        mcp_service_description_label: 'Description',
+        mcp_service_register_failed: 'Registration failed',
+        mcp_service_update_failed: 'Update failed',
+        
+        // MCP Service Edit
+        mcp_service_edit_title: 'Edit MCP Service',
+        mcp_service_edit_desc: 'Edit MCP service information',
+        
         // Template List
         mcp_template_list_title: 'Template List',
         mcp_template_list_desc: 'Service template management',
-        mcp_template_tab_builtin: 'WebService',
+        mcp_template_tab_api: 'WebService(API)',
+        mcp_template_tab_mcp: 'WebService(MCP)',
         mcp_template_tab_custom: 'Custom',
         mcp_template_new_button: 'New Custom Template',
         mcp_template_new_title: 'New Custom Template',

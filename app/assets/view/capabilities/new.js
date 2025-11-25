@@ -1,5 +1,7 @@
 // capabilities/new.js - New Capability Registration Page
-const serviceId = parseInt(window.location.pathname.split('/')[2]);
+const pathParts = window.location.pathname.split('/');
+const mcpServiceId = parseInt(pathParts[2]); // /mcp-services/{id}/apps/{app_id}/capabilities/new
+const serviceId = parseInt(pathParts[4]);
 let headerIndex = 0;
 let bodyIndex = 0;
 
@@ -258,7 +260,7 @@ function formatJson() {
         });
         
         if (response.ok) {
-            window.location.href = `/services/${serviceId}/capabilities`;
+            window.location.href = `/mcp-services/${mcpServiceId}/apps/${serviceId}/capabilities`;
         } else {
             const error = await response.json();
             showError(t('capability_register_failed') + ': ' + (error.error || t('error_unknown')));

@@ -7,11 +7,69 @@ import secrets
 from flask import Blueprint, request, jsonify
 from app.controllers.auth_controller import login_required
 
-from app.models.models import db, ConnectionAccount, Service, Capability, AccountPermission, AdminSettings
+from app.models.models import db, ConnectionAccount, McpService, Service, Capability, AccountPermission, AdminSettings
 
 # Service is now mapped to 'apps' table, but keep the class name for compatibility
 
 api_bp = Blueprint('api', __name__)
+
+
+# ============= MCP Service API =============
+
+@api_bp.route('/mcp-services', methods=['GET', 'POST'])
+@login_required
+def mcp_services():
+    """Get all MCP services or create new MCP service"""
+    if request.method == 'GET':
+        services = McpService.query.all()
+        return jsonify([s.to_dict() for s in services])
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        mcp_service = McpService(
+            name=data['name'],
+            subdomain=data['subdomain'],
+            description=data.get('description', '')
+        )
+        db.session.add(mcp_service)
+        db.session.commit()
+        return jsonify(mcp_service.to_dict()), 201
+
+
+@api_bp.route('/mcp-services/<int:mcp_service_id>', methods=['GET', 'PUT', 'DELETE'])
+@login_required
+def mcp_service_detail(mcp_service_id):
+    """Get, update, or delete a specific MCP service"""
+    mcp_service = McpService.query.get_or_404(mcp_service_id)
+    
+    if request.method == 'GET':
+        result = mcp_service.to_dict()
+        # Include apps list
+        result['apps'] = [app.to_dict() for app in mcp_service.apps]
+        return jsonify(result)
+    
+    elif request.method == 'PUT':
+        data = request.get_json()
+        mcp_service.name = data.get('name', mcp_service.name)
+        mcp_service.subdomain = data.get('subdomain', mcp_service.subdomain)
+        mcp_service.description = data.get('description', mcp_service.description)
+        db.session.commit()
+        return jsonify(mcp_service.to_dict())
+    
+    elif request.method == 'DELETE':
+        db.session.delete(mcp_service)
+        db.session.commit()
+        return '', 204
+
+
+@api_bp.route('/mcp-services/<int:mcp_service_id>/toggle', methods=['POST'])
+@login_required
+def toggle_mcp_service(mcp_service_id):
+    """Toggle MCP service enabled/disabled status"""
+    mcp_service = McpService.query.get_or_404(mcp_service_id)
+    mcp_service.is_enabled = not mcp_service.is_enabled
+    db.session.commit()
+    return jsonify(mcp_service.to_dict())
 
 
 # ============= App API =============
@@ -58,19 +116,21 @@ def test_service_connection():
         return jsonify({'success': False, 'error': str(e)}), 200
 
 
-@api_bp.route('/apps', methods=['GET', 'POST'])
+@api_bp.route('/mcp-services/<int:mcp_service_id>/apps', methods=['GET', 'POST'])
 @login_required
-def apps():
-    """Get all apps or create new app"""
+def mcp_service_apps(mcp_service_id):
+    """Get all apps for an MCP service or create new app under MCP service"""
+    mcp_service = McpService.query.get_or_404(mcp_service_id)
+    
     if request.method == 'GET':
-        services = Service.query.all()
-        return jsonify([s.to_dict() for s in services])
+        return jsonify([app.to_dict() for app in mcp_service.apps])
     
     elif request.method == 'POST':
         data = request.get_json()
         service = Service(
+            mcp_service_id=mcp_service_id,
             name=data['name'],
-            subdomain=data['subdomain'],
+            subdomain=mcp_service.subdomain,  # Inherit from MCP service (deprecated field)
             service_type=data.get('service_type', 'api'),
             mcp_url=data.get('mcp_url'),
             common_headers=json.dumps(data.get('common_headers', {})),
@@ -85,7 +145,40 @@ def apps():
             try:
                 discover_mcp_capabilities(service.id, service.mcp_url)
             except Exception as e:
-                # エラーがあってもサービス登録は完了させる
+                print(f"MCP capability discovery failed: {e}")
+        
+        return jsonify(service.to_dict()), 201
+
+
+@api_bp.route('/apps', methods=['GET', 'POST'])
+@login_required
+def apps():
+    """Get all apps or create new app (legacy endpoint)"""
+    if request.method == 'GET':
+        services = Service.query.all()
+        return jsonify([s.to_dict() for s in services])
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        # If mcp_service_id is provided, use it; otherwise create standalone (for backward compatibility)
+        service = Service(
+            mcp_service_id=data.get('mcp_service_id'),
+            name=data['name'],
+            subdomain=data.get('subdomain'),  # Deprecated
+            service_type=data.get('service_type', 'api'),
+            mcp_url=data.get('mcp_url'),
+            common_headers=json.dumps(data.get('common_headers', {})),
+            description=data.get('description', '')
+        )
+        db.session.add(service)
+        db.session.commit()
+        
+        # MCPタイプの場合、自動でCapabilityを検出
+        if service.service_type == 'mcp' and service.mcp_url:
+            from app.services.mcp_discovery import discover_mcp_capabilities
+            try:
+                discover_mcp_capabilities(service.id, service.mcp_url)
+            except Exception as e:
                 print(f"MCP capability discovery failed: {e}")
         
         return jsonify(service.to_dict()), 201

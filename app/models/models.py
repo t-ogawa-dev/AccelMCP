@@ -33,12 +33,41 @@ class ConnectionAccount(db.Model):
         }
 
 
-class Service(db.Model):
-    __tablename__ = 'apps'
+class McpService(db.Model):
+    """MCPサービス - 複数のアプリを束ねる上位概念"""
+    __tablename__ = 'mcp_services'
     
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     subdomain = db.Column(db.String(50), unique=True, nullable=False)
+    description = db.Column(db.Text)
+    is_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    apps = db.relationship('Service', back_populates='mcp_service', cascade='all, delete-orphan')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'subdomain': self.subdomain,
+            'description': self.description,
+            'is_enabled': self.is_enabled,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'apps_count': len(self.apps) if self.apps else 0
+        }
+
+
+class Service(db.Model):
+    __tablename__ = 'apps'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    mcp_service_id = db.Column(db.Integer, db.ForeignKey('mcp_services.id'), nullable=True)  # nullable=True for migration
+    name = db.Column(db.String(100), nullable=False)
+    subdomain = db.Column(db.String(50), unique=True, nullable=True)  # Will be deprecated
     service_type = db.Column(db.String(20), nullable=False)  # 'api' or 'mcp'
     mcp_url = db.Column(db.String(500))  # MCP接続先URL (service_type='mcp'の場合)
     common_headers = db.Column(db.Text)  # JSON string
@@ -48,13 +77,15 @@ class Service(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
+    mcp_service = db.relationship('McpService', back_populates='apps')
     capabilities = db.relationship('Capability', back_populates='service', cascade='all, delete-orphan')
     
     def to_dict(self):
         return {
             'id': self.id,
+            'mcp_service_id': self.mcp_service_id,
             'name': self.name,
-            'subdomain': self.subdomain,
+            'subdomain': self.subdomain,  # Deprecated, will be removed after migration
             'service_type': self.service_type,
             'mcp_url': self.mcp_url,
             'common_headers': json.loads(self.common_headers) if self.common_headers else {},

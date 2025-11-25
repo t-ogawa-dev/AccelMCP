@@ -15,48 +15,78 @@ def dashboard():
     return render_template('dashboard.html')
 
 
+# ============= MCP Service Management Routes =============
+
+@admin_bp.route('/mcp-services')
+@login_required
+def mcp_services_list():
+    """MCP services list page"""
+    return render_template('mcp_services/list.html')
+
+
+@admin_bp.route('/mcp-services/new')
+@login_required
+def mcp_service_new():
+    """New MCP service page"""
+    return render_template('mcp_services/new.html')
+
+
+@admin_bp.route('/mcp-services/<int:mcp_service_id>')
+@login_required
+def mcp_service_detail(mcp_service_id):
+    """MCP service detail page"""
+    return render_template('mcp_services/detail.html', mcp_service_id=mcp_service_id)
+
+
+@admin_bp.route('/mcp-services/<int:mcp_service_id>/edit')
+@login_required
+def mcp_service_edit(mcp_service_id):
+    """Edit MCP service page"""
+    return render_template('mcp_services/edit.html', mcp_service_id=mcp_service_id)
+
+
 # ============= Service Management Routes =============
 
-@admin_bp.route('/services')
+@admin_bp.route('/mcp-services/<int:mcp_service_id>/apps')
 @login_required
-def services_list():
+def services_list(mcp_service_id):
     """Services list page"""
-    return render_template('services/list.html')
+    return render_template('services/list.html', mcp_service_id=mcp_service_id)
 
 
-@admin_bp.route('/services/new')
+@admin_bp.route('/mcp-services/<int:mcp_service_id>/apps/new')
 @login_required
-def service_new():
+def service_new(mcp_service_id):
     """New service page"""
-    return render_template('services/new.html')
+    return render_template('services/new.html', mcp_service_id=mcp_service_id)
 
 
-@admin_bp.route('/services/<int:service_id>')
+@admin_bp.route('/mcp-services/<int:mcp_service_id>/apps/<int:service_id>')
 @login_required
-def service_detail(service_id):
+def service_detail(mcp_service_id, service_id):
     """Service detail page"""
-    return render_template('services/detail.html', service_id=service_id)
+    return render_template('services/detail.html', mcp_service_id=mcp_service_id, service_id=service_id)
 
 
-@admin_bp.route('/services/<int:service_id>/edit')
+@admin_bp.route('/mcp-services/<int:mcp_service_id>/apps/<int:service_id>/edit')
 @login_required
-def service_edit(service_id):
+def service_edit(mcp_service_id, service_id):
     """Service edit page"""
-    return render_template('services/edit.html', service_id=service_id)
+    return render_template('services/edit.html', mcp_service_id=mcp_service_id, service_id=service_id)
 
 
-@admin_bp.route('/services/<int:service_id>/capabilities')
+@admin_bp.route('/mcp-services/<int:mcp_service_id>/apps/<int:service_id>/capabilities')
 @login_required
-def service_capabilities(service_id):
+def service_capabilities(mcp_service_id, service_id):
     """Service capabilities page"""
-    return render_template('services/capabilities.html', service_id=service_id)
+    return render_template('services/capabilities.html', mcp_service_id=mcp_service_id, service_id=service_id)
 
 
-@admin_bp.route('/services/<int:service_id>/capabilities/new')
+@admin_bp.route('/mcp-services/<int:mcp_service_id>/apps/<int:service_id>/capabilities/new')
 @login_required
-def capability_new(service_id):
+def capability_new(mcp_service_id, service_id):
     """New capability page"""
-    return render_template('capabilities/new.html', service_id=service_id)
+    return render_template('capabilities/new.html', mcp_service_id=mcp_service_id, service_id=service_id)
 
 
 @admin_bp.route('/capabilities/<int:capability_id>')

@@ -6,11 +6,15 @@
 <nav class="breadcrumb">
     <a href="/dashboard" data-i18n="breadcrumb_home">ホーム</a>
     <span class="breadcrumb-separator">›</span>
-    <a href="/services" data-i18n="breadcrumb_app_list">アプリ一覧</a>
+    <a href="/mcp-services" data-i18n="mcp_service_list_title">MCPサービス一覧</a>
     <span class="breadcrumb-separator">›</span>
-    <a href="/services/{{ service_id }}" data-i18n="breadcrumb_app_detail">アプリ詳細</a>
+    <a href="/mcp-services/{{ mcp_service_id }}" id="mcp-service-link">MCPサービス</a>
     <span class="breadcrumb-separator">›</span>
-    <a href="/services/{{ service_id }}/capabilities" data-i18n="breadcrumb_capabilities">Capabilities</a>
+    <a href="/mcp-services/{{ mcp_service_id }}/apps" data-i18n="breadcrumb_app_list">アプリ一覧</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="/mcp-services/{{ mcp_service_id }}/apps/{{ service_id }}" data-i18n="breadcrumb_app_detail">アプリ詳細</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="/mcp-services/{{ mcp_service_id }}/apps/{{ service_id }}/capabilities" data-i18n="breadcrumb_capabilities">Capabilities</a>
     <span class="breadcrumb-separator">›</span>
     <span class="breadcrumb-current" data-i18n="breadcrumb_app_new">新規登録</span>
 </nav>

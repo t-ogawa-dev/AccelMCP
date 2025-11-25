@@ -6,9 +6,13 @@
 <nav class="breadcrumb">
     <a href="/dashboard" data-i18n="breadcrumb_home">ホーム</a>
     <span class="breadcrumb-separator">›</span>
-    <a href="/services" data-i18n="breadcrumb_app_list">アプリ一覧</a>
+    <a href="/mcp-services" data-i18n="mcp_service_list_title">MCPサービス一覧</a>
     <span class="breadcrumb-separator">›</span>
-    <a href="/services/{{ service_id }}" data-i18n="breadcrumb_app_detail">アプリ詳細</a>
+    <a href="/mcp-services/{{ mcp_service_id }}" id="mcp-service-link">MCPサービス</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="/mcp-services/{{ mcp_service_id }}/apps" data-i18n="breadcrumb_app_list">アプリ一覧</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="/mcp-services/{{ mcp_service_id }}/apps/{{ service_id }}" data-i18n="breadcrumb_app_detail">アプリ詳細</a>
     <span class="breadcrumb-separator">›</span>
     <span class="breadcrumb-current" data-i18n="breadcrumb_app_edit">編集</span>
 </nav>
@@ -25,11 +29,6 @@
         <div class="form-group">
             <label for="name"><span data-i18n="app_name_label">アプリ名</span> *</label>
             <input type="text" id="name" name="name" required>
-        </div>
-        
-        <div class="form-group">
-            <label for="subdomain"><span data-i18n="app_subdomain_input">サブドメイン</span> *</label>
-            <input type="text" id="subdomain" name="subdomain" required pattern="[a-z0-9-]+">
         </div>
         
         <div class="form-group">
@@ -70,7 +69,7 @@
         
         <div class="form-actions">
             <button type="submit" class="btn btn-primary" data-i18n="button_save">保存</button>
-            <a href="/services/{{ service_id }}" class="btn btn-secondary" data-i18n="button_cancel">キャンセル</a>
+            <a href="/mcp-services/{{ mcp_service_id }}/apps/{{ service_id }}" class="btn btn-secondary" data-i18n="button_cancel">キャンセル</a>
         </div>
     </form>
 </div>

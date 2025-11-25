@@ -6,8 +6,12 @@ async function loadCapability() {
     const cap = await response.json();
     
     // Update breadcrumb links
-    document.getElementById('service-link').href = `/services/${cap.service_id}`;
-    document.getElementById('capabilities-link').href = `/services/${cap.service_id}/capabilities`;
+    // Set breadcrumb links
+    const mcpServiceId = cap.mcp_service_id || 1; // APIから取得するか、デフォルト値
+    document.getElementById('mcp-service-link').href = `/mcp-services/${mcpServiceId}`;
+    document.getElementById('apps-link').href = `/mcp-services/${mcpServiceId}/apps`;
+    document.getElementById('service-link').href = `/mcp-services/${mcpServiceId}/apps/${cap.service_id}`;
+    document.getElementById('capabilities-link').href = `/mcp-services/${mcpServiceId}/apps/${cap.service_id}/capabilities`;
     document.getElementById('edit-link').href = `/capabilities/${capabilityId}/edit`;
     
     const container = document.getElementById('capability-detail');

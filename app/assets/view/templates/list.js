@@ -1,5 +1,5 @@
 // templates/list.js - Template List Page
-let currentTab = 'builtin';
+let currentTab = 'api';
 let selectedTemplateId = null;
 
 function showFlashMessage(message) {
@@ -14,10 +14,26 @@ function showFlashMessage(message) {
 }
 
 async function loadTemplates(type) {
-    const response = await fetch(`/api/mcp-templates?type=${type}`);
-    const templates = await response.json();
+    let apiType = type;
+    let containerId;
     
-    const containerId = type === 'builtin' ? 'builtin-templates' : 'custom-templates';
+    if (type === 'api' || type === 'mcp') {
+        apiType = 'builtin';
+        containerId = `${type}-templates`;
+    } else {
+        containerId = 'custom-templates';
+    }
+    
+    const response = await fetch(`/api/mcp-templates?type=${apiType}`);
+    let templates = await response.json();
+    
+    // Filter by service_type for builtin templates
+    if (type === 'api') {
+        templates = templates.filter(t => t.service_type === 'api');
+    } else if (type === 'mcp') {
+        templates = templates.filter(t => t.service_type === 'mcp');
+    }
+    
     const container = document.getElementById(containerId);
     
     if (templates.length === 0) {
@@ -109,7 +125,7 @@ function closeSuccessModal() {
 }
 
 function goToServiceList() {
-    window.location.href = '/services';
+    window.location.href = '/apps';
 }
 
 function confirmTemplateUse() {
@@ -251,13 +267,12 @@ document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.add('active');
         
         // Show/hide content
-        document.getElementById('builtin-tab').style.display = tabName === 'builtin' ? 'block' : 'none';
+        document.getElementById('api-tab').style.display = tabName === 'api' ? 'block' : 'none';
+        document.getElementById('mcp-tab').style.display = tabName === 'mcp' ? 'block' : 'none';
         document.getElementById('custom-tab').style.display = tabName === 'custom' ? 'block' : 'none';
         
         currentTab = tabName;
-        if (tabName === 'custom') {
-            loadTemplates('custom');
-        }
+        loadTemplates(tabName);
     });
 });
 
@@ -398,11 +413,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Switch to custom tab when showing flash message
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelector('.tab[data-tab="custom"]').classList.add('active');
-        document.getElementById('builtin-tab').style.display = 'none';
+        document.getElementById('api-tab').style.display = 'none';
+        document.getElementById('mcp-tab').style.display = 'none';
         document.getElementById('custom-tab').style.display = 'block';
         currentTab = 'custom';
         loadTemplates('custom');
     } else {
-        loadTemplates('builtin');
+        loadTemplates('api');
     }
 })();
