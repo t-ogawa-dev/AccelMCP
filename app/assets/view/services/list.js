@@ -29,7 +29,7 @@ async function loadServices(mcpServiceId) {
             </div>
             <div class="list-item-actions">
                 <label class="toggle-switch">
-                    <input type="checkbox" ${service.is_enabled ? 'checked' : ''} onchange="toggleApp(${service.id})">
+                    <input type="checkbox" ${service.is_enabled ? 'checked' : ''} onchange="toggleApp(${service.id}, ${mcpServiceId})">
                     <span class="toggle-slider"></span>
                 </label>
                 <a href="/mcp-services/${mcpServiceId}/apps/${service.id}/capabilities" class="btn btn-sm">${t('app_capabilities_button')}</a>
@@ -40,14 +40,14 @@ async function loadServices(mcpServiceId) {
     `).join('');
 }
 
-async function toggleApp(id) {
+async function toggleApp(id, mcpServiceId) {
     try {
         const response = await fetch(`/api/apps/${id}/toggle`, {
             method: 'POST'
         });
         
         if (response.ok) {
-            loadServices();
+            loadServices(mcpServiceId);
         } else {
             const error = await response.json();
             alert('切り替えに失敗しました: ' + (error.error || 'Unknown error'));
