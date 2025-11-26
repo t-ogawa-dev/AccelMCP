@@ -1,5 +1,7 @@
 // services/capabilities.js - Service Capabilities List
-const serviceId = parseInt(window.location.pathname.split('/')[2]);
+const pathParts = window.location.pathname.split('/');
+const mcpServiceId = parseInt(pathParts[2]);
+const serviceId = parseInt(pathParts[4]);
 
 async function loadCapabilities() {
     const response = await fetch(`/api/apps/${serviceId}/capabilities`);

@@ -1,5 +1,7 @@
 // services/detail.js - Service Detail Page
-const serviceId = parseInt(window.location.pathname.split('/')[2]);
+const pathParts = window.location.pathname.split('/');
+const mcpServiceId = parseInt(pathParts[2]);
+const serviceId = parseInt(pathParts[4]);
 
 async function loadService() {
     const response = await fetch(`/api/apps/${serviceId}`);
@@ -16,17 +18,8 @@ async function loadService() {
             <h3>${t('app_basic_info')}</h3>
             <table class="detail-table">
                 <tr>
-                    <th>${t('app_subdomain_label')}</th>
-                    <td>${service.subdomain}</td>
-                </tr>
-                <tr>
-                    <th>${t('app_mcp_endpoint')}</th>
-                    <td>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <code id="mcp-endpoint">http://${service.subdomain}.lvh.me:5001/mcp</code>
-                            <button onclick="copyEndpoint(this)" class="btn btn-secondary" style="padding: 4px 12px; font-size: 13px;" data-i18n="button_copy">${t('button_copy')}</button>
-                        </div>
-                    </td>
+                    <th>${t('app_type_label')}</th>
+                    <td><span class="badge badge-${service.service_type}">${service.service_type.toUpperCase()}</span></td>
                 </tr>
                 <tr>
                     <th>${t('app_registered_at')}</th>
@@ -44,55 +37,6 @@ async function loadService() {
             <pre class="code-block">${JSON.stringify(service.common_headers, null, 2)}</pre>
         </div>
     `;
-}
-
-function copyEndpoint(button) {
-    const endpointElement = document.getElementById('mcp-endpoint');
-    const endpoint = endpointElement.textContent;
-    
-    // Try modern Clipboard API first
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(endpoint).then(() => {
-            showCopySuccess(button);
-        }).catch(err => {
-            // Fallback to older method
-            fallbackCopy(endpoint, button);
-        });
-    } else {
-        // Use fallback method
-        fallbackCopy(endpoint, button);
-    }
-}
-
-function fallbackCopy(text, button) {
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    textArea.style.position = 'fixed';
-    textArea.style.left = '-999999px';
-    document.body.appendChild(textArea);
-    textArea.select();
-    
-    try {
-        document.execCommand('copy');
-        showCopySuccess(button);
-    } catch (err) {
-        console.error('Failed to copy:', err);
-        alert(currentLanguage === 'ja' ? 'コピーに失敗しました' : 'Failed to copy');
-    } finally {
-        document.body.removeChild(textArea);
-    }
-}
-
-function showCopySuccess(button) {
-    // Show success message
-    const originalText = button.textContent;
-    button.textContent = currentLanguage === 'ja' ? 'コピーしました！' : 'Copied!';
-    button.style.background = '#28a745';
-    
-    setTimeout(() => {
-        button.textContent = originalText;
-        button.style.background = '';
-    }, 2000);
 }
 
 // Initialize language and load service detail
