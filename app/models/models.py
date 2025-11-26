@@ -65,9 +65,8 @@ class Service(db.Model):
     __tablename__ = 'apps'
     
     id = db.Column(db.Integer, primary_key=True)
-    mcp_service_id = db.Column(db.Integer, db.ForeignKey('mcp_services.id'), nullable=True)  # nullable=True for migration
+    mcp_service_id = db.Column(db.Integer, db.ForeignKey('mcp_services.id'), nullable=False)
     name = db.Column(db.String(100), nullable=False)
-    subdomain = db.Column(db.String(50), unique=True, nullable=True)  # Will be deprecated
     service_type = db.Column(db.String(20), nullable=False)  # 'api' or 'mcp'
     mcp_url = db.Column(db.String(500))  # MCP接続先URL (service_type='mcp'の場合)
     common_headers = db.Column(db.Text)  # JSON string
@@ -85,7 +84,6 @@ class Service(db.Model):
             'id': self.id,
             'mcp_service_id': self.mcp_service_id,
             'name': self.name,
-            'subdomain': self.subdomain,  # Deprecated, will be removed after migration
             'service_type': self.service_type,
             'mcp_url': self.mcp_url,
             'common_headers': json.loads(self.common_headers) if self.common_headers else {},

@@ -1,6 +1,8 @@
 // templates/list.js - Template List Page
 let currentTab = 'api';
 let selectedTemplateId = null;
+let selectedMcpServiceId = null;
+let createdAppId = null;
 
 function showFlashMessage(message) {
     const flashDiv = document.getElementById('flash-message');
@@ -85,16 +87,36 @@ function useTemplate(templateId, event) {
     event.stopPropagation();
     selectedTemplateId = templateId;
     
+    // Load MCP services
+    loadMcpServicesForModal();
+    
     // Show modal
     const modal = document.getElementById('use-template-modal');
-    const input = document.getElementById('modal-subdomain');
     const errorDiv = document.getElementById('modal-error');
     
     modal.style.display = 'block';
-    input.value = '';
     errorDiv.style.display = 'none';
     errorDiv.textContent = '';
-    input.focus();
+}
+
+async function loadMcpServicesForModal() {
+    const select = document.getElementById('modal-mcp-service');
+    
+    try {
+        const response = await fetch('/api/mcp-services');
+        const services = await response.json();
+        
+        if (services.length === 0) {
+            select.innerHTML = '<option value="" disabled>' + t('mcp_template_no_services') + '</option>';
+            return;
+        }
+        
+        select.innerHTML = services.map(service => 
+            `<option value="${service.id}">${service.name} (${service.subdomain})</option>`
+        ).join('');
+    } catch (e) {
+        select.innerHTML = '<option value="" disabled>Failed to load services</option>';
+    }
 }
 
 function closeModal() {
@@ -124,28 +146,29 @@ function closeSuccessModal() {
     modal.style.display = 'none';
 }
 
-function goToServiceList() {
-    window.location.href = '/apps';
+function goToAppDetail() {
+    if (selectedMcpServiceId && createdAppId) {
+        window.location.href = `/mcp-services/${selectedMcpServiceId}/apps/${createdAppId}`;
+    } else if (selectedMcpServiceId) {
+        window.location.href = `/mcp-services/${selectedMcpServiceId}/apps`;
+    } else {
+        window.location.href = '/mcp-services';
+    }
 }
 
 function confirmTemplateUse() {
-    const subdomain = document.getElementById('modal-subdomain').value.trim();
+    const select = document.getElementById('modal-mcp-service');
+    const mcpServiceId = select.value;
     
-    if (!subdomain) {
-        showModalError(t('app_subdomain_input') + ' is required');
+    if (!mcpServiceId) {
+        showModalError(t('mcp_template_select_service_required'));
         return;
     }
     
-    // Validate subdomain format
-    const pattern = /^[a-z0-9-]+$/;
-    if (!pattern.test(subdomain)) {
-        showModalError(t('app_subdomain_hint'));
-        return;
-    }
-    
-    // Save templateId before closing modal
+    // Save IDs before applying
     const templateId = selectedTemplateId;
-    applyTemplate(templateId, subdomain);
+    selectedMcpServiceId = mcpServiceId;
+    applyTemplate(templateId, mcpServiceId);
 }
 
 // Close modal when clicking outside
@@ -171,16 +194,17 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-async function applyTemplate(templateId, subdomain) {
+async function applyTemplate(templateId, mcpServiceId) {
     try {
         const response = await fetch(`/api/mcp-templates/${templateId}/apply`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({subdomain})
+            body: JSON.stringify({mcp_service_id: mcpServiceId})
         });
         
         if (response.ok) {
             const service = await response.json();
+            createdAppId = service.id;
             closeModal();
             showSuccessModal(service.name);
         } else {

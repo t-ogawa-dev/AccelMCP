@@ -847,29 +847,27 @@ def import_template():
 @api_bp.route('/mcp-templates/<int:template_id>/apply', methods=['POST'])
 @login_required
 def apply_template(template_id):
-    """Apply template to create a new service"""
-    from app.models.models import McpServiceTemplate
+    """Apply template to create a new app in selected MCP service"""
+    from app.models.models import McpServiceTemplate, McpService
     
     template = McpServiceTemplate.query.get_or_404(template_id)
     data = request.get_json()
     
-    subdomain = data.get('subdomain')
-    if not subdomain:
-        return jsonify({'error': 'Subdomain is required'}), 400
+    mcp_service_id = data.get('mcp_service_id')
+    if not mcp_service_id:
+        return jsonify({'error': 'MCP service ID is required'}), 400
     
-    # Check if subdomain already exists
-    existing_service = Service.query.filter_by(subdomain=subdomain).first()
-    if existing_service:
-        return jsonify({'error': 'Subdomain already exists'}), 409
+    # Check if MCP service exists
+    mcp_service = McpService.query.get_or_404(mcp_service_id)
     
     try:
-        # Create service from template
+        # Create app from template
         service = Service(
             name=data.get('name', template.name),
-            subdomain=subdomain,
             service_type=template.service_type,
             common_headers=template.common_headers,
-            description=data.get('description', template.description)
+            description=data.get('description', template.description),
+            mcp_service_id=mcp_service_id
         )
         db.session.add(service)
         db.session.flush()
