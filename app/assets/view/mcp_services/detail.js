@@ -86,31 +86,6 @@ async function loadMcpService() {
     document.getElementById('subdomain').textContent = service.subdomain;
     document.getElementById('mcp-endpoint').textContent = `http://${service.subdomain}.lvh.me:5001/mcp`;
     document.getElementById('description').textContent = service.description || '-';
-    
-    // Apps list
-    const appsContainer = document.getElementById('apps-list');
-    
-    if (!service.apps || service.apps.length === 0) {
-        appsContainer.innerHTML = `<div class="empty-state">${t('app_empty')}</div>`;
-        return;
-    }
-    
-    appsContainer.innerHTML = service.apps.map(app => `
-        <div class="list-item ${!app.is_enabled ? 'disabled' : ''}">
-            <div class="list-item-main">
-                <h3><a href="/mcp-services/${service.id}/apps/${app.id}">${app.name}</a></h3>
-                <div class="list-item-meta">
-                    <span class="badge badge-${app.service_type}">${app.service_type.toUpperCase()}</span>
-                    ${!app.is_enabled ? `<span class="status-badge disabled">${t('status_disabled')}</span>` : `<span class="status-badge enabled">${t('status_enabled')}</span>`}
-                </div>
-                ${app.description ? `<p class="text-muted">${app.description}</p>` : ''}
-            </div>
-            <div class="list-item-actions">
-                <a href="/mcp-services/${service.id}/apps/${app.id}/capabilities" class="btn btn-sm">${t('app_capabilities_button')}</a>
-                <a href="/mcp-services/${service.id}/apps/${app.id}/edit" class="btn btn-sm">${t('button_edit')}</a>
-            </div>
-        </div>
-    `).join('');
 }
 
 (async () => {
