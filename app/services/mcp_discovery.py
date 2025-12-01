@@ -23,7 +23,30 @@ async def _discover_tools_async(mcp_url: str, headers: dict) -> list:
     """
     import httpx
     
-    # まずPOSTリクエストでinitializeを送信してContent-Typeを確認
+    request_headers = headers.copy() if headers else {}
+    
+    # Step 1: GETリクエストで標準SSEを試す
+    try:
+        async with httpx.AsyncClient() as http_client:
+            get_headers = request_headers.copy()
+            get_headers['Accept'] = 'text/event-stream'
+            
+            response = await http_client.get(
+                mcp_url,
+                headers=get_headers,
+                timeout=10.0,
+                follow_redirects=True
+            )
+            
+            content_type = response.headers.get('content-type', '').lower()
+            if response.status_code == 200 and 'text/event-stream' in content_type:
+                # 標準SSE (GET + endpoint方式)
+                logging.info("Detected standard SSE (GET + endpoint)")
+                return await _discover_tools_sse_standard(mcp_url, request_headers)
+    except Exception as e:
+        logging.debug(f"GET request failed: {e}, trying POST...")
+    
+    # Step 2: POSTリクエストでinitializeを送信してContent-Typeを確認
     async with httpx.AsyncClient() as http_client:
         try:
             # Initialize request to detect server type
@@ -41,7 +64,6 @@ async def _discover_tools_async(mcp_url: str, headers: dict) -> list:
                 "id": 1
             }
             
-            request_headers = headers.copy() if headers else {}
             request_headers['Content-Type'] = 'application/json'
             request_headers['Accept'] = 'application/json, text/event-stream'
             
@@ -56,18 +78,70 @@ async def _discover_tools_async(mcp_url: str, headers: dict) -> list:
             is_sse = 'text/event-stream' in content_type
         except Exception as e:
             # If POST fails, assume HTTP POST JSON-RPC
+            logging.debug(f"POST detection failed: {e}")
             is_sse = False
-            request_headers = headers.copy() if headers else {}
     
     if is_sse:
-        # Use SSE client with prepared headers
-        return await _discover_tools_sse(mcp_url, request_headers)
+        # POST + SSE (Microsoft Learn方式)
+        logging.info("Detected POST + SSE")
+        return await _discover_tools_sse_post(mcp_url, request_headers)
     else:
-        # Use HTTP POST JSON-RPC
+        # HTTP POST JSON-RPC
+        logging.info("Detected HTTP POST JSON-RPC")
         return await _discover_tools_http(mcp_url, headers)
 
 
-async def _discover_tools_sse(mcp_url: str, headers: dict) -> list:
+async def _discover_tools_sse_standard(mcp_url: str, headers: dict) -> list:
+    """
+    標準SSEベースのMCPサーバーからツールリストを取得
+    GET + endpoint イベント方式（MCP SDK使用）
+    
+    Args:
+        mcp_url: MCPサーバーのエンドポイントURL
+        headers: 認証ヘッダー等
+    
+    Returns:
+        ツールのリスト
+    """
+    from mcp import ClientSession
+    from mcp.client.sse import sse_client
+    
+    try:
+        logging.info(f"Attempting standard SSE connection to {mcp_url}")
+        
+        # MCP SDKのSSEクライアントを使用
+        async with sse_client(mcp_url, headers=headers) as (read, write):
+            async with ClientSession(read, write) as session:
+                # Initialize
+                await session.initialize()
+                logging.info("Standard SSE initialized")
+                
+                # List tools
+                tools_result = await session.list_tools()
+                
+                # Extract tools
+                if hasattr(tools_result, 'tools'):
+                    tools_data = tools_result.tools
+                    logging.info(f"Received {len(tools_data)} tools from standard SSE MCP")
+                    
+                    return [
+                        {
+                            'name': tool.name,
+                            'description': tool.description if hasattr(tool, 'description') else '',
+                            'inputSchema': tool.inputSchema if hasattr(tool, 'inputSchema') else {}
+                        }
+                        for tool in tools_data
+                    ]
+                else:
+                    logging.warning("Standard SSE: tools_result does not have 'tools' attribute")
+                    return []
+                    
+    except Exception as e:
+        logging.error(f"Standard SSE MCP connection failed: {str(e)}")
+        raise Exception(f"Standard SSE MCP connection failed: {str(e)}")
+
+
+async def _discover_tools_sse_post(mcp_url: str, headers: dict) -> list:
     """
     SSEベースのMCPサーバーからツールリストを取得
     Microsoft LearnのようなPOST+SSEサーバー向け
