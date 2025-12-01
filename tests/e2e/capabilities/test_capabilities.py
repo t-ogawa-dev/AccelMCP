@@ -8,11 +8,11 @@ from playwright.sync_api import Page, expect
 @pytest.fixture(autouse=True)
 def login(page: Page):
     """各テスト前に自動ログイン"""
-    page.goto("http://localhost:5001/login")
+    page.goto("http://localhost:5000/login")
     page.fill('input[name="username"]', "admin")
     page.fill('input[name="password"]', "admin123")
     page.click('button[type="submit"]')
-    page.wait_for_url("http://localhost:5001/")
+    page.wait_for_url("http://localhost:5000/")
 
 
 class TestCapabilitiesListPage:
@@ -20,7 +20,7 @@ class TestCapabilitiesListPage:
     
     def test_capabilities_list_loads(self, page: Page):
         """Capabilities一覧ページが読み込まれる"""
-        page.goto("http://localhost:5001/services")
+        page.goto("http://localhost:5000/services")
         
         # Navigate to first service's capabilities
         if page.locator('.service-card:first-of-type a, .list-item:first-of-type a').count() > 0:
@@ -32,7 +32,7 @@ class TestCapabilitiesListPage:
     
     def test_toggle_capability(self, page: Page):
         """Capabilityの有効/無効を切り替えられる"""
-        page.goto("http://localhost:5001/services")
+        page.goto("http://localhost:5000/services")
         
         # Navigate to first service's capabilities
         if page.locator('.service-card:first-of-type a, .list-item:first-of-type a').count() > 0:
@@ -55,7 +55,7 @@ class TestCapabilitiesListPage:
     
     def test_status_badge_display(self, page: Page):
         """ステータスバッジが表示される"""
-        page.goto("http://localhost:5001/services")
+        page.goto("http://localhost:5000/services")
         
         # Navigate to first service's capabilities
         if page.locator('.service-card:first-of-type a, .list-item:first-of-type a').count() > 0:
@@ -74,7 +74,7 @@ class TestCapabilityDetailPage:
     
     def test_navigate_to_capability_detail(self, page: Page):
         """Capability詳細画面に遷移できる"""
-        page.goto("http://localhost:5001/services")
+        page.goto("http://localhost:5000/services")
         
         # Navigate to first service's capabilities
         if page.locator('.service-card:first-of-type a, .list-item:first-of-type a').count() > 0:
@@ -94,7 +94,7 @@ class TestCapabilityEditPage:
     
     def test_navigate_to_capability_edit(self, page: Page):
         """Capability編集画面に遷移できる"""
-        page.goto("http://localhost:5001/services")
+        page.goto("http://localhost:5000/services")
         
         # Navigate to first service's capabilities
         if page.locator('.service-card:first-of-type a, .list-item:first-of-type a').count() > 0:
@@ -110,7 +110,7 @@ class TestCapabilityEditPage:
     
     def test_edit_capability(self, page: Page):
         """Capabilityを編集できる"""
-        page.goto("http://localhost:5001/services")
+        page.goto("http://localhost:5000/services")
         
         # Navigate to capability edit page
         if page.locator('.service-card:first-of-type a, .list-item:first-of-type a').count() > 0:

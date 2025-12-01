@@ -6,14 +6,14 @@ Added 2 major MCP endpoints:
 
 ### 1. Subdomain-Based Capabilities Retrieval & MCP Processing
 
-**Endpoint**: `<subdomain>.lvh.me:5001/mcp`
+**Endpoint**: `<subdomain>.lvh.me:5000/mcp`
 
 - **GET /mcp** - Retrieve Capabilities available to the account
 - **POST /mcp** - Process MCP protocol requests (tools/list, tools/call)
 
 ### 2. Direct Tool Execution Endpoint
 
-**Endpoint**: `<subdomain>.lvh.me:5001/tools/<tool_id>`
+**Endpoint**: `<subdomain>.lvh.me:5000/tools/<tool_id>`
 
 - **POST /tools/<tool_id>** - Execute specific Tool directly
 
@@ -47,13 +47,13 @@ Added 2 major MCP endpoints:
 1. **lvh.me Domain** (Recommended)
 
    ```
-   http://myservice.lvh.me:5001/mcp
+   http://myservice.lvh.me:5000/mcp
    ```
 
 2. **Query Parameters**
 
    ```
-   http://localhost:5001/mcp?subdomain=myservice
+   http://localhost:5000/mcp?subdomain=myservice
    ```
 
 3. **Custom Header**
@@ -104,7 +104,7 @@ Added 2 major MCP endpoints:
 
 ```bash
 curl -H "Authorization: Bearer TOKEN" \
-  http://weather.lvh.me:5001/mcp
+  http://weather.lvh.me:5000/mcp
 ```
 
 ### Execute Tool (Direct)
@@ -114,7 +114,7 @@ curl -X POST \
   -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"arguments": {"city": "Tokyo"}}' \
-  http://weather.lvh.me:5001/tools/get_weather
+  http://weather.lvh.me:5000/tools/get_weather
 ```
 
 ### Execute Tool (MCP Protocol)
@@ -132,7 +132,7 @@ curl -X POST \
       "arguments": {"city": "Tokyo"}
     }
   }' \
-  http://weather.lvh.me:5001/mcp
+  http://weather.lvh.me:5000/mcp
 ```
 
 ## MCP Client Integration
@@ -143,7 +143,7 @@ curl -X POST \
 {
   "mcp_servers": {
     "weather": {
-      "url": "http://weather.lvh.me:5001/mcp",
+      "url": "http://weather.lvh.me:5000/mcp",
       "auth": {
         "type": "bearer",
         "token": "YOUR_TOKEN"
@@ -159,7 +159,7 @@ curl -X POST \
 {
   "mcpServers": {
     "weather": {
-      "url": "http://weather.lvh.me:5001/mcp",
+      "url": "http://weather.lvh.me:5000/mcp",
       "transport": {
         "type": "http"
       },
@@ -192,14 +192,14 @@ python3 test_mcp.py
 ```bash
 # 1. Check Capabilities
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://yourservice.lvh.me:5001/mcp
+  http://yourservice.lvh.me:5000/mcp
 
 # 2. Execute Tool
 curl -X POST \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"arguments": {...}}' \
-  http://yourservice.lvh.me:5001/tools/TOOL_NAME
+  http://yourservice.lvh.me:5000/tools/TOOL_NAME
 ```
 
 ## Error Handling

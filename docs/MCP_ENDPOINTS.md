@@ -11,7 +11,7 @@
 3. **POST /tools/<tool_id>** - 直接 Tool 実行
 
 すべてのエンドポイントはサブドメインベースのルーティングをサポートしています。
-管理画面は `http://admin.lvh.me:5001/` でアクセス可能です。
+管理画面は `http://admin.lvh.me:5000/` でアクセス可能です。
 
 ## サブドメインの指定方法
 
@@ -20,25 +20,25 @@
 `lvh.me` は常に 127.0.0.1 を指すため、ローカル開発で便利です。
 
 ```
-http://<subdomain>.lvh.me:5001/mcp
+http://<subdomain>.lvh.me:5000/mcp
 ```
 
 **例:**
 
-- `http://weather.lvh.me:5001/mcp` - weather サービスの MCP エンドポイント
-- `http://myapi.lvh.me:5001/mcp` - myapi サービスの MCP エンドポイント
-- `http://admin.lvh.me:5001/` - 管理画面（サブドメイン admin は管理画面専用）
+- `http://weather.lvh.me:5000/mcp` - weather サービスの MCP エンドポイント
+- `http://myapi.lvh.me:5000/mcp` - myapi サービスの MCP エンドポイント
+- `http://admin.lvh.me:5000/` - 管理画面（サブドメイン admin は管理画面専用）
 
 ### 方法 2: クエリパラメータ
 
 ```
-http://localhost:5001/mcp?subdomain=<subdomain>
+http://localhost:5000/mcp?subdomain=<subdomain>
 ```
 
 ### 方法 3: カスタムヘッダー
 
 ```bash
-curl -H "X-Subdomain: myservice" http://localhost:5001/mcp
+curl -H "X-Subdomain: myservice" http://localhost:5000/mcp
 ```
 
 ## 認証
@@ -61,7 +61,7 @@ Authorization: Bearer <USER_BEARER_TOKEN>
 
 ```bash
 curl -H "Authorization: Bearer abc123..." \
-  http://myservice.lvh.me:5001/mcp
+  http://myservice.lvh.me:5000/mcp
 ```
 
 ### レスポンス
@@ -130,7 +130,7 @@ curl -X POST \
     "id": 1,
     "method": "tools/list"
   }' \
-  http://myservice.lvh.me:5001/mcp
+  http://myservice.lvh.me:5000/mcp
 ```
 
 #### レスポンス
@@ -177,7 +177,7 @@ curl -X POST \
       }
     }
   }' \
-  http://myservice.lvh.me:5001/mcp
+  http://myservice.lvh.me:5000/mcp
 ```
 
 #### レスポンス (成功時)
@@ -227,7 +227,7 @@ curl -X POST \
       "city": "Tokyo"
     }
   }' \
-  http://myservice.lvh.me:5001/tools/get_weather
+  http://myservice.lvh.me:5000/tools/get_weather
 ```
 
 ### Tool ID の指定方法
@@ -297,7 +297,7 @@ curl -X POST \
 {
   "mcp_servers": {
     "weather_service": {
-      "url": "http://weather.lvh.me:5001/mcp",
+      "url": "http://weather.lvh.me:5000/mcp",
       "auth": {
         "type": "bearer",
         "token": "YOUR_BEARER_TOKEN"
@@ -313,7 +313,7 @@ curl -X POST \
 {
   "mcpServers": {
     "weather": {
-      "url": "http://weather.lvh.me:5001/mcp",
+      "url": "http://weather.lvh.me:5000/mcp",
       "transport": {
         "type": "http"
       },
@@ -337,7 +337,7 @@ headers = {
 
 # Capabilities取得
 response = requests.get(
-    'http://myservice.lvh.me:5001/mcp',
+    'http://myservice.lvh.me:5000/mcp',
     headers=headers
 )
 capabilities = response.json()
@@ -345,7 +345,7 @@ print(capabilities)
 
 # Tool実行
 response = requests.post(
-    'http://myservice.lvh.me:5001/tools/get_weather',
+    'http://myservice.lvh.me:5000/tools/get_weather',
     headers=headers,
     json={'arguments': {'city': 'Tokyo'}}
 )
@@ -358,14 +358,14 @@ print(result)
 ```bash
 # 1. Capabilitiesを取得
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://myservice.lvh.me:5001/mcp
+  http://myservice.lvh.me:5000/mcp
 
 # 2. 特定のToolを実行
 curl -X POST \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"arguments": {"city": "Tokyo"}}' \
-  http://myservice.lvh.me:5001/tools/get_weather
+  http://myservice.lvh.me:5000/tools/get_weather
 
 # 3. MCPプロトコルでToolを実行
 curl -X POST \
@@ -380,7 +380,7 @@ curl -X POST \
       "arguments": {"city": "Tokyo"}
     }
   }' \
-  http://myservice.lvh.me:5001/mcp
+  http://myservice.lvh.me:5000/mcp
 ```
 
 ---
@@ -457,7 +457,7 @@ curl -X POST \
 
 1. DNS 設定を確認 (`ping myservice.lvh.me` が 127.0.0.1 を返すか)
 2. 代わりにクエリパラメータを使用: `?subdomain=myservice`
-3. ポート番号を含める: `http://myservice.lvh.me:5001/mcp`
+3. ポート番号を含める: `http://myservice.lvh.me:5000/mcp`
 
 ### 認証エラー
 

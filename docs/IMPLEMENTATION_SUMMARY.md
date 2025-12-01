@@ -6,14 +6,14 @@
 
 ### 1. サブドメインベースの Capabilities 取得・MCP 処理
 
-**エンドポイント**: `<subdomain>.lvh.me:5001/mcp`
+**エンドポイント**: `<subdomain>.lvh.me:5000/mcp`
 
 - **GET /mcp** - ユーザーが使用可能な Capabilities を取得
 - **POST /mcp** - MCP プロトコルリクエストを処理 (tools/list, tools/call)
 
 ### 2. Tool 直接実行エンドポイント
 
-**エンドポイント**: `<subdomain>.lvh.me:5001/tools/<tool_id>`
+**エンドポイント**: `<subdomain>.lvh.me:5000/tools/<tool_id>`
 
 - **POST /tools/<tool_id>** - 特定の Tool を直接実行
 
@@ -47,13 +47,13 @@
 1. **lvh.me ドメイン** (推奨)
 
    ```
-   http://myservice.lvh.me:5001/mcp
+   http://myservice.lvh.me:5000/mcp
    ```
 
 2. **クエリパラメータ**
 
    ```
-   http://localhost:5001/mcp?subdomain=myservice
+   http://localhost:5000/mcp?subdomain=myservice
    ```
 
 3. **カスタムヘッダー**
@@ -104,7 +104,7 @@
 
 ```bash
 curl -H "Authorization: Bearer TOKEN" \
-  http://weather.lvh.me:5001/mcp
+  http://weather.lvh.me:5000/mcp
 ```
 
 ### Tool 実行 (直接)
@@ -114,7 +114,7 @@ curl -X POST \
   -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"arguments": {"city": "Tokyo"}}' \
-  http://weather.lvh.me:5001/tools/get_weather
+  http://weather.lvh.me:5000/tools/get_weather
 ```
 
 ### Tool 実行 (MCP プロトコル)
@@ -132,7 +132,7 @@ curl -X POST \
       "arguments": {"city": "Tokyo"}
     }
   }' \
-  http://weather.lvh.me:5001/mcp
+  http://weather.lvh.me:5000/mcp
 ```
 
 ## MCP クライアント統合
@@ -143,7 +143,7 @@ curl -X POST \
 {
   "mcp_servers": {
     "weather": {
-      "url": "http://weather.lvh.me:5001/mcp",
+      "url": "http://weather.lvh.me:5000/mcp",
       "auth": {
         "type": "bearer",
         "token": "YOUR_TOKEN"
@@ -159,7 +159,7 @@ curl -X POST \
 {
   "mcpServers": {
     "weather": {
-      "url": "http://weather.lvh.me:5001/mcp",
+      "url": "http://weather.lvh.me:5000/mcp",
       "transport": {
         "type": "http"
       },
@@ -192,14 +192,14 @@ python3 test_mcp.py
 ```bash
 # 1. Capabilitiesを確認
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://yourservice.lvh.me:5001/mcp
+  http://yourservice.lvh.me:5000/mcp
 
 # 2. Toolを実行
 curl -X POST \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"arguments": {...}}' \
-  http://yourservice.lvh.me:5001/tools/TOOL_NAME
+  http://yourservice.lvh.me:5000/tools/TOOL_NAME
 ```
 
 ## エラーハンドリング

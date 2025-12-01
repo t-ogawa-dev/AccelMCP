@@ -180,14 +180,14 @@ def test_service_list(self, auth_client):
 ```python
 def test_login_with_valid_credentials(self, page: Page):
     """正しい認証情報でログインできる"""
-    page.goto("http://localhost:5001/login")
+    page.goto("http://localhost:5000/login")
 
     page.fill('input[name="username"]', "admin")
     page.fill('input[name="password"]', "admin123")
     page.click('button[type="submit"]')
 
-    page.wait_for_url("http://localhost:5001/")
-    expect(page).to_have_url("http://localhost:5001/")
+    page.wait_for_url("http://localhost:5000/")
+    expect(page).to_have_url("http://localhost:5000/")
 ```
 
 **E2E テストの実行方法:**
@@ -249,7 +249,7 @@ def test_something(self, auth_client, sample_service):
 ```python
 def test_e2e_example(self, page: Page):
     """E2Eテストの例"""
-    page.goto("http://localhost:5001/login")
+    page.goto("http://localhost:5000/login")
     page.fill('input[name="username"]', "admin")
     page.click('button[type="submit"]')
 ```

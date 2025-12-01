@@ -14,18 +14,44 @@ HTTP/stdio 対応の MCP サーバー。API/MCP 中継機能とユーザー別�
 
 ```bash
 # Docker Composeで起動
-docker-compose up -d
+docker compose up -d
 
 # ログ確認
-docker-compose logs -f
+docker compose logs -f
 
 # 停止
-docker-compose down
+docker compose down
+```
+
+### ログレベルの設定
+
+環境変数 `LOG_LEVEL` でログレベルを制御できます：
+
+```bash
+# DEBUGレベルで起動（詳細なログを出力）
+LOG_LEVEL=DEBUG docker compose up -d
+
+# INFOレベル（デフォルト）
+LOG_LEVEL=INFO docker compose up -d
+```
+
+利用可能なログレベル：
+
+- `DEBUG`: 詳細なデバッグ情報
+- `INFO`: 一般的な情報メッセージ（デフォルト）
+- `WARNING`: 警告メッセージ
+- `ERROR`: エラーメッセージ
+- `CRITICAL`: 重大なエラー
+
+`.env` ファイルで設定することも可能：
+
+```
+LOG_LEVEL=DEBUG
 ```
 
 ## アクセス
 
-- Web 管理画面: http://admin.lvh.me:5001/ または http://localhost:5001/
+- Web 管理画面: http://admin.lvh.me:5000/ または http://localhost:5000/
 - デフォルト管理者
   - ID: `accel`
   - パスワード: `universe`
@@ -67,11 +93,11 @@ docker-compose down
 ```bash
 # lvh.me ドメインを使用 (ローカル開発用)
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://myservice.lvh.me:5001/mcp
+  http://myservice.lvh.me:5000/mcp
 
 # または subdomain パラメータを使用
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:5001/mcp?subdomain=myservice
+  http://localhost:5000/mcp?subdomain=myservice
 ```
 
 **レスポンス例:**
@@ -110,7 +136,7 @@ curl -X POST \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"arguments": {"city": "Tokyo"}}' \
-  http://myservice.lvh.me:5001/tools/get_weather
+  http://myservice.lvh.me:5000/tools/get_weather
 
 # または MCP プロトコルで実行
 curl -X POST \
@@ -125,7 +151,7 @@ curl -X POST \
       "arguments": {"city": "Tokyo"}
     }
   }' \
-  http://myservice.lvh.me:5001/mcp
+  http://myservice.lvh.me:5000/mcp
 ```
 
 ### MCP クライアント設定
@@ -136,7 +162,7 @@ curl -X POST \
 {
   "mcpServers": {
     "my-service": {
-      "url": "http://myservice.lvh.me:5001/mcp",
+      "url": "http://myservice.lvh.me:5000/mcp",
       "transport": {
         "type": "http"
       },
@@ -154,7 +180,7 @@ curl -X POST \
 {
   "mcpServers": {
     "my-service": {
-      "url": "http://localhost:5001/mcp/myservice",
+      "url": "http://localhost:5000/mcp/myservice",
       "headers": {
         "Authorization": "Bearer YOUR_TOKEN"
       }
@@ -190,9 +216,9 @@ curl -X POST \
 
 | エンドポイント                            | メソッド | 説明                                          |
 | ----------------------------------------- | -------- | --------------------------------------------- |
-| `<subdomain>.lvh.me:5001/mcp`             | GET      | ユーザーが使用可能な Capabilities を取得      |
-| `<subdomain>.lvh.me:5001/mcp`             | POST     | MCP リクエストを処理 (tools/list, tools/call) |
-| `<subdomain>.lvh.me:5001/tools/<tool_id>` | POST     | 特定の Tool を直接実行                        |
+| `<subdomain>.lvh.me:5000/mcp`             | GET      | ユーザーが使用可能な Capabilities を取得      |
+| `<subdomain>.lvh.me:5000/mcp`             | POST     | MCP リクエストを処理 (tools/list, tools/call) |
+| `<subdomain>.lvh.me:5000/tools/<tool_id>` | POST     | 特定の Tool を直接実行                        |
 | `/mcp/<subdomain>`                        | POST     | Legacy エンドポイント (後方互換性)            |
 
 **注意:** `lvh.me` はローカル開発用のドメインで、常に 127.0.0.1 を指します。本番環境では独自ドメインを使用してください。

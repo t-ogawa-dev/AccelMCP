@@ -28,7 +28,7 @@ docker-compose logs -f web
 
 ### 4. Web 管理画面へアクセス
 
-ブラウザで http://admin.lvh.me:5001/ または http://localhost:5001/ を開きます。
+ブラウザで http://admin.lvh.me:5000/ または http://localhost:5000/ を開きます。
 
 **デフォルト管理者アカウント:**
 
@@ -52,7 +52,7 @@ docker-compose logs -f web
 
 ```
 サブドメイン: myservice
-→ MCPエンドポイント: http://myservice.lvh.me:5001/mcp
+→ MCPエンドポイント: http://myservice.lvh.me:5000/mcp
 ```
 
 ### 2. Capability の登録
@@ -83,7 +83,7 @@ Bodyパラメータ:
 ```
 Capability名: search_database
 接続タイプ: MCP
-接続先URL: http://other-mcp-server:5001/mcp/db
+接続先URL: http://other-mcp-server:5000/mcp/db
 ```
 
 ### 3. ユーザーの登録
@@ -112,21 +112,21 @@ Capability名: search_database
 ```bash
 # Capabilities取得
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://myservice.lvh.me:5001/mcp
+  http://myservice.lvh.me:5000/mcp
 
 # Tool実行
 curl -X POST \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"arguments": {"param": "value"}}' \
-  http://myservice.lvh.me:5001/tools/get_weather
+  http://myservice.lvh.me:5000/tools/get_weather
 ```
 
 #### クエリパラメータを使用
 
 ```bash
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:5001/mcp?subdomain=myservice
+  http://localhost:5000/mcp?subdomain=myservice
 ```
 
 ### MCP クライアント設定例
@@ -137,7 +137,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 {
   "mcp_servers": {
     "my_service": {
-      "url": "http://myservice.lvh.me:5001/mcp",
+      "url": "http://myservice.lvh.me:5000/mcp",
       "auth": {
         "type": "bearer",
         "token": "YOUR_BEARER_TOKEN"
@@ -153,7 +153,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 {
   "mcpServers": {
     "my-service": {
-      "url": "http://myservice.lvh.me:5001/mcp",
+      "url": "http://myservice.lvh.me:5000/mcp",
       "transport": {
         "type": "http"
       },
@@ -171,7 +171,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 {
   "mcpServers": {
     "my-service": {
-      "url": "http://localhost:5001/mcp/myservice",
+      "url": "http://localhost:5000/mcp/myservice",
       "headers": {
         "Authorization": "Bearer YOUR_BEARER_TOKEN"
       }
@@ -235,7 +235,7 @@ AI: (get_current_weather ツールを使用して天気情報を取得)
 
 1. サービス登録: Integration Hub
 2. Capability 登録:
-   - database_query (MCP, http://db-mcp:5001/mcp/db)
+   - database_query (MCP, http://db-mcp:5000/mcp/db)
    - file_read (MCP, http://fs-mcp:5002/mcp/files)
 3. ユーザーごとに必要な Capability のみ権限付与
 
@@ -257,7 +257,7 @@ docker-compose restart web
 
 ```yaml
 ports:
-  - "8080:5001" # 8080ポートに変更
+  - "8080:5000" # 8080ポートに変更
 ```
 
 ### トークンが無効

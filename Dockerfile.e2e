@@ -39,7 +39,7 @@ COPY tests/ /app/tests/
 COPY pytest.ini ./
 
 # Expose port
-EXPOSE 5001
+EXPOSE 5000
 
 # Run tests by default
 CMD ["python", "-m", "pytest", "tests/", "-v"]

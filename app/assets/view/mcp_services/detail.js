@@ -84,7 +84,7 @@ async function loadMcpService() {
     document.getElementById('service-name').textContent = service.name;
     document.getElementById('name').textContent = service.name;
     document.getElementById('subdomain').textContent = service.subdomain;
-    document.getElementById('mcp-endpoint').textContent = `http://${service.subdomain}.lvh.me:5001/mcp`;
+    document.getElementById('mcp-endpoint').textContent = `http://${service.subdomain}.lvh.me:5000/mcp`;
     document.getElementById('description').textContent = service.description || '-';
 }
 

@@ -190,6 +190,7 @@ def test_service_connection():
     """Test MCP server connection"""
     data = request.get_json()
     mcp_url = data.get('mcp_url')
+    common_headers = data.get('common_headers', {})
     
     if not mcp_url:
         return jsonify({'success': False, 'error': 'MCP URL is required'}), 400
@@ -198,6 +199,15 @@ def test_service_connection():
         import requests
         from requests.adapters import HTTPAdapter
         from urllib3.util.retry import Retry
+        from app.services.variable_replacer import VariableReplacer
+        
+        # Replace variables in headers if any
+        replacer = VariableReplacer()
+        resolved_headers = {}
+        for key, value in common_headers.items():
+            resolved_key = replacer.replace_in_string(key)
+            resolved_value = replacer.replace_in_string(value)
+            resolved_headers[resolved_key] = resolved_value
         
         # Setup session with timeout and retries
         session = requests.Session()
@@ -206,16 +216,92 @@ def test_service_connection():
         session.mount('http://', adapter)
         session.mount('https://', adapter)
         
-        # Test connection with a simple GET request
-        response = session.get(mcp_url, timeout=5)
+        # Test connection with MCP protocol (JSON-RPC 2.0)
+        # First, try to initialize the session
+        test_headers = resolved_headers.copy()
+        test_headers['Content-Type'] = 'application/json'
+        
+        # Step 1: Initialize request
+        init_request = {
+            "jsonrpc": "2.0",
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {
+                    "name": "AccelMCP",
+                    "version": "1.0.0"
+                }
+            },
+            "id": 1
+        }
+        
+        response = session.post(
+            mcp_url, 
+            json=init_request,
+            headers=test_headers,
+            timeout=10
+        )
+        
+        # Check Content-Type to determine if SSE
+        content_type = response.headers.get('Content-Type', '')
+        if 'text/event-stream' in content_type:
+            # SSE server
+            return jsonify({
+                'success': True,
+                'message': 'Connection successful (SSE)',
+                'server_type': 'sse'
+            })
         
         # Check if response is valid
         if response.status_code == 200:
-            return jsonify({'success': True, 'message': 'Connection successful'})
+            # Try to parse as JSON-RPC response
+            try:
+                # Check if response has content
+                if not response.text or response.text.strip() == '':
+                    return jsonify({
+                        'success': False,
+                        'error': 'Server returned empty response'
+                    })
+                
+                result = response.json()
+                if 'result' in result:
+                    # Initialize successful
+                    server_info = result.get('result', {}).get('serverInfo', {})
+                    return jsonify({
+                        'success': True, 
+                        'message': 'Connection successful',
+                        'server_info': server_info
+                    })
+                elif 'error' in result:
+                    error_msg = result['error'].get('message', 'Unknown error')
+                    error_code = result['error'].get('code', 'unknown')
+                    return jsonify({
+                        'success': False,
+                        'error': f'MCP Error ({error_code}): {error_msg}'
+                    })
+                else:
+                    return jsonify({'success': True, 'message': 'Connection successful (non-standard response)'})
+            except ValueError as e:
+                # Not JSON - log response content for debugging
+                from flask import current_app
+                content_preview = response.text[:200] if response.text else '(empty)'
+                current_app.logger.warning(f"Non-JSON response from {mcp_url}: {content_preview}")
+                
+                content_type = response.headers.get("Content-Type", "")
+                return jsonify({
+                    'success': False,
+                    'error': f'Invalid JSON response: {str(e)}. Content-Type: {content_type}'
+                })
+        elif response.status_code == 405:
+            return jsonify({
+                'success': False, 
+                'error': 'Method Not Allowed (405). The endpoint may not support MCP protocol or requires different authentication.'
+            })
         else:
             return jsonify({
                 'success': False, 
-                'error': f'Server returned status code {response.status_code}'
+                'error': f'Server returned status code {response.status_code}: {response.text[:200]}'
             })
     
     except requests.exceptions.Timeout:
@@ -240,7 +326,6 @@ def mcp_service_apps(mcp_service_id):
         service = Service(
             mcp_service_id=mcp_service_id,
             name=data['name'],
-            subdomain=mcp_service.subdomain,  # Inherit from MCP service (deprecated field)
             service_type=data.get('service_type', 'api'),
             mcp_url=data.get('mcp_url'),
             common_headers=json.dumps(data.get('common_headers', {})),
@@ -252,10 +337,14 @@ def mcp_service_apps(mcp_service_id):
         # MCPタイプの場合、自動でCapabilityを検出
         if service.service_type == 'mcp' and service.mcp_url:
             from app.services.mcp_discovery import discover_mcp_capabilities
+            from flask import current_app
             try:
-                discover_mcp_capabilities(service.id, service.mcp_url)
+                current_app.logger.info(f"Starting MCP capability discovery for service {service.id}")
+                tool_count = discover_mcp_capabilities(service.id, service.mcp_url)
+                current_app.logger.info(f"Successfully discovered {tool_count} MCP tools")
             except Exception as e:
-                print(f"MCP capability discovery failed: {e}")
+                current_app.logger.error(f"MCP capability discovery failed: {e}")
+                # Capability検出失敗してもサービス登録は成功させる
         
         return jsonify(service.to_dict()), 201
 
@@ -274,7 +363,6 @@ def apps():
         service = Service(
             mcp_service_id=data.get('mcp_service_id'),
             name=data['name'],
-            subdomain=data.get('subdomain'),  # Deprecated
             service_type=data.get('service_type', 'api'),
             mcp_url=data.get('mcp_url'),
             common_headers=json.dumps(data.get('common_headers', {})),
@@ -286,10 +374,14 @@ def apps():
         # MCPタイプの場合、自動でCapabilityを検出
         if service.service_type == 'mcp' and service.mcp_url:
             from app.services.mcp_discovery import discover_mcp_capabilities
+            from flask import current_app
             try:
-                discover_mcp_capabilities(service.id, service.mcp_url)
+                current_app.logger.info(f"Starting MCP capability discovery for service {service.id}")
+                tool_count = discover_mcp_capabilities(service.id, service.mcp_url)
+                current_app.logger.info(f"Successfully discovered {tool_count} MCP tools")
             except Exception as e:
-                print(f"MCP capability discovery failed: {e}")
+                current_app.logger.error(f"MCP capability discovery failed: {e}")
+                # Capability検出失敗してもサービス登録は成功させる
         
         return jsonify(service.to_dict()), 201
 

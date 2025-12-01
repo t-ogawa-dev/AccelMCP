@@ -2,13 +2,15 @@
 MCP Controller
 Handles MCP protocol endpoints
 """
-from flask import Blueprint, request, jsonify
+import logging
+from flask import Blueprint, request, jsonify, current_app
 
 from app.models.models import ConnectionAccount, Service
 from app.services.mcp_handler import MCPHandler
 from app.models.models import db
 
 mcp_bp = Blueprint('mcp', __name__)
+logger = logging.getLogger(__name__)
 
 # Initialize MCP handler
 mcp_handler = MCPHandler(db)
@@ -21,24 +23,30 @@ def get_subdomain_from_request():
     # Handle lvh.me domain (subdomain.lvh.me)
     if '.lvh.me' in host:
         subdomain = host.replace('.lvh.me', '')
+        logger.debug(f"Extracted subdomain from lvh.me: {subdomain}")
         return subdomain if subdomain else None
     
     # Handle localhost with subdomain parameter
-    return request.args.get('subdomain') or request.headers.get('X-Subdomain')
+    subdomain = request.args.get('subdomain') or request.headers.get('X-Subdomain')
+    logger.debug(f"Extracted subdomain from param/header: {subdomain}")
+    return subdomain
 
 
 def authenticate_bearer_token():
     """Authenticate connection account from Bearer token"""
     auth_header = request.headers.get('Authorization', '')
     if not auth_header.startswith('Bearer '):
+        logger.warning("Missing or invalid Authorization header")
         return None, {'error': 'Missing or invalid Authorization header'}, 401
     
     bearer_token = auth_header[7:]  # Remove 'Bearer ' prefix
     account = ConnectionAccount.query.filter_by(bearer_token=bearer_token).first()
     
     if not account:
+        logger.warning(f"Invalid bearer token: {bearer_token[:10]}...")
         return None, {'error': 'Invalid bearer token'}, 401
     
+    logger.debug(f"Authenticated account: {account.name}")
     return account, None, None
 
 
@@ -52,9 +60,12 @@ def mcp_subdomain_endpoint():
     - GET: Returns capabilities list for the service
     - POST: Processes MCP tool calls
     """
+    logger.info(f"MCP request: {request.method} {request.url}")
+    
     # Extract subdomain
     subdomain = get_subdomain_from_request()
     if not subdomain:
+        logger.warning("Subdomain not specified in request")
         return jsonify({
             'jsonrpc': '2.0',
             'error': {
@@ -63,9 +74,12 @@ def mcp_subdomain_endpoint():
             }
         }), 400
     
+    logger.debug(f"Processing request for subdomain: {subdomain}")
+    
     # Authenticate account
     account, error, status = authenticate_bearer_token()
     if error:
+        logger.error(f"Authentication failed for subdomain {subdomain}")
         return jsonify({
             'jsonrpc': '2.0',
             'error': {

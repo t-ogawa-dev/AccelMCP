@@ -19,7 +19,7 @@ docker-compose logs -f web
 
 ## 2. 管理画面でログイン (1 分)
 
-1. ブラウザで http://localhost:5001 を開く
+1. ブラウザで http://localhost:5000 を開く
 2. ログイン:
    - ID: `admin`
    - パスワード: `admin123`
@@ -74,7 +74,7 @@ docker-compose logs -f web
 TOKEN="YOUR_BEARER_TOKEN_HERE"
 
 curl -H "Authorization: Bearer $TOKEN" \
-  http://weather.lvh.me:5001/mcp
+  http://weather.lvh.me:5000/mcp
 ```
 
 **期待される出力:**
@@ -113,7 +113,7 @@ curl -X POST \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"arguments": {"message": "Test from MCP"}}' \
-  http://weather.lvh.me:5001/tools/echo_test
+  http://weather.lvh.me:5000/tools/echo_test
 ```
 
 **期待される出力:**
@@ -179,7 +179,7 @@ python3 test_mcp.py
 
 ```bash
 curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:5001/mcp?subdomain=weather
+  http://localhost:5000/mcp?subdomain=weather
 ```
 
 ### 権限エラーが出る

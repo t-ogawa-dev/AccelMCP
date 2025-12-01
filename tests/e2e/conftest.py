@@ -11,8 +11,8 @@ def base_url():
     # When running in Docker, use service name 'web'
     # When running locally, use localhost
     if os.getenv('DOCKER_ENV'):
-        return "http://web:5001"
-    return "http://localhost:5001"
+        return "http://web:5000"
+    return "http://localhost:5000"
 
 
 @pytest.fixture

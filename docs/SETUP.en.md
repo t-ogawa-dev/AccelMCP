@@ -28,7 +28,7 @@ Once startup is complete, the default administrator's Bearer token will be displ
 
 ### 4. Access Web Admin Interface
 
-Open http://admin.lvh.me:5001/ or http://localhost:5001/ in your browser.
+Open http://admin.lvh.me:5000/ or http://localhost:5000/ in your browser.
 
 **Default Administrator Account:**
 
@@ -52,7 +52,7 @@ Open http://admin.lvh.me:5001/ or http://localhost:5001/ in your browser.
 
 ```
 Subdomain: myservice
-→ MCP Endpoint: http://myservice.lvh.me:5001/mcp
+→ MCP Endpoint: http://myservice.lvh.me:5000/mcp
 ```
 
 ### 2. Capability Registration
@@ -83,7 +83,7 @@ Body Parameters:
 ```
 Capability Name: search_database
 Connection Type: MCP
-Connection URL: http://other-mcp-server:5001/mcp/db
+Connection URL: http://other-mcp-server:5000/mcp/db
 ```
 
 ### 3. User Registration
@@ -112,21 +112,21 @@ Now the account can use the specified capability.
 ```bash
 # Get Capabilities
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://myservice.lvh.me:5001/mcp
+  http://myservice.lvh.me:5000/mcp
 
 # Execute Tool
 curl -X POST \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"arguments": {"param": "value"}}' \
-  http://myservice.lvh.me:5001/tools/get_weather
+  http://myservice.lvh.me:5000/tools/get_weather
 ```
 
 #### Using Query Parameters
 
 ```bash
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:5001/mcp?subdomain=myservice
+  http://localhost:5000/mcp?subdomain=myservice
 ```
 
 ### MCP Client Configuration Examples
@@ -137,7 +137,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 {
   "mcp_servers": {
     "my_service": {
-      "url": "http://myservice.lvh.me:5001/mcp",
+      "url": "http://myservice.lvh.me:5000/mcp",
       "auth": {
         "type": "bearer",
         "token": "YOUR_BEARER_TOKEN"
@@ -153,7 +153,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 {
   "mcpServers": {
     "my-service": {
-      "url": "http://myservice.lvh.me:5001/mcp",
+      "url": "http://myservice.lvh.me:5000/mcp",
       "transport": {
         "type": "http"
       },
@@ -171,7 +171,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 {
   "mcpServers": {
     "my-service": {
-      "url": "http://localhost:5001/mcp/myservice",
+      "url": "http://localhost:5000/mcp/myservice",
       "headers": {
         "Authorization": "Bearer YOUR_BEARER_TOKEN"
       }
@@ -235,7 +235,7 @@ Example of integrating database MCP server and filesystem MCP server:
 
 1. Register Service: Integration Hub
 2. Register Capabilities:
-   - database_query (MCP, http://db-mcp:5001/mcp/db)
+   - database_query (MCP, http://db-mcp:5000/mcp/db)
    - file_read (MCP, http://fs-mcp:5002/mcp/files)
 3. Grant only necessary capabilities per account
 
@@ -257,7 +257,7 @@ Change port settings in `compose.yaml`:
 
 ```yaml
 ports:
-  - "8080:5001" # Changed to port 8080
+  - "8080:5000" # Changed to port 8080
 ```
 
 ### Invalid Token

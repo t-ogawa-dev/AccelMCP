@@ -9,11 +9,11 @@ from playwright.sync_api import Page, expect
 @pytest.fixture(autouse=True)
 def login(page: Page):
     """各テスト前に自動ログイン"""
-    page.goto("http://localhost:5001/login")
+    page.goto("http://localhost:5000/login")
     page.fill('input[name="username"]', "admin")
     page.fill('input[name="password"]', "admin123")
     page.click('button[type="submit"]')
-    page.wait_for_url("http://localhost:5001/")
+    page.wait_for_url("http://localhost:5000/")
 
 
 class TestTemplateListPage:
@@ -21,13 +21,13 @@ class TestTemplateListPage:
     
     def test_template_list_loads(self, page: Page):
         """テンプレート一覧ページが読み込まれる"""
-        page.goto("http://localhost:5001/templates")
+        page.goto("http://localhost:5000/templates")
         
-        expect(page).to_have_url("http://localhost:5001/templates")
+        expect(page).to_have_url("http://localhost:5000/templates")
     
     def test_switch_to_custom_tab(self, page: Page):
         """カスタムタブに切り替えられる"""
-        page.goto("http://localhost:5001/templates")
+        page.goto("http://localhost:5000/templates")
         
         # Click custom tab
         if page.locator('button:has-text("カスタム")').count() > 0:
@@ -36,7 +36,7 @@ class TestTemplateListPage:
     
     def test_switch_to_builtin_tab(self, page: Page):
         """WebServiceタブに切り替えられる"""
-        page.goto("http://localhost:5001/templates")
+        page.goto("http://localhost:5000/templates")
         
         # Click builtin tab
         if page.locator('button:has-text("WebService")').count() > 0:
@@ -45,7 +45,7 @@ class TestTemplateListPage:
     
     def test_navigate_to_new_template(self, page: Page):
         """新規テンプレート作成画面に遷移できる"""
-        page.goto("http://localhost:5001/templates")
+        page.goto("http://localhost:5000/templates")
         
         # Switch to custom tab first
         if page.locator('button:has-text("カスタム")').count() > 0:
@@ -54,7 +54,7 @@ class TestTemplateListPage:
         # Click new template button
         if page.locator('a[href="/templates/new"]').count() > 0:
             page.click('a[href="/templates/new"]')
-            expect(page).to_have_url("http://localhost:5001/templates/new")
+            expect(page).to_have_url("http://localhost:5000/templates/new")
 
 
 class TestTemplateNewPage:
@@ -62,14 +62,14 @@ class TestTemplateNewPage:
     
     def test_new_template_page_loads(self, page: Page):
         """新規テンプレート作成ページが読み込まれる"""
-        page.goto("http://localhost:5001/templates/new")
+        page.goto("http://localhost:5000/templates/new")
         
-        expect(page).to_have_url("http://localhost:5001/templates/new")
+        expect(page).to_have_url("http://localhost:5000/templates/new")
         expect(page.locator('input[name="name"]')).to_be_visible()
     
     def test_create_custom_template(self, page: Page):
         """カスタムテンプレートを作成できる"""
-        page.goto("http://localhost:5001/templates/new")
+        page.goto("http://localhost:5000/templates/new")
         
         # Fill template form
         page.fill('input[name="name"]', f"E2E Test Template {page.context.browser.version[:5]}")
@@ -89,7 +89,7 @@ class TestTemplateDetailPage:
     
     def test_template_detail_loads(self, page: Page):
         """テンプレート詳細ページが読み込まれる"""
-        page.goto("http://localhost:5001/templates")
+        page.goto("http://localhost:5000/templates")
         
         # Click first template
         if page.locator('.template-card:first-of-type, .list-item:first-of-type').count() > 0:
@@ -98,7 +98,7 @@ class TestTemplateDetailPage:
     
     def test_use_template_modal(self, page: Page):
         """テンプレート使用モーダルが動作する"""
-        page.goto("http://localhost:5001/templates")
+        page.goto("http://localhost:5000/templates")
         
         # Click first template's use button
         if page.locator('button:has-text("使用する")').count() > 0:
@@ -119,7 +119,7 @@ class TestTemplateDetailPage:
     
     def test_export_template(self, page: Page):
         """テンプレートをエクスポートできる"""
-        page.goto("http://localhost:5001/templates")
+        page.goto("http://localhost:5000/templates")
         
         # Switch to custom tab
         if page.locator('button:has-text("カスタム")').count() > 0:
@@ -138,7 +138,7 @@ class TestTemplateDetailPage:
     
     def test_navigate_to_edit(self, page: Page):
         """編集画面に遷移できる（カスタムテンプレートのみ）"""
-        page.goto("http://localhost:5001/templates")
+        page.goto("http://localhost:5000/templates")
         
         # Switch to custom tab
         if page.locator('button:has-text("カスタム")').count() > 0:
@@ -156,7 +156,7 @@ class TestTemplateDetailPage:
     
     def test_navigate_to_capabilities(self, page: Page):
         """Capabilities画面に遷移できる"""
-        page.goto("http://localhost:5001/templates")
+        page.goto("http://localhost:5000/templates")
         
         # Click first template
         if page.locator('.template-card:first-of-type, .list-item:first-of-type').count() > 0:
@@ -173,7 +173,7 @@ class TestTemplateEditPage:
     
     def test_edit_template(self, page: Page):
         """カスタムテンプレートを編集できる"""
-        page.goto("http://localhost:5001/templates")
+        page.goto("http://localhost:5000/templates")
         
         # Switch to custom tab
         if page.locator('button:has-text("カスタム")').count() > 0:
@@ -205,7 +205,7 @@ class TestTemplateCapabilitiesPage:
     
     def test_template_capabilities_loads(self, page: Page):
         """テンプレートCapabilitiesページが読み込まれる"""
-        page.goto("http://localhost:5001/templates")
+        page.goto("http://localhost:5000/templates")
         
         # Click first template
         if page.locator('.template-card:first-of-type, .list-item:first-of-type').count() > 0:

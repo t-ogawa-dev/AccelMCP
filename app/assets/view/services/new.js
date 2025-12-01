@@ -4,16 +4,13 @@ let headerIndex = 0;
 function toggleServiceType() {
     const serviceType = document.querySelector('input[name="service_type"]:checked').value;
     const mcpUrlSection = document.getElementById('mcp-url-section');
-    const commonHeadersSection = document.getElementById('common-headers-section');
     const mcpUrlInput = document.getElementById('mcp_url');
     
     if (serviceType === 'mcp') {
         mcpUrlSection.style.display = 'block';
-        commonHeadersSection.style.display = 'none';
         mcpUrlInput.setAttribute('required', 'required');
     } else {
         mcpUrlSection.style.display = 'none';
-        commonHeadersSection.style.display = 'block';
         mcpUrlInput.removeAttribute('required');
     }
 }
@@ -49,6 +46,18 @@ async function testConnection() {
         return;
     }
     
+    // Collect common headers
+    const commonHeaders = {};
+    const headerRows = document.querySelectorAll('#headers-container .key-value-row');
+    headerRows.forEach(row => {
+        const inputs = row.querySelectorAll('input[type="text"]');
+        const key = inputs[0].value.trim();
+        const value = inputs[1].value.trim();
+        if (key) {
+            commonHeaders[key] = value;
+        }
+    });
+    
     // Show loading state
     resultDiv.style.display = 'block';
     resultDiv.style.padding = '12px';
@@ -62,7 +71,10 @@ async function testConnection() {
         const response = await fetch('/api/apps/test-connection', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ mcp_url: mcpUrl })
+            body: JSON.stringify({ 
+                mcp_url: mcpUrl,
+                common_headers: commonHeaders
+            })
         });
         
         const result = await response.json();
@@ -123,18 +135,18 @@ async function testConnection() {
         
         if (serviceType === 'mcp') {
             data.mcp_url = formData.get('mcp_url');
-        } else {
-            // Collect headers
-            const headerRows = document.querySelectorAll('#headers-container .key-value-row');
-            headerRows.forEach(row => {
-                const inputs = row.querySelectorAll('input[type="text"]');
-                const key = inputs[0].value.trim();
-                const value = inputs[1].value.trim();
-                if (key) {
-                    data.common_headers[key] = value;
-                }
-            });
         }
+        
+        // Collect headers for both API and MCP types
+        const headerRows = document.querySelectorAll('#headers-container .key-value-row');
+        headerRows.forEach(row => {
+            const inputs = row.querySelectorAll('input[type="text"]');
+            const key = inputs[0].value.trim();
+            const value = inputs[1].value.trim();
+            if (key) {
+                data.common_headers[key] = value;
+            }
+        });
         
         const response = await fetch('/api/apps', {
             method: 'POST',

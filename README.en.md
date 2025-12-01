@@ -25,7 +25,7 @@ docker-compose down
 
 ## Access
 
-- Web Admin Interface: http://admin.lvh.me:5001/ or http://localhost:5001/
+- Web Admin Interface: http://admin.lvh.me:5000/ or http://localhost:5000/
 - Default Administrator
   - ID: `accel`
   - Password: `universe`
@@ -67,11 +67,11 @@ docker-compose down
 ```bash
 # Using lvh.me domain (for local development)
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://myservice.lvh.me:5001/mcp
+  http://myservice.lvh.me:5000/mcp
 
 # Or using subdomain parameter
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:5001/mcp?subdomain=myservice
+  http://localhost:5000/mcp?subdomain=myservice
 ```
 
 **Response Example:**
@@ -110,7 +110,7 @@ curl -X POST \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"arguments": {"city": "Tokyo"}}' \
-  http://myservice.lvh.me:5001/tools/get_weather
+  http://myservice.lvh.me:5000/tools/get_weather
 
 # Or execute via MCP protocol
 curl -X POST \
@@ -125,7 +125,7 @@ curl -X POST \
       "arguments": {"city": "Tokyo"}
     }
   }' \
-  http://myservice.lvh.me:5001/mcp
+  http://myservice.lvh.me:5000/mcp
 ```
 
 ### MCP Client Configuration
@@ -136,7 +136,7 @@ curl -X POST \
 {
   "mcpServers": {
     "my-service": {
-      "url": "http://myservice.lvh.me:5001/mcp",
+      "url": "http://myservice.lvh.me:5000/mcp",
       "transport": {
         "type": "http"
       },
@@ -154,7 +154,7 @@ curl -X POST \
 {
   "mcpServers": {
     "my-service": {
-      "url": "http://localhost:5001/mcp/myservice",
+      "url": "http://localhost:5000/mcp/myservice",
       "headers": {
         "Authorization": "Bearer YOUR_TOKEN"
       }
@@ -190,9 +190,9 @@ curl -X POST \
 
 | Endpoint                                  | Method | Description                                   |
 | ----------------------------------------- | ------ | --------------------------------------------- |
-| `<subdomain>.lvh.me:5001/mcp`             | GET    | Get Capabilities available to the account     |
-| `<subdomain>.lvh.me:5001/mcp`             | POST   | Process MCP requests (tools/list, tools/call) |
-| `<subdomain>.lvh.me:5001/tools/<tool_id>` | POST   | Execute a specific Tool directly              |
+| `<subdomain>.lvh.me:5000/mcp`             | GET    | Get Capabilities available to the account     |
+| `<subdomain>.lvh.me:5000/mcp`             | POST   | Process MCP requests (tools/list, tools/call) |
+| `<subdomain>.lvh.me:5000/tools/<tool_id>` | POST   | Execute a specific Tool directly              |
 | `/mcp/<subdomain>`                        | POST   | Legacy endpoint (backward compatibility)      |
 
 **Note:** `lvh.me` is a domain for local development that always resolves to 127.0.0.1. Use your own domain in production.

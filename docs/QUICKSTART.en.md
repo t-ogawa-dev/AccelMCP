@@ -19,7 +19,7 @@ Once you see `Default admin user created`, the server is ready.
 
 ## 2. Login to Admin Interface (1 minute)
 
-1. Open http://localhost:5001 in your browser
+1. Open http://localhost:5000 in your browser
 2. Login:
    - ID: `accel`
    - Password: `universe`
@@ -72,7 +72,7 @@ On the same account details screen, **copy the Bearer Token**.
 TOKEN="YOUR_BEARER_TOKEN_HERE"
 
 curl -H "Authorization: Bearer $TOKEN" \
-  http://weather.lvh.me:5001/mcp
+  http://weather.lvh.me:5000/mcp
 ```
 
 **Expected Output:**
@@ -111,7 +111,7 @@ curl -X POST \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"arguments": {"message": "Test from MCP"}}' \
-  http://weather.lvh.me:5001/tools/echo_test
+  http://weather.lvh.me:5000/tools/echo_test
 ```
 
 **Expected Output:**
@@ -179,7 +179,7 @@ Use this instead:
 
 ```bash
 curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:5001/mcp?subdomain=weather
+  http://localhost:5000/mcp?subdomain=weather
 ```
 
 ### Permission Errors

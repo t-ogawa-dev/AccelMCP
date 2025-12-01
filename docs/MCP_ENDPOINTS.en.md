@@ -11,7 +11,7 @@ This MCP server provides 3 main endpoints:
 3. **POST /tools/<tool_id>** - Direct Tool execution
 
 All endpoints support subdomain-based routing.
-The admin interface is accessible at `http://admin.lvh.me:5001/`.
+The admin interface is accessible at `http://admin.lvh.me:5000/`.
 
 ## Subdomain Specification Methods
 
@@ -20,25 +20,25 @@ The admin interface is accessible at `http://admin.lvh.me:5001/`.
 `lvh.me` always points to 127.0.0.1, making it convenient for local development.
 
 ```
-http://<subdomain>.lvh.me:5001/mcp
+http://<subdomain>.lvh.me:5000/mcp
 ```
 
 **Examples:**
 
-- `http://weather.lvh.me:5001/mcp` - weather service MCP endpoint
-- `http://myapi.lvh.me:5001/mcp` - myapi service MCP endpoint
-- `http://admin.lvh.me:5001/` - Admin interface (subdomain admin is dedicated to admin interface)
+- `http://weather.lvh.me:5000/mcp` - weather service MCP endpoint
+- `http://myapi.lvh.me:5000/mcp` - myapi service MCP endpoint
+- `http://admin.lvh.me:5000/` - Admin interface (subdomain admin is dedicated to admin interface)
 
 ### Method 2: Query Parameters
 
 ```
-http://localhost:5001/mcp?subdomain=<subdomain>
+http://localhost:5000/mcp?subdomain=<subdomain>
 ```
 
 ### Method 3: Custom Header
 
 ```bash
-curl -H "X-Subdomain: myservice" http://localhost:5001/mcp
+curl -H "X-Subdomain: myservice" http://localhost:5000/mcp
 ```
 
 ## Authentication
@@ -61,7 +61,7 @@ Retrieve the list of Tools available to the account.
 
 ```bash
 curl -H "Authorization: Bearer abc123..." \
-  http://myservice.lvh.me:5001/mcp
+  http://myservice.lvh.me:5000/mcp
 ```
 
 ### Response
@@ -130,7 +130,7 @@ curl -X POST \
     "id": 1,
     "method": "tools/list"
   }' \
-  http://myservice.lvh.me:5001/mcp
+  http://myservice.lvh.me:5000/mcp
 ```
 
 #### Response
@@ -177,7 +177,7 @@ curl -X POST \
       }
     }
   }' \
-  http://myservice.lvh.me:5001/mcp
+  http://myservice.lvh.me:5000/mcp
 ```
 
 #### Response (Success)
@@ -227,7 +227,7 @@ curl -X POST \
       "city": "Tokyo"
     }
   }' \
-  http://myservice.lvh.me:5001/tools/get_weather
+  http://myservice.lvh.me:5000/tools/get_weather
 ```
 
 ### Tool ID Specification Methods
@@ -297,7 +297,7 @@ curl -X POST \
 {
   "mcp_servers": {
     "weather_service": {
-      "url": "http://weather.lvh.me:5001/mcp",
+      "url": "http://weather.lvh.me:5000/mcp",
       "auth": {
         "type": "bearer",
         "token": "YOUR_BEARER_TOKEN"
@@ -313,7 +313,7 @@ curl -X POST \
 {
   "mcpServers": {
     "weather": {
-      "url": "http://weather.lvh.me:5001/mcp",
+      "url": "http://weather.lvh.me:5000/mcp",
       "transport": {
         "type": "http"
       },
@@ -337,7 +337,7 @@ headers = {
 
 # Get Capabilities
 response = requests.get(
-    'http://myservice.lvh.me:5001/mcp',
+    'http://myservice.lvh.me:5000/mcp',
     headers=headers
 )
 capabilities = response.json()
@@ -345,7 +345,7 @@ print(capabilities)
 
 # Execute Tool
 response = requests.post(
-    'http://myservice.lvh.me:5001/tools/get_weather',
+    'http://myservice.lvh.me:5000/tools/get_weather',
     headers=headers,
     json={'arguments': {'city': 'Tokyo'}}
 )
@@ -358,14 +358,14 @@ print(result)
 ```bash
 # 1. Get Capabilities
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://myservice.lvh.me:5001/mcp
+  http://myservice.lvh.me:5000/mcp
 
 # 2. Execute specific Tool
 curl -X POST \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"arguments": {"city": "Tokyo"}}' \
-  http://myservice.lvh.me:5001/tools/get_weather
+  http://myservice.lvh.me:5000/tools/get_weather
 
 # 3. Execute Tool via MCP protocol
 curl -X POST \
@@ -380,7 +380,7 @@ curl -X POST \
       "arguments": {"city": "Tokyo"}
     }
   }' \
-  http://myservice.lvh.me:5001/mcp
+  http://myservice.lvh.me:5000/mcp
 ```
 
 ---
@@ -457,7 +457,7 @@ curl -X POST \
 
 1. Check DNS settings (`ping myservice.lvh.me` should return 127.0.0.1)
 2. Use query parameter instead: `?subdomain=myservice`
-3. Include port number: `http://myservice.lvh.me:5001/mcp`
+3. Include port number: `http://myservice.lvh.me:5000/mcp`
 
 ### Authentication Error
 

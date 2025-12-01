@@ -9,11 +9,11 @@ from playwright.sync_api import Page, expect
 @pytest.fixture(autouse=True)
 def login(page: Page):
     """各テスト前に自動ログイン"""
-    page.goto("http://localhost:5001/login")
+    page.goto("http://localhost:5000/login")
     page.fill('input[name="username"]', "admin")
     page.fill('input[name="password"]', "admin123")
     page.click('button[type="submit"]')
-    page.wait_for_url("http://localhost:5001/")
+    page.wait_for_url("http://localhost:5000/")
 
 
 class TestServiceListPage:
@@ -21,20 +21,20 @@ class TestServiceListPage:
     
     def test_service_list_loads(self, page: Page):
         """サービス一覧ページが読み込まれる"""
-        page.goto("http://localhost:5001/services")
+        page.goto("http://localhost:5000/services")
         
-        expect(page).to_have_url("http://localhost:5001/services")
+        expect(page).to_have_url("http://localhost:5000/services")
     
     def test_navigate_to_new_service(self, page: Page):
         """新規サービス登録画面に遷移できる"""
-        page.goto("http://localhost:5001/services")
+        page.goto("http://localhost:5000/services")
         
         page.click('a[href="/services/new"]')
-        expect(page).to_have_url("http://localhost:5001/services/new")
+        expect(page).to_have_url("http://localhost:5000/services/new")
     
     def test_navigate_to_service_detail(self, page: Page):
         """サービス詳細画面に遷移できる"""
-        page.goto("http://localhost:5001/services")
+        page.goto("http://localhost:5000/services")
         
         # Click first service if exists
         if page.locator('.service-card:first-of-type a, .list-item:first-of-type a').count() > 0:
@@ -47,14 +47,14 @@ class TestServiceNewPage:
     
     def test_new_service_page_loads(self, page: Page):
         """新規サービス登録ページが読み込まれる"""
-        page.goto("http://localhost:5001/services/new")
+        page.goto("http://localhost:5000/services/new")
         
-        expect(page).to_have_url("http://localhost:5001/services/new")
+        expect(page).to_have_url("http://localhost:5000/services/new")
         expect(page.locator('input[name="subdomain"]')).to_be_visible()
     
     def test_create_api_service(self, page: Page):
         """APIサービスを作成できる"""
-        page.goto("http://localhost:5001/services/new")
+        page.goto("http://localhost:5000/services/new")
         
         # Fill service form
         page.fill('input[name="subdomain"]', f"e2e-test-api-{page.context.browser.version[:5]}")
@@ -70,7 +70,7 @@ class TestServiceNewPage:
     
     def test_create_mcp_service(self, page: Page):
         """MCPサービスを作成できる"""
-        page.goto("http://localhost:5001/services/new")
+        page.goto("http://localhost:5000/services/new")
         
         # Fill service form
         page.fill('input[name="subdomain"]', f"e2e-test-mcp-{page.context.browser.version[:5]}")
@@ -89,7 +89,7 @@ class TestServiceNewPage:
     
     def test_mcp_connection_test(self, page: Page):
         """MCP接続テストボタンが動作する"""
-        page.goto("http://localhost:5001/services/new")
+        page.goto("http://localhost:5000/services/new")
         
         # Select MCP service type
         page.select_option('select[name="service_type"]', "mcp")
@@ -110,7 +110,7 @@ class TestServiceDetailPage:
     
     def test_navigate_to_edit(self, page: Page):
         """編集画面に遷移できる"""
-        page.goto("http://localhost:5001/services")
+        page.goto("http://localhost:5000/services")
         
         # Click first service
         if page.locator('.service-card:first-of-type a, .list-item:first-of-type a').count() > 0:
@@ -123,7 +123,7 @@ class TestServiceDetailPage:
     
     def test_navigate_to_capabilities(self, page: Page):
         """Capabilities画面に遷移できる"""
-        page.goto("http://localhost:5001/services")
+        page.goto("http://localhost:5000/services")
         
         # Click first service
         if page.locator('.service-card:first-of-type a, .list-item:first-of-type a').count() > 0:
@@ -136,7 +136,7 @@ class TestServiceDetailPage:
     
     def test_copy_mcp_endpoint(self, page: Page):
         """MCPエンドポイントをコピーできる"""
-        page.goto("http://localhost:5001/services")
+        page.goto("http://localhost:5000/services")
         
         # Click first service
         if page.locator('.service-card:first-of-type a, .list-item:first-of-type a').count() > 0:
@@ -153,7 +153,7 @@ class TestServiceEditPage:
     
     def test_edit_service(self, page: Page):
         """サービスを編集できる"""
-        page.goto("http://localhost:5001/services")
+        page.goto("http://localhost:5000/services")
         
         # Navigate to first service edit page
         if page.locator('.service-card:first-of-type a, .list-item:first-of-type a').count() > 0:
@@ -176,7 +176,7 @@ class TestServiceEditPage:
     
     def test_delete_service(self, page: Page):
         """サービスを削除できる"""
-        page.goto("http://localhost:5001/services")
+        page.goto("http://localhost:5000/services")
         
         # Get initial service count
         services_count = page.locator('.service-card, .list-item').count()
