@@ -29,10 +29,42 @@
         </div>
 
         <div class="form-group">
+            <label>
+                <span data-i18n="variable_source_type_label">値の取得元</span> *
+            </label>
+            <div style="display: flex; gap: 20px; margin-top: 8px;">
+                <label class="radio-label">
+                    <input type="radio" name="source_type" value="value" id="source-value" onchange="toggleSourceType()">
+                    <span data-i18n="variable_source_value">直接入力</span>
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="source_type" value="env" id="source-env" onchange="toggleSourceType()">
+                    <span data-i18n="variable_source_env">環境変数</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="form-group" id="value-input-group">
             <label for="value">
                 <span data-i18n="variable_value_label">値</span> *
             </label>
             <textarea id="value" name="value" rows="3" required data-i18n-placeholder="variable_value_placeholder" placeholder="変数の値を入力"></textarea>
+        </div>
+
+        <div class="form-group" id="env-input-group" style="display: none;">
+            <label for="env_var_name">
+                <span data-i18n="variable_env_var_name_label">環境変数名</span> *
+            </label>
+            <div style="display: flex; gap: 10px; align-items: flex-start;">
+                <div style="flex: 1;">
+                    <input type="text" id="env_var_name" name="env_var_name" data-i18n-placeholder="variable_env_var_name_placeholder" placeholder="例: GITHUB_TOKEN">
+                    <small data-i18n="variable_env_var_name_hint">システムの環境変数から値を取得します</small>
+                </div>
+                <button type="button" onclick="checkEnvVariable()" class="btn btn-secondary" style="white-space: nowrap;">
+                    <span data-i18n="button_check_env">確認</span>
+                </button>
+            </div>
+            <div id="env-check-result" style="display: none; margin-top: 10px; padding: 10px; border-radius: 4px;"></div>
         </div>
 
         <div class="form-group">

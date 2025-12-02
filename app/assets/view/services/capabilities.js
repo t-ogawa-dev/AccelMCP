@@ -22,6 +22,7 @@ async function loadCapabilities() {
                 <div class="list-item-meta">
                     <span class="badge badge-${cap.capability_type}">${cap.capability_type.toUpperCase()}</span>
                     ${!cap.is_enabled ? `<span class="status-badge disabled">${t('status_disabled')}</span>` : `<span class="status-badge enabled">${t('status_enabled')}</span>`}
+                    ${(cap.access_control === 'restricted') ? `<span class="badge badge-access-restricted">${t('access_control_restricted')}</span>` : `<span class="badge badge-access-public">${t('access_control_public')}</span>`}
                     <span class="text-muted">${cap.url || 'N/A'}</span>
                 </div>
                 ${cap.description ? `<p class="text-muted">${cap.description}</p>` : ''}

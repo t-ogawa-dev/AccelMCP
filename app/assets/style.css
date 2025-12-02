@@ -257,6 +257,17 @@ body {
     color: #155724;
 }
 
+/* Access Control Badges - matching detail page colors */
+.badge-access-public {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.badge-access-restricted {
+    background: #fef3c7;
+    color: #92400e;
+}
+
 /* Text Utilities */
 .text-muted {
     color: #6c757d;

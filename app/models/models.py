@@ -333,6 +333,8 @@ class Variable(db.Model):
     name = db.Column(db.String(100), nullable=False, unique=True)
     value = db.Column(db.Text, nullable=False)  # 暗号化して保存
     value_type = db.Column(db.String(20), nullable=False, default='string')  # 'string' or 'number'
+    source_type = db.Column(db.String(20), nullable=False, default='value')  # 'value' or 'env'
+    env_var_name = db.Column(db.String(100))  # 環境変数名（source_type='env'の場合）
     description = db.Column(db.Text)
     is_secret = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -355,8 +357,14 @@ class Variable(db.Model):
         self.value = self.encrypt_value(plain_value)
     
     def get_value(self):
-        """復号した値を取得"""
-        return self.decrypt_value(self.value)
+        """復号した値を取得（環境変数または直接値）"""
+        if self.source_type == 'env':
+            # 環境変数から取得
+            import os
+            return os.environ.get(self.env_var_name, '')
+        else:
+            # 暗号化された値を復号
+            return self.decrypt_value(self.value)
     
     def get_typed_value(self):
         """型付きで値を取得（numberの場合は数値型で返す）"""
@@ -377,13 +385,18 @@ class Variable(db.Model):
             'id': self.id,
             'name': self.name,
             'value_type': self.value_type,
+            'source_type': self.source_type,
+            'env_var_name': self.env_var_name if self.source_type == 'env' else None,
             'description': self.description,
             'is_secret': self.is_secret,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
         if include_value:
-            result['value'] = self.get_value()
+            if self.source_type == 'env':
+                result['value'] = f'[環境変数: {self.env_var_name}]'
+            else:
+                result['value'] = self.get_value()
         elif self.is_secret:
             result['value'] = '********'  # マスク表示
         else:

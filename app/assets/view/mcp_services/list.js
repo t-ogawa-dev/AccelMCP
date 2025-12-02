@@ -20,6 +20,7 @@ async function loadMcpServices() {
                 <div class="list-item-meta">
                     <span class="badge">${t('mcp_service_subdomain')}: ${service.subdomain}</span>
                     ${!service.is_enabled ? `<span class="status-badge disabled">${t('status_disabled')}</span>` : `<span class="status-badge enabled">${t('status_enabled')}</span>`}
+                    ${(service.access_control === 'restricted') ? `<span class="badge badge-access-restricted">${t('access_control_restricted')}</span>` : `<span class="badge badge-access-public">${t('access_control_public')}</span>`}
                     <span class="text-muted">${t('mcp_service_apps_count')}: ${service.apps_count || 0}</span>
                 </div>
                 ${service.description ? `<p class="text-muted">${service.description}</p>` : ''}

@@ -23,6 +23,7 @@ async function loadServices(mcpServiceId) {
                 <div class="list-item-meta">
                     <span class="badge badge-${service.service_type}">${service.service_type.toUpperCase()}</span>
                     ${!service.is_enabled ? `<span class="status-badge disabled">${t('status_disabled')}</span>` : `<span class="status-badge enabled">${t('status_enabled')}</span>`}
+                    ${(service.access_control === 'restricted') ? `<span class="badge badge-access-restricted">${t('access_control_restricted')}</span>` : `<span class="badge badge-access-public">${t('access_control_public')}</span>`}
                     <span class="text-muted">${t('app_registered')}: ${new Date(service.created_at).toLocaleDateString(currentLanguage === 'ja' ? 'ja-JP' : 'en-US')}</span>
                 </div>
                 ${service.description ? `<p class="text-muted">${service.description}</p>` : ''}

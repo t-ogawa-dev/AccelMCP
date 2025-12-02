@@ -204,10 +204,31 @@ def test_service_connection():
         # Replace variables in headers if any
         replacer = VariableReplacer()
         resolved_headers = {}
+        unresolved_vars = []
+        
         for key, value in common_headers.items():
             resolved_key = replacer.replace_in_string(key)
             resolved_value = replacer.replace_in_string(value)
             resolved_headers[resolved_key] = resolved_value
+            
+            # Check if variables were not resolved
+            import re
+            if re.search(r'\{\{[A-Z0-9_]+\}\}', resolved_value):
+                # Extract variable names that were not resolved
+                for match in re.finditer(r'\{\{([A-Z0-9_]+)\}\}', resolved_value):
+                    unresolved_vars.append(match.group(1))
+        
+        # If there are unresolved variables, return error
+        if unresolved_vars:
+            return jsonify({
+                'success': False, 
+                'error': f'未定義の変数: {", ".join(set(unresolved_vars))}。Variables画面で登録してください。'
+            }), 400
+        
+        # Log resolved headers for debugging
+        from flask import current_app
+        current_app.logger.info(f"Test connection to {mcp_url}")
+        current_app.logger.info(f"Resolved headers: {resolved_headers}")
         
         # Setup session with timeout and retries
         session = requests.Session()
@@ -1025,17 +1046,43 @@ def variables():
         if Variable.query.filter_by(name=data['name']).first():
             return jsonify({'error': '同じ名前の変数が既に存在します'}), 409
         
+        source_type = data.get('source_type', 'value')
+        
         variable = Variable(
             name=data['name'],
             value_type=data.get('value_type', 'string'),
+            source_type=source_type,
             description=data.get('description', ''),
             is_secret=data.get('is_secret', True)
         )
-        variable.set_value(data['value'])
+        
+        if source_type == 'env':
+            variable.env_var_name = data.get('env_var_name', '')
+            variable.value = ''  # 環境変数の場合は値を空にする
+        else:
+            variable.set_value(data['value'])
         
         db.session.add(variable)
         db.session.commit()
         return jsonify(variable.to_dict()), 201
+
+
+@api_bp.route('/variables/check-env', methods=['POST'])
+@login_required
+def check_env_variable():
+    """Check if environment variable exists"""
+    import os
+    data = request.get_json()
+    env_var_name = data.get('env_var_name', '')
+    
+    if not env_var_name:
+        return jsonify({'exists': False}), 200
+    
+    # Check if environment variable exists and has a value
+    env_value = os.environ.get(env_var_name)
+    exists = env_value is not None and env_value != ''
+    
+    return jsonify({'exists': exists}), 200
 
 
 @api_bp.route('/variables/<int:variable_id>', methods=['GET', 'PUT', 'DELETE'])
@@ -1060,11 +1107,16 @@ def variable_detail(variable_id):
         
         variable.name = new_name
         variable.value_type = data.get('value_type', variable.value_type)
+        variable.source_type = data.get('source_type', variable.source_type)
         variable.description = data.get('description', variable.description)
         variable.is_secret = data.get('is_secret', variable.is_secret)
         
-        if 'value' in data:
-            variable.set_value(data['value'])
+        if variable.source_type == 'env':
+            variable.env_var_name = data.get('env_var_name', variable.env_var_name)
+            variable.value = ''  # 環境変数の場合は値を空にする
+        else:
+            if 'value' in data:
+                variable.set_value(data['value'])
         
         db.session.commit()
         return jsonify(variable.to_dict())
