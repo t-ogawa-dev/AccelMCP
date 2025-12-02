@@ -392,11 +392,11 @@ class Variable(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
-        if include_value:
-            if self.source_type == 'env':
-                result['value'] = f'[環境変数: {self.env_var_name}]'
-            else:
-                result['value'] = self.get_value()
+        # 環境変数の場合は常に環境変数名を表示
+        if self.source_type == 'env':
+            result['value'] = self.env_var_name
+        elif include_value:
+            result['value'] = self.get_value()
         elif self.is_secret:
             result['value'] = '********'  # マスク表示
         else:

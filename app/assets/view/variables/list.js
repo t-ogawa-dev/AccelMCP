@@ -33,7 +33,7 @@ async function loadVariables() {
                 <div class="list-item-meta">
                     ${variable.is_secret ? '<span class="badge badge-secret">🔒 Secret</span>' : '<span class="badge">Public</span>'}
                     <span class="badge badge-type">${variable.value_type === 'number' ? '🔢 Number' : '📝 String'}</span>
-                    <span class="text-muted">${t('variable_value_label')}: <code>${variable.value}</code></span>
+                    <span class="text-muted">${variable.source_type === 'env' ? t('variable_env_var_name_display') : t('variable_value_label')}: <code>${variable.value}</code></span>
                 </div>
                 ${variable.description ? `<p class="text-muted">${variable.description}</p>` : ''}
             </div>

@@ -24,40 +24,40 @@
 <!-- Usage Instructions Accordion -->
 <div class="accordion">
     <div class="accordion-header" onclick="toggleAccordion()">
-        <span>💡 Variablesの使用方法</span>
+        <span data-i18n="variable_usage_title">💡 Variablesの使用方法</span>
         <span class="accordion-icon">▼</span>
     </div>
     <div class="accordion-content" id="usage-accordion">
         <div class="usage-box">
-            <p style="margin-bottom: 16px;">変数をアプリやCapabilityで使用するには <code>&#123;&#123;VARIABLE_NAME&#125;&#125;</code> の形式で参照してください</p>
+            <p style="margin-bottom: 16px;" data-i18n="variable_usage_intro">変数をアプリやCapabilityで使用するには <code>&#123;&#123;VARIABLE_NAME&#125;&#125;</code> の形式で参照してください</p>
             
-            <strong>📍 使用可能な箇所:</strong>
+            <strong data-i18n="variable_usage_locations_title">📍 使用可能な箇所:</strong>
             <ul style="margin: 8px 0 16px 20px; line-height: 1.8;">
-                <li><strong>Capability接続先URL</strong>: APIエンドポイントのURL</li>
-                <li><strong>アプリ共通ヘッダー</strong>: 全Capabilityで使用されるヘッダー値</li>
-                <li><strong>Capability個別ヘッダー</strong>: 特定Capabilityのヘッダー値</li>
-                <li><strong>Capabilityボディパラメータ</strong>: リクエストボディの値</li>
-                <li><strong>Capabilityテンプレートコンテンツ</strong>: Promptタイプのテンプレート内</li>
+                <li><strong data-i18n="variable_usage_location_url">Capability接続先URL</strong>: <span data-i18n="variable_usage_location_url_desc">APIエンドポイントのURL</span></li>
+                <li><strong data-i18n="variable_usage_location_app_headers">アプリ共通ヘッダー</strong>: <span data-i18n="variable_usage_location_app_headers_desc">全Capabilityで使用されるヘッダー値</span></li>
+                <li><strong data-i18n="variable_usage_location_cap_headers">Capability個別ヘッダー</strong>: <span data-i18n="variable_usage_location_cap_headers_desc">特定Capabilityのヘッダー値</span></li>
+                <li><strong data-i18n="variable_usage_location_body">Capabilityボディパラメータ</strong>: <span data-i18n="variable_usage_location_body_desc">リクエストボディの値</span></li>
+                <li><strong data-i18n="variable_usage_location_template">Capabilityテンプレートコンテンツ</strong>: <span data-i18n="variable_usage_location_template_desc">Promptタイプのテンプレート内</span></li>
             </ul>
             
-            <strong>✏️ 使用例:</strong>
+            <strong data-i18n="variable_usage_examples_title">✏️ 使用例:</strong>
             <div style="background: #f5f5f5; border-radius: 4px; padding: 12px; margin-top: 8px; font-family: monospace; font-size: 13px;">
                 <div style="margin-bottom: 8px;">
-                    <span style="color: #666;">// 接続先URL</span><br>
+                    <span style="color: #666;" data-i18n="variable_usage_example_url">// 接続先URL</span><br>
                     <code style="color: #388e3c;">"https://api.example.com/&#123;&#123;API_KEY&#125;&#125;"</code>
                 </div>
                 <div style="margin-bottom: 8px;">
-                    <span style="color: #666;">// アプリ共通ヘッダー</span><br>
+                    <span style="color: #666;" data-i18n="variable_usage_example_app_header">// アプリ共通ヘッダー</span><br>
                     <code style="color: #d32f2f;">"Authorization"</code>: <code style="color: #388e3c;">"Bearer &#123;&#123;OPENAI_API_KEY&#125;&#125;"</code>
                 </div>
                 <div style="margin-bottom: 8px;">
-                    <span style="color: #666;">// Capabilityヘッダー</span><br>
-                    <code style="color: #d32f2f;">"X-API-Key"</code>: <code style="color: #388e3c;">"&#123;&#123;CUSTOM_API_KEY&#125;&#125;"</code>
+                    <span style="color: #666;" data-i18n="variable_usage_example_cap_header">// Capabilityヘッダー</span><br>
+                    <code style="color: #d32f2f;">"X-API-Key"</code>: <code style="color: #388e3c.">"&#123;&#123;CUSTOM_API_KEY&#125;&#125;"</code>
                 </div>
                 <div>
-                    <span style="color: #666;">// ボディパラメータ</span><br>
+                    <span style="color: #666;" data-i18n="variable_usage_example_body">// ボディパラメータ</span><br>
                     <code style="color: #d32f2f;">"api_key"</code>: <code style="color: #388e3c;">"&#123;&#123;SERVICE_KEY&#125;&#125;"</code>,<br>
-                    <code style="color: #d32f2f;">"user"</code>: <code style="color: #388e3c;">"&#123;&#123;USER_ID&#125;&#125;"</code>
+                    <code style="color: #d32f2f.">"user"</code>: <code style="color: #388e3c;">"&#123;&#123;USER_ID&#125;&#125;"</code>
                 </div>
             </div>
         </div>
