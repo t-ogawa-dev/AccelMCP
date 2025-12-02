@@ -39,11 +39,58 @@
             <textarea id="description" name="description" rows="3"></textarea>
         </div>
         
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary" data-i18n="button_save">保存</button>
-            <a href="/mcp-services/{{ mcp_service_id }}" class="btn btn-secondary" data-i18n="button_cancel">キャンセル</a>
+        <div class="form-group">
+            <label>
+                <span data-i18n="mcp_service_access_control_label">アクセス制御</span>
+            </label>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="access-control-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <small class="text-muted" data-i18n="mcp_service_access_control_hint">制限ありにすると、接続可能アカウントを設定できます</small>
         </div>
     </form>
+</div>
+
+<div class="form-card" id="permissions-section" style="margin-top: 20px; display: none;">
+    <h3 data-i18n="mcp_service_account_management">接続可能アカウント管理</h3>
+    <p class="text-muted" data-i18n="mcp_service_account_management_desc">このMCPサービスに接続できるアカウントを設定します</p>
+    
+    <div style="display: flex; gap: 20px; align-items: flex-start; margin-top: 20px;">
+        <div style="flex: 1;">
+            <h4 data-i18n="mcp_service_enabled_accounts">接続可能アカウント</h4>
+            <select id="enabled-accounts" multiple size="10" style="width: 100%; padding: 10px; height: 300px; box-sizing: border-box;">
+            </select>
+            <p class="text-muted" style="margin-top: 5px; font-size: 0.85rem;">
+                <span id="enabled-count">0</span><span data-i18n="capability_items_count">件</span>
+            </p>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 10px; align-self: center;">
+            <button onclick="moveToEnabled()" type="button" class="btn btn-primary" title="選択したアカウントを接続可能にする">←</button>
+            <button onclick="moveAllToEnabled()" type="button" class="btn btn-primary" title="全てのアカウントを接続可能にする">←←</button>
+            <button onclick="moveToDisabled()" type="button" class="btn btn-secondary" title="選択したアカウントの接続を解除">→</button>
+            <button onclick="moveAllToDisabled()" type="button" class="btn btn-secondary" title="全てのアカウントの接続を解除">→→</button>
+        </div>
+        
+        <div style="flex: 1;">
+            <h4 data-i18n="mcp_service_disabled_accounts">未設定アカウント</h4>
+            <select id="disabled-accounts" multiple size="10" style="width: 100%; padding: 10px; height: 300px; box-sizing: border-box;">
+            </select>
+            <p class="text-muted" style="margin-top: 5px; font-size: 0.85rem;">
+                <span id="disabled-count">0</span><span data-i18n="capability_items_count">件</span>
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="form-card" style="margin-top: 20px;">
+    <div class="form-actions">
+        <button type="submit" form="mcp-service-form" class="btn btn-primary" data-i18n="button_save">保存</button>
+        <a href="/mcp-services/{{ mcp_service_id }}" class="btn btn-secondary" data-i18n="button_cancel">キャンセル</a>
+    </div>
 </div>
 {% endblock %}
 

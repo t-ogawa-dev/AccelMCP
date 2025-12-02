@@ -1,5 +1,6 @@
 /**
  * MCPサービス詳細画面
+ * v1.1 - アクセス制御表示追加
  */
 
 const mcpServiceId = parseInt(window.location.pathname.split('/')[2]);
@@ -86,6 +87,18 @@ async function loadMcpService() {
     document.getElementById('subdomain').textContent = service.subdomain;
     document.getElementById('mcp-endpoint').textContent = `http://${service.subdomain}.lvh.me:5000/mcp`;
     document.getElementById('description').textContent = service.description || '-';
+    
+    // Access control
+    const badge = document.getElementById('access-control-badge');
+    const isPublic = service.access_control === 'public';
+    
+    if (isPublic) {
+        badge.textContent = t('access_control_public');
+        badge.style.cssText = 'padding: 4px 12px; border-radius: 4px; background-color: #d1fae5; color: #065f46; font-weight: 500; font-size: 0.875rem;';
+    } else {
+        badge.textContent = t('access_control_restricted');
+        badge.style.cssText = 'padding: 4px 12px; border-radius: 4px; background-color: #fef3c7; color: #92400e; font-weight: 500; font-size: 0.875rem;';
+    }
 }
 
 (async () => {

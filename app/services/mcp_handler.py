@@ -4,10 +4,13 @@ Handles MCP requests with permission checking and API/MCP relay
 """
 import json
 import httpx
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import asyncio
+import logging
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+
+logger = logging.getLogger(__name__)
 
 
 class MCPHandler:
@@ -15,6 +18,77 @@ class MCPHandler:
     
     def __init__(self, db):
         self.db = db
+    
+    def _check_hierarchical_access(self, account, mcp_service, app=None, capability=None) -> bool:
+        """
+        Check if account has access using 3-tier hierarchical model
+        
+        Access hierarchy:
+        1. McpService level: Check if service.access_control=='restricted' and permission exists
+        2. App level: Check if app.access_control=='restricted' and permission exists  
+        3. Capability level: Check if capability.access_control=='restricted' and permission exists
+        
+        Also checks is_enabled flags at each level.
+        
+        Args:
+            account: ConnectionAccount object
+            mcp_service: McpService object
+            app: Service (App) object (optional)
+            capability: Capability object (optional)
+            
+        Returns:
+            True if access granted, False otherwise
+        """
+        from app.models.models import AccountPermission
+        
+        # Check is_enabled flags
+        if not mcp_service.is_enabled:
+            logger.warning(f"MCP Service {mcp_service.id} is disabled")
+            return False
+        
+        if app and not app.is_enabled:
+            logger.warning(f"App {app.id} is disabled")
+            return False
+            
+        if capability and not capability.is_enabled:
+            logger.warning(f"Capability {capability.id} is disabled")
+            return False
+        
+        # Level 1: McpService access control
+        if mcp_service.access_control == 'restricted':
+            has_service_permission = self.db.session.query(AccountPermission).filter(
+                AccountPermission.account_id == account.id,
+                AccountPermission.mcp_service_id == mcp_service.id
+            ).first() is not None
+            
+            if not has_service_permission:
+                logger.debug(f"Account {account.id} denied: no MCP Service permission")
+                return False
+        
+        # Level 2: App access control (if checking app or capability)
+        if app and app.access_control == 'restricted':
+            has_app_permission = self.db.session.query(AccountPermission).filter(
+                AccountPermission.account_id == account.id,
+                AccountPermission.app_id == app.id
+            ).first() is not None
+            
+            if not has_app_permission:
+                logger.debug(f"Account {account.id} denied: no App permission")
+                return False
+        
+        # Level 3: Capability access control (if checking specific capability)
+        if capability and capability.access_control == 'restricted':
+            has_capability_permission = self.db.session.query(AccountPermission).filter(
+                AccountPermission.account_id == account.id,
+                AccountPermission.capability_id == capability.id
+            ).first() is not None
+            
+            if not has_capability_permission:
+                logger.debug(f"Account {account.id} denied: no Capability permission")
+                return False
+        
+        logger.debug(f"Account {account.id} granted access")
+        return True
     
     def get_capabilities(self, account, service) -> Dict[str, Any]:
         """
@@ -28,42 +102,55 @@ class MCPHandler:
         Returns:
             MCP capabilities response
         """
-        from app.models.models import Capability, AccountPermission
+        from app.models.models import Capability
         
-        # Get capabilities user has permission for
-        permitted_capabilities = self.db.session.query(Capability).join(
-            AccountPermission
-        ).filter(
-            AccountPermission.account_id == account.id,
-            Capability.service_id == service.id
-        ).all()
+        # Get mcp_service for hierarchical check
+        mcp_service = service.mcp_service
         
-        tools = []
-        for cap in permitted_capabilities:
-            tool = {
-                'name': cap.name,
-                'description': cap.description or f'{cap.type.upper()} tool: {cap.name}',
-                'inputSchema': {
-                    'type': 'object',
-                    'properties': {},
-                    'required': []
+        # Check hierarchical access at app level
+        if not self._check_hierarchical_access(account, mcp_service, app=service):
+            return {
+                'jsonrpc': '2.0',
+                'error': {
+                    'code': -32000,
+                    'message': 'Access denied to this service'
                 }
             }
-            
-            # Add body_params as input schema
-            if cap.body_params:
-                try:
-                    body_params = json.loads(cap.body_params)
-                    for key, value in body_params.items():
-                        tool['inputSchema']['properties'][key] = {
-                            'type': 'string',
-                            'description': f'Parameter: {key}',
-                            'default': value
-                        }
-                except json.JSONDecodeError:
-                    pass
-            
-            tools.append(tool)
+        
+        # Get all capabilities for this service
+        all_capabilities = self.db.session.query(Capability).filter(
+            Capability.app_id == service.id
+        ).all()
+        
+        # Filter capabilities based on hierarchical access
+        tools = []
+        for cap in all_capabilities:
+            # Check if user has access to this specific capability
+            if self._check_hierarchical_access(account, mcp_service, app=service, capability=cap):
+                tool = {
+                    'name': cap.name,
+                    'description': cap.description or f'{cap.capability_type.upper()} tool: {cap.name}',
+                    'inputSchema': {
+                        'type': 'object',
+                        'properties': {},
+                        'required': []
+                    }
+                }
+                
+                # Add body_params as input schema
+                if cap.body_params:
+                    try:
+                        body_params = json.loads(cap.body_params)
+                        for key, value in body_params.items():
+                            tool['inputSchema']['properties'][key] = {
+                                'type': 'string',
+                                'description': f'Parameter: {key}',
+                                'default': value
+                            }
+                    except json.JSONDecodeError:
+                        pass
+                
+                tools.append(tool)
         
         return {
             'capabilities': {
@@ -89,11 +176,14 @@ class MCPHandler:
         Returns:
             MCP tool execution response
         """
-        from app.models.models import Capability, AccountPermission
+        from app.models.models import Capability
+        
+        # Get mcp_service for hierarchical check
+        mcp_service = service.mcp_service
         
         # Try to find capability by name first, then by ID
         capability = self.db.session.query(Capability).filter(
-            Capability.service_id == service.id,
+            Capability.app_id == service.id,
             (Capability.name == tool_id) | (Capability.id == tool_id)
         ).first()
         
@@ -106,13 +196,8 @@ class MCPHandler:
                 }
             }
         
-        # Check permission
-        permission = self.db.session.query(AccountPermission).filter(
-            AccountPermission.account_id == account.id,
-            AccountPermission.capability_id == capability.id
-        ).first()
-        
-        if not permission:
+        # Check hierarchical permission
+        if not self._check_hierarchical_access(account, mcp_service, app=service, capability=capability):
             return {
                 'jsonrpc': '2.0',
                 'error': {
@@ -178,38 +263,49 @@ class MCPHandler:
     
     def _handle_tools_list(self, account, service) -> Dict[str, Any]:
         """Return list of tools user has permission to use"""
-        from app.models.models import Capability, AccountPermission
+        from app.models.models import Capability
         
-        # Get capabilities user has permission for
-        permitted_capabilities = self.db.session.query(Capability).join(
-            AccountPermission
-        ).filter(
-            AccountPermission.account_id == account.id,
-            Capability.service_id == service.id
-        ).all()
+        # Get mcp_service for hierarchical check
+        mcp_service = service.mcp_service
         
-        tools = []
-        for cap in permitted_capabilities:
-            tool = {
-                'name': cap.name,
-                'description': cap.description or f'{cap.type.upper()} tool: {cap.name}',
-                'inputSchema': {
-                    'type': 'object',
-                    'properties': {},
-                    'required': []
+        # Check if user has access to the service
+        if not self._check_hierarchical_access(account, mcp_service, app=service):
+            return {
+                'jsonrpc': '2.0',
+                'result': {
+                    'tools': []  # Return empty list if no access to service
                 }
             }
-            
-            # Add body_params as input schema
-            if cap.body_params:
-                body_params = json.loads(cap.body_params)
-                for key, value in body_params.items():
-                    tool['inputSchema']['properties'][key] = {
-                        'type': 'string',
-                        'description': f'Parameter: {key}'
+        
+        # Get all capabilities for this service
+        all_capabilities = self.db.session.query(Capability).filter(
+            Capability.app_id == service.id
+        ).all()
+        
+        # Filter capabilities based on hierarchical access
+        tools = []
+        for cap in all_capabilities:
+            if self._check_hierarchical_access(account, mcp_service, app=service, capability=cap):
+                tool = {
+                    'name': cap.name,
+                    'description': cap.description or f'{cap.capability_type.upper()} tool: {cap.name}',
+                    'inputSchema': {
+                        'type': 'object',
+                        'properties': {},
+                        'required': []
                     }
-            
-            tools.append(tool)
+                }
+                
+                # Add body_params as input schema
+                if cap.body_params:
+                    body_params = json.loads(cap.body_params)
+                    for key, value in body_params.items():
+                        tool['inputSchema']['properties'][key] = {
+                            'type': 'string',
+                            'description': f'Parameter: {key}'
+                        }
+                
+                tools.append(tool)
         
         return {
             'jsonrpc': '2.0',
@@ -220,7 +316,10 @@ class MCPHandler:
     
     def _handle_tool_call(self, account, service, mcp_request: Dict[str, Any]) -> Dict[str, Any]:
         """Execute tool call with permission check"""
-        from app.models.models import Capability, AccountPermission
+        from app.models.models import Capability
+        
+        # Get mcp_service for hierarchical check
+        mcp_service = service.mcp_service
         
         params = mcp_request.get('params', {})
         tool_name = params.get('name')
@@ -228,7 +327,7 @@ class MCPHandler:
         
         # Find capability
         capability = self.db.session.query(Capability).filter(
-            Capability.service_id == service.id,
+            Capability.app_id == service.id,
             Capability.name == tool_name
         ).first()
         
@@ -242,18 +341,13 @@ class MCPHandler:
                 }
             }
         
-        # Check permission
-        permission = self.db.session.query(AccountPermission).filter(
-            AccountPermission.account_id == account.id,
-            AccountPermission.capability_id == capability.id
-        ).first()
-        
-        if not permission:
+        # Check hierarchical permission
+        if not self._check_hierarchical_access(account, mcp_service, app=service, capability=capability):
             return {
                 'jsonrpc': '2.0',
                 'id': mcp_request.get('id'),
                 'error': {
-                    'code': -32603,
+                    'code': -32000,
                     'message': f'Permission denied for tool: {tool_name}'
                 }
             }

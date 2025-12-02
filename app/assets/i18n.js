@@ -138,6 +138,12 @@ const translations = {
         // MCPサービス編集
         mcp_service_edit_title: 'MCPサービス編集',
         mcp_service_edit_desc: 'MCPサービス情報を編集します',
+        mcp_service_access_control_label: 'アクセス制限',
+        mcp_service_access_control_hint: '制限ありにすると、接続可能アカウントを設定できます',
+        mcp_service_account_management: '接続可能アカウント管理',
+        mcp_service_account_management_desc: 'このMCPサービスに接続できるアカウントを設定します',
+        mcp_service_enabled_accounts: '接続可能アカウント',
+        mcp_service_disabled_accounts: '未設定アカウント',
         
         // テンプレート一覧
         mcp_template_list_title: 'テンプレート一覧',
@@ -249,6 +255,12 @@ const translations = {
         app_connection_error: '接続エラー',
         app_common_headers_label: '共通ヘッダー',
         app_common_headers_hint: '全てのCapabilityで使用される共通ヘッダー',
+        app_access_control_label: 'アクセス制限',
+        app_access_control_hint: '制限ありにすると、接続可能アカウントを設定できます',
+        app_account_management: '接続可能アカウント管理',
+        app_account_management_desc: 'このアプリに接続できるアカウントを設定します',
+        app_enabled_accounts: '接続可能アカウント',
+        app_disabled_accounts: '未設定アカウント',
         app_register_failed: '登録に失敗しました',
         app_update_failed: '更新に失敗しました',
         
@@ -373,6 +385,27 @@ const translations = {
         account_permissions_hint: 'Capabilityごとにアクセス権限を設定できます',
         account_register_failed: '登録に失敗しました',
         account_update_failed: '更新に失敗しました',
+        
+        // アクセス制御
+        access_control: 'アクセス制限',
+        access_control_public: 'パブリック',
+        access_control_restricted: '制限あり',
+        access_control_description: 'リソースへのアクセス制御を設定します',
+        access_control_public_desc: '全てのアカウントがアクセス可能',
+        access_control_restricted_desc: '許可されたアカウントのみアクセス可能',
+        permission_level_mcp_service: 'MCPサービス',
+        permission_level_app: 'アプリ',
+        permission_level_capability: 'Capability',
+        permissions_tab: '権限管理',
+        permissions_empty: '権限が設定されていません',
+        permissions_edit_note: '権限の編集は編集画面で行ってください',
+        permission_add: '権限を追加',
+        permission_added: '権限を追加しました',
+        permission_deleted: '権限を削除しました',
+        permission_error: '権限の操作に失敗しました',
+        mcp_service_permissions: 'MCPサービス権限',
+        app_permissions: 'アプリ権限',
+        capability_permissions: 'Capability権限',
         
         // 共通フォーム
         form_required: '必須',
@@ -519,6 +552,12 @@ const translations = {
         // MCP Service Edit
         mcp_service_edit_title: 'Edit MCP Service',
         mcp_service_edit_desc: 'Edit MCP service information',
+        mcp_service_access_control_label: 'Access Restriction',
+        mcp_service_access_control_hint: 'When set to restricted, you can configure permitted accounts',
+        mcp_service_account_management: 'Permitted Account Management',
+        mcp_service_account_management_desc: 'Configure accounts that can access this MCP service',
+        mcp_service_enabled_accounts: 'Permitted Accounts',
+        mcp_service_disabled_accounts: 'Unassigned Accounts',
         
         // Template List
         mcp_template_list_title: 'Template List',
@@ -630,6 +669,12 @@ const translations = {
         app_connection_error: 'Connection error',
         app_common_headers_label: 'Common Headers',
         app_common_headers_hint: 'Headers used by all capabilities',
+        app_access_control_label: 'Access Restriction',
+        app_access_control_hint: 'When set to restricted, you can configure permitted accounts',
+        app_account_management: 'Permitted Account Management',
+        app_account_management_desc: 'Configure accounts that can access this app',
+        app_enabled_accounts: 'Permitted Accounts',
+        app_disabled_accounts: 'Unassigned Accounts',
         app_register_failed: 'Registration failed',
         app_update_failed: 'Update failed',
         
@@ -754,6 +799,27 @@ const translations = {
         account_permissions_hint: 'Set access permissions for each capability',
         account_register_failed: 'Registration failed',
         account_update_failed: 'Update failed',
+        
+        // Access Control
+        access_control: 'Access Restriction',
+        access_control_public: 'Public',
+        access_control_restricted: 'Restricted',
+        access_control_description: 'Configure access control for resources',
+        access_control_public_desc: 'All accounts can access',
+        access_control_restricted_desc: 'Only authorized accounts can access',
+        permission_level_mcp_service: 'MCP Service',
+        permission_level_app: 'App',
+        permission_level_capability: 'Capability',
+        permissions_tab: 'Permissions',
+        permissions_empty: 'No permissions configured',
+        permissions_edit_note: 'Please edit permissions on the edit page',
+        permission_add: 'Add Permission',
+        permission_added: 'Permission added',
+        permission_deleted: 'Permission deleted',
+        permission_error: 'Permission operation failed',
+        mcp_service_permissions: 'MCP Service Permissions',
+        app_permissions: 'App Permissions',
+        capability_permissions: 'Capability Permissions',
         
         // Common Form
         form_required: 'Required',

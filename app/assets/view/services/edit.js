@@ -3,6 +3,19 @@ const pathParts = window.location.pathname.split('/');
 const mcpServiceId = parseInt(pathParts[2]); // /mcp-services/{id}/apps/{app_id}/edit
 const serviceId = parseInt(pathParts[4]);
 let headerIndex = 0;
+let currentAccessControl = 'public'; // デフォルトはpublic（制限なし）
+let currentServiceType = 'api'; // Current service type (readonly after creation)
+
+// Update access control UI
+function updateAccessControlUI(isRestricted) {
+    const permissionsSection = document.getElementById('permissions-section');
+    
+    if (isRestricted) {
+        permissionsSection.style.display = 'block';
+    } else {
+        permissionsSection.style.display = 'none';
+    }
+}
 
 function showServiceTypeSection() {
     const serviceType = document.querySelector('input[name="service_type"]:checked').value;
@@ -111,11 +124,11 @@ async function loadService() {
     document.getElementById('name').value = service.name;
     document.getElementById('description').value = service.description || '';
     
-    // Set service type
-    const serviceType = service.service_type || 'api';
-    document.querySelector(`input[name="service_type"][value="${serviceType}"]`).checked = true;
+    // Set service type (readonly)
+    currentServiceType = service.service_type || 'api';
+    document.querySelector(`input[name="service_type"][value="${currentServiceType}"]`).checked = true;
     
-    if (serviceType === 'mcp') {
+    if (currentServiceType === 'mcp') {
         document.getElementById('mcp_url').value = service.mcp_url || '';
     }
     
@@ -130,51 +143,175 @@ async function loadService() {
             addHeaderRow(key, value);
         });
     }
+    
+    // Set access control (default: public for apps)
+    currentAccessControl = service.access_control || 'public';
+    const isRestricted = currentAccessControl === 'restricted';
+    document.getElementById('access-control-toggle').checked = isRestricted;
+    updateAccessControlUI(isRestricted);
+}
+
+// Load account permissions
+async function loadPermissions() {
+    const response = await fetch(`/api/apps/${serviceId}/permissions`);
+    const data = await response.json();
+    
+    const enabledSelect = document.getElementById('enabled-accounts');
+    const disabledSelect = document.getElementById('disabled-accounts');
+    
+    enabledSelect.innerHTML = data.enabled.map(account => 
+        `<option value="${account.id}">${account.name}</option>`
+    ).join('');
+    
+    disabledSelect.innerHTML = data.disabled.map(account => 
+        `<option value="${account.id}">${account.name}</option>`
+    ).join('');
+    
+    updateCounts();
+}
+
+function moveToEnabled() {
+    const disabledSelect = document.getElementById('disabled-accounts');
+    const enabledSelect = document.getElementById('enabled-accounts');
+    const selected = Array.from(disabledSelect.selectedOptions);
+    
+    selected.forEach(option => {
+        enabledSelect.appendChild(option);
+    });
+    
+    updateCounts();
+}
+
+function moveAllToEnabled() {
+    const disabledSelect = document.getElementById('disabled-accounts');
+    const enabledSelect = document.getElementById('enabled-accounts');
+    
+    Array.from(disabledSelect.options).forEach(option => {
+        enabledSelect.appendChild(option);
+    });
+    
+    updateCounts();
+}
+
+function moveToDisabled() {
+    const enabledSelect = document.getElementById('enabled-accounts');
+    const disabledSelect = document.getElementById('disabled-accounts');
+    const selected = Array.from(enabledSelect.selectedOptions);
+    
+    selected.forEach(option => {
+        disabledSelect.appendChild(option);
+    });
+    
+    updateCounts();
+}
+
+function moveAllToDisabled() {
+    const enabledSelect = document.getElementById('enabled-accounts');
+    const disabledSelect = document.getElementById('disabled-accounts');
+    
+    Array.from(enabledSelect.options).forEach(option => {
+        disabledSelect.appendChild(option);
+    });
+    
+    updateCounts();
+}
+
+function updateCounts() {
+    const enabledCount = document.getElementById('enabled-accounts').options.length;
+    const disabledCount = document.getElementById('disabled-accounts').options.length;
+    
+    document.getElementById('enabled-count').textContent = enabledCount;
+    document.getElementById('disabled-count').textContent = disabledCount;
+}
+
+// Save permissions
+async function savePermissions() {
+    const enabledSelect = document.getElementById('enabled-accounts');
+    const enabledAccountIds = Array.from(enabledSelect.options).map(opt => parseInt(opt.value));
+    
+    const response = await fetch(`/api/apps/${serviceId}/permissions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ account_ids: enabledAccountIds })
+    });
+    
+    if (!response.ok) {
+        throw new Error('Failed to save permissions');
+    }
 }
 
 // Initialize and setup
 (async () => {
     await initLanguageSwitcher();
     await loadService();
+    await loadPermissions();
+    
+    // Access control toggle handler
+    document.getElementById('access-control-toggle').addEventListener('change', async (e) => {
+        const isRestricted = e.target.checked;
+        updateAccessControlUI(isRestricted);
+        currentAccessControl = isRestricted ? 'restricted' : 'public';
+    });
     
     // Setup form submit handler
     document.getElementById('service-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const formData = new FormData(e.target);
-        const serviceType = formData.get('service_type');
-        const data = {
-            name: formData.get('name'),
-            description: formData.get('description'),
-            service_type: serviceType,
-            common_headers: {}
-        };
-        
-        if (serviceType === 'mcp') {
-            data.mcp_url = formData.get('mcp_url');
-        }
-        
-        // Collect headers for both API and MCP types
-        const headerRows = document.querySelectorAll('#headers-container .key-value-row');
-        headerRows.forEach(row => {
-            const inputs = row.querySelectorAll('input[type="text"]');
-            const key = inputs[0].value.trim();
-            const value = inputs[1].value.trim();
-            if (key) {
-                data.common_headers[key] = value;
+        try {
+            const formData = new FormData(e.target);
+            const data = {
+                name: formData.get('name'),
+                description: formData.get('description'),
+                service_type: currentServiceType, // Use saved value since radio is disabled
+                common_headers: {}
+            };
+            
+            if (currentServiceType === 'mcp') {
+                data.mcp_url = formData.get('mcp_url');
             }
-        });
-        
-        const response = await fetch(`/api/apps/${serviceId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        
-        if (response.ok) {
+            
+            // Collect headers for both API and MCP types
+            const headerRows = document.querySelectorAll('#headers-container .key-value-row');
+            headerRows.forEach(row => {
+                const inputs = row.querySelectorAll('input[type="text"]');
+                const key = inputs[0].value.trim();
+                const value = inputs[1].value.trim();
+                if (key) {
+                    data.common_headers[key] = value;
+                }
+            });
+            
+            // Update basic info
+            const response = await fetch(`/api/apps/${serviceId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || t('error_unknown'));
+            }
+            
+            // Update access control
+            const accessControlResponse = await fetch(`/api/apps/${serviceId}/access-control`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ access_control: currentAccessControl })
+            });
+            
+            if (!accessControlResponse.ok) {
+                throw new Error('Failed to update access control');
+            }
+            
+            // Save permissions if restricted
+            if (currentAccessControl === 'restricted') {
+                await savePermissions();
+            }
+            
             window.location.href = `/mcp-services/${mcpServiceId}/apps/${serviceId}`;
-        } else {
-            alert(t('app_update_failed'));
+        } catch (error) {
+            alert(t('app_update_failed') + ': ' + error.message);
         }
     });
 })();

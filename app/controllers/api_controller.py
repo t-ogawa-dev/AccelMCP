@@ -398,7 +398,6 @@ def app_detail(service_id):
     elif request.method == 'PUT':
         data = request.get_json()
         service.name = data.get('name', service.name)
-        service.subdomain = data.get('subdomain', service.subdomain)
         service.service_type = data.get('service_type', service.service_type)
         service.mcp_url = data.get('mcp_url', service.mcp_url)
         service.common_headers = json.dumps(data.get('common_headers', {}))
@@ -602,7 +601,7 @@ def regenerate_token(account_id):
 @api_bp.route('/accounts/<int:account_id>/permissions', methods=['GET', 'POST'])
 @login_required
 def account_permissions(account_id):
-    """Get account permissions or add new permission"""
+    """Get account permissions or add new permission (supports 3-tier)"""
     account = ConnectionAccount.query.get_or_404(account_id)
     
     if request.method == 'GET':
@@ -611,18 +610,42 @@ def account_permissions(account_id):
     
     elif request.method == 'POST':
         data = request.get_json()
-        capability_id = data['capability_id']
+        
+        # Determine which level of permission to add
+        mcp_service_id = data.get('mcp_service_id')
+        app_id = data.get('app_id')
+        capability_id = data.get('capability_id')
+        
+        # Validate: exactly one must be provided
+        provided = sum([bool(mcp_service_id), bool(app_id), bool(capability_id)])
+        if provided != 1:
+            return jsonify({'error': 'Exactly one of mcp_service_id, app_id, or capability_id must be provided'}), 400
         
         # Check if permission already exists
         existing = AccountPermission.query.filter_by(
-            account_id=account_id, 
+            account_id=account_id,
+            mcp_service_id=mcp_service_id,
+            app_id=app_id,
             capability_id=capability_id
         ).first()
         
         if existing:
             return jsonify({'error': 'この権限は既に付与されています'}), 400
         
-        permission = AccountPermission(account_id=account_id, capability_id=capability_id)
+        # Verify the resource exists
+        if mcp_service_id:
+            McpService.query.get_or_404(mcp_service_id)
+        elif app_id:
+            Service.query.get_or_404(app_id)
+        elif capability_id:
+            Capability.query.get_or_404(capability_id)
+        
+        permission = AccountPermission(
+            account_id=account_id,
+            mcp_service_id=mcp_service_id,
+            app_id=app_id,
+            capability_id=capability_id
+        )
         db.session.add(permission)
         db.session.commit()
         return jsonify(permission.to_dict()), 201
@@ -1050,4 +1073,182 @@ def variable_detail(variable_id):
         db.session.delete(variable)
         db.session.commit()
         return '', 204
+
+
+# ============= Hierarchical Access Control API =============
+
+@api_bp.route('/mcp-services/<int:mcp_service_id>/access-control', methods=['PUT'])
+@login_required
+def mcp_service_access_control(mcp_service_id):
+    """Toggle MCP service access control (public/restricted)"""
+    mcp_service = McpService.query.get_or_404(mcp_service_id)
+    
+    data = request.get_json()
+    access_control = data.get('access_control')
+    
+    if access_control not in ['public', 'restricted']:
+        return jsonify({'error': 'access_control must be "public" or "restricted"'}), 400
+    
+    mcp_service.access_control = access_control
+    db.session.commit()
+    
+    return jsonify(mcp_service.to_dict())
+
+
+@api_bp.route('/apps/<int:app_id>/access-control', methods=['PUT'])
+@login_required
+def app_access_control(app_id):
+    """Toggle app access control (public/restricted)"""
+    app = Service.query.get_or_404(app_id)
+    
+    data = request.get_json()
+    access_control = data.get('access_control')
+    
+    if access_control not in ['public', 'restricted']:
+        return jsonify({'error': 'access_control must be "public" or "restricted"'}), 400
+    
+    app.access_control = access_control
+    db.session.commit()
+    
+    return jsonify(app.to_dict())
+
+
+@api_bp.route('/capabilities/<int:capability_id>/access-control', methods=['PUT'])
+@login_required
+def capability_access_control(capability_id):
+    """Toggle capability access control (public/restricted)"""
+    capability = Capability.query.get_or_404(capability_id)
+    
+    data = request.get_json()
+    access_control = data.get('access_control')
+    
+    if access_control not in ['public', 'restricted']:
+        return jsonify({'error': 'access_control must be "public" or "restricted"'}), 400
+    
+    capability.access_control = access_control
+    db.session.commit()
+    
+    return jsonify(capability.to_dict())
+
+
+@api_bp.route('/mcp-services/<int:mcp_service_id>/permissions', methods=['GET', 'POST'])
+@login_required
+def mcp_service_permissions(mcp_service_id):
+    """Get or add MCP service level permissions"""
+    mcp_service = McpService.query.get_or_404(mcp_service_id)
+    
+    if request.method == 'GET':
+        # Get all accounts with permissions for this MCP service
+        permissions = AccountPermission.query.filter_by(mcp_service_id=mcp_service_id).all()
+        enabled_account_ids = [p.account_id for p in permissions]
+        
+        # Get enabled accounts (with permission)
+        enabled_accounts = ConnectionAccount.query.filter(
+            ConnectionAccount.id.in_(enabled_account_ids)
+        ).all() if enabled_account_ids else []
+        
+        # Get disabled accounts (without permission)
+        disabled_accounts = ConnectionAccount.query.filter(
+            ~ConnectionAccount.id.in_(enabled_account_ids)
+        ).all() if enabled_account_ids else ConnectionAccount.query.all()
+        
+        return jsonify({
+            'enabled': [a.to_dict() for a in enabled_accounts],
+            'disabled': [a.to_dict() for a in disabled_accounts]
+        })
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        account_ids = data.get('account_ids', [])
+        
+        # Delete all existing permissions for this MCP service
+        AccountPermission.query.filter_by(mcp_service_id=mcp_service_id).delete()
+        
+        # Add new permissions
+        for account_id in account_ids:
+            # Verify account exists
+            account = ConnectionAccount.query.filter_by(id=account_id).first()
+            if account:
+                permission = AccountPermission(
+                    account_id=account_id,
+                    mcp_service_id=mcp_service_id
+                )
+                db.session.add(permission)
+        
+        db.session.commit()
+        return jsonify({'message': 'MCP service permissions updated'}), 200
+        db.session.add(permission)
+        db.session.commit()
+        
+        return jsonify(permission.to_dict()), 201
+
+
+@api_bp.route('/apps/<int:app_id>/permissions', methods=['GET', 'POST'])
+@login_required
+def app_permissions(app_id):
+    """Get or add app level permissions"""
+    app = Service.query.get_or_404(app_id)
+    
+    if request.method == 'GET':
+        # Get all accounts with permissions for this app
+        permissions = AccountPermission.query.filter_by(app_id=app_id).all()
+        enabled_account_ids = [p.account_id for p in permissions]
+        
+        # Get enabled accounts (with permission)
+        enabled_accounts = ConnectionAccount.query.filter(
+            ConnectionAccount.id.in_(enabled_account_ids)
+        ).all() if enabled_account_ids else []
+        
+        # Get disabled accounts (without permission)
+        disabled_accounts = ConnectionAccount.query.filter(
+            ~ConnectionAccount.id.in_(enabled_account_ids)
+        ).all() if enabled_account_ids else ConnectionAccount.query.all()
+        
+        return jsonify({
+            'enabled': [a.to_dict() for a in enabled_accounts],
+            'disabled': [a.to_dict() for a in disabled_accounts]
+        })
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        account_ids = data.get('account_ids', [])
+        
+        # Delete all existing permissions for this app
+        AccountPermission.query.filter_by(app_id=app_id).delete()
+        
+        # Add new permissions
+        for account_id in account_ids:
+            # Verify account exists
+            account = ConnectionAccount.query.filter_by(id=account_id).first()
+            if account:
+                permission = AccountPermission(
+                    account_id=account_id,
+                    app_id=app_id
+                )
+                db.session.add(permission)
+        
+        db.session.commit()
+        return jsonify({'message': 'App permissions updated'}), 200
+
+
+@api_bp.route('/accounts/<int:account_id>/permissions/by-level', methods=['GET'])
+@login_required
+def account_permissions_by_level(account_id):
+    """Get account permissions grouped by level (mcp_service, app, capability)"""
+    account = ConnectionAccount.query.get_or_404(account_id)
+    
+    permissions = AccountPermission.query.filter_by(account_id=account_id).all()
+    
+    result = {
+        'mcp_service': [],
+        'app': [],
+        'capability': []
+    }
+    
+    for perm in permissions:
+        level = perm.get_permission_level()
+        if level:
+            result[level].append(perm.to_dict())
+    
+    return jsonify(result)
 

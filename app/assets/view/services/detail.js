@@ -22,6 +22,12 @@ async function loadService() {
                     <td><span class="badge badge-${service.service_type}">${service.service_type.toUpperCase()}</span></td>
                 </tr>
                 <tr>
+                    <th>${t('access_control')}</th>
+                    <td>
+                        <span id="access-control-badge"></span>
+                    </td>
+                </tr>
+                <tr>
                     <th>${t('app_registered_at')}</th>
                     <td>${new Date(service.created_at).toLocaleString(currentLanguage === 'ja' ? 'ja-JP' : 'en-US')}</td>
                 </tr>
@@ -37,6 +43,18 @@ async function loadService() {
             <pre class="code-block">${JSON.stringify(service.common_headers, null, 2)}</pre>
         </div>
     `;
+    
+    // Update access control UI
+    const badge = document.getElementById('access-control-badge');
+    const isPublic = service.access_control === 'public';
+    
+    if (isPublic) {
+        badge.textContent = t('access_control_public');
+        badge.style.cssText = 'padding: 4px 12px; border-radius: 4px; background-color: #d1fae5; color: #065f46; font-weight: 500; font-size: 0.875rem;';
+    } else {
+        badge.textContent = t('access_control_restricted');
+        badge.style.cssText = 'padding: 4px 12px; border-radius: 4px; background-color: #fef3c7; color: #92400e; font-weight: 500; font-size: 0.875rem;';
+    }
 }
 
 // Initialize language and load service detail
@@ -44,3 +62,4 @@ async function loadService() {
     await initLanguageSwitcher();
     loadService();
 })();
+

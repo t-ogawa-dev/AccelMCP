@@ -41,12 +41,14 @@ class McpService(db.Model):
     name = db.Column(db.String(100), nullable=False)
     subdomain = db.Column(db.String(50), unique=True, nullable=False)
     description = db.Column(db.Text)
+    access_control = db.Column(db.String(20), nullable=False, default='restricted')  # 'public' or 'restricted'
     is_enabled = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     apps = db.relationship('Service', back_populates='mcp_service', cascade='all, delete-orphan')
+    permissions = db.relationship('AccountPermission', back_populates='mcp_service', cascade='all, delete-orphan')
     
     def to_dict(self):
         return {
@@ -54,6 +56,7 @@ class McpService(db.Model):
             'name': self.name,
             'subdomain': self.subdomain,
             'description': self.description,
+            'access_control': self.access_control,
             'is_enabled': self.is_enabled,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
@@ -71,6 +74,7 @@ class Service(db.Model):
     mcp_url = db.Column(db.String(500))  # MCP接続先URL (service_type='mcp'の場合)
     common_headers = db.Column(db.Text)  # JSON string
     description = db.Column(db.Text)
+    access_control = db.Column(db.String(20), nullable=False, default='public')  # 'public' or 'restricted'
     is_enabled = db.Column(db.Boolean, default=True, nullable=False)  # 有効/無効フラグ
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -78,6 +82,7 @@ class Service(db.Model):
     # Relationships
     mcp_service = db.relationship('McpService', back_populates='apps')
     capabilities = db.relationship('Capability', back_populates='service', cascade='all, delete-orphan')
+    permissions = db.relationship('AccountPermission', back_populates='app', cascade='all, delete-orphan')
     
     def to_dict(self):
         return {
@@ -88,6 +93,7 @@ class Service(db.Model):
             'mcp_url': self.mcp_url,
             'common_headers': json.loads(self.common_headers) if self.common_headers else {},
             'description': self.description,
+            'access_control': self.access_control,
             'is_enabled': self.is_enabled,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
@@ -109,6 +115,7 @@ class Capability(db.Model):
     body_params = db.Column(db.Text)  # JSON string (for tool)
     template_content = db.Column(db.Text)  # prompt template (for prompt)
     description = db.Column(db.Text)
+    access_control = db.Column(db.String(20), nullable=False, default='public')  # 'public' or 'restricted'
     is_enabled = db.Column(db.Boolean, default=True, nullable=False)  # 有効/無効フラグ
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -129,6 +136,7 @@ class Capability(db.Model):
             'body_params': json.loads(self.body_params) if self.body_params else {},
             'template_content': self.template_content,
             'description': self.description,
+            'access_control': self.access_control,
             'is_enabled': self.is_enabled,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
@@ -140,35 +148,69 @@ class Capability(db.Model):
 
 
 class AccountPermission(db.Model):
-    """接続アカウントの権限管理"""
+    """接続アカウントの権限管理 - 3階層サポート"""
     __tablename__ = 'account_permissions'
     
     id = db.Column(db.Integer, primary_key=True)
     account_id = db.Column(db.Integer, db.ForeignKey('connection_accounts.id'), nullable=False)
-    capability_id = db.Column(db.Integer, db.ForeignKey('capabilities.id'), nullable=False)
+    
+    # 3-tier permission: exactly one of these must be set
+    mcp_service_id = db.Column(db.Integer, db.ForeignKey('mcp_services.id'), nullable=True)
+    app_id = db.Column(db.Integer, db.ForeignKey('apps.id'), nullable=True)
+    capability_id = db.Column(db.Integer, db.ForeignKey('capabilities.id'), nullable=True)
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
     account = db.relationship('ConnectionAccount', back_populates='permissions')
+    mcp_service = db.relationship('McpService', back_populates='permissions')
+    app = db.relationship('Service', back_populates='permissions')
     capability = db.relationship('Capability', back_populates='permissions')
     
-    # Unique constraint
-    __table_args__ = (
-        db.UniqueConstraint('account_id', 'capability_id', name='uq_account_capability'),
-    )
+    def get_permission_level(self):
+        """Get the level of permission: 'mcp_service', 'app', or 'capability'"""
+        if self.mcp_service_id is not None:
+            return 'mcp_service'
+        elif self.app_id is not None:
+            return 'app'
+        elif self.capability_id is not None:
+            return 'capability'
+        return None
     
     def to_dict(self):
-        capability_dict = self.capability.to_dict() if self.capability else None
-        if capability_dict and self.capability.service:
-            capability_dict['service_name'] = self.capability.service.name
-        
-        return {
+        result = {
             'id': self.id,
             'account_id': self.account_id,
-            'capability_id': self.capability_id,
-            'capability': capability_dict,
+            'permission_level': self.get_permission_level(),
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
+        
+        # Add resource details based on permission level
+        if self.mcp_service_id:
+            result['mcp_service_id'] = self.mcp_service_id
+            if self.mcp_service:
+                result['mcp_service'] = {
+                    'id': self.mcp_service.id,
+                    'name': self.mcp_service.name,
+                    'subdomain': self.mcp_service.subdomain
+                }
+        elif self.app_id:
+            result['app_id'] = self.app_id
+            if self.app:
+                result['app'] = {
+                    'id': self.app.id,
+                    'name': self.app.name,
+                    'mcp_service_id': self.app.mcp_service_id
+                }
+        elif self.capability_id:
+            result['capability_id'] = self.capability_id
+            if self.capability:
+                capability_dict = self.capability.to_dict()
+                if self.capability.service:
+                    capability_dict['service_name'] = self.capability.service.name
+                result['capability'] = capability_dict
+        
+        return result
 
 
 class AdminSettings(db.Model):
