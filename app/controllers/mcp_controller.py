@@ -5,7 +5,7 @@ Handles MCP protocol endpoints
 import logging
 from flask import Blueprint, request, jsonify, current_app
 
-from app.models.models import ConnectionAccount, Service
+from app.models.models import ConnectionAccount, Service, McpService, Capability
 from app.services.mcp_handler import MCPHandler
 from app.models.models import db
 
@@ -88,21 +88,37 @@ def mcp_subdomain_endpoint():
             }
         }), status
     
-    # Get service by subdomain
-    service = Service.query.filter_by(subdomain=subdomain).first()
-    if not service:
+    # Get MCP service by subdomain
+    mcp_service = McpService.query.filter_by(subdomain=subdomain).first()
+    if not mcp_service:
         return jsonify({
             'jsonrpc': '2.0',
             'error': {
                 'code': -32001,
-                'message': f'Service not found for subdomain: {subdomain}'
+                'message': f'MCP service not found for subdomain: {subdomain}'
             }
         }), 404
     
-    # Handle GET request - return capabilities
+    # Get apps (services) under this MCP service
+    services = Service.query.filter_by(mcp_service_id=mcp_service.id).all()
+    
+    # Handle GET request - return capabilities from all services
     if request.method == 'GET':
-        response = mcp_handler.get_capabilities(account, service)
-        return jsonify(response)
+        all_capabilities = []
+        for service in services:
+            capabilities = Capability.query.filter_by(app_id=service.id).all()
+            all_capabilities.extend([cap.to_dict() for cap in capabilities])
+        
+        return jsonify({
+            'jsonrpc': '2.0',
+            'result': {
+                'capabilities': all_capabilities,
+                'serverInfo': {
+                    'name': mcp_service.name,
+                    'version': '1.0.0'
+                }
+            }
+        })
     
     # Handle POST request - process MCP request
     mcp_request = request.get_json()
@@ -115,8 +131,41 @@ def mcp_subdomain_endpoint():
             }
         }), 400
     
-    response = mcp_handler.handle_http_request(account, service, mcp_request)
-    return jsonify(response)
+    # Find the service that has the requested tool/capability
+    method = mcp_request.get('method')
+    params = mcp_request.get('params', {})
+    
+    if method == 'tools/call':
+        tool_name = params.get('name')
+        for service in services:
+            capability = Capability.query.filter_by(
+                app_id=service.id,
+                name=tool_name
+            ).first()
+            if capability:
+                response = mcp_handler.handle_http_request(account, service, mcp_request)
+                return jsonify(response)
+        
+        return jsonify({
+            'jsonrpc': '2.0',
+            'error': {
+                'code': -32601,
+                'message': f'Tool not found: {tool_name}'
+            }
+        }), 404
+    
+    # For other methods, use the first service (or handle accordingly)
+    if services:
+        response = mcp_handler.handle_http_request(account, services[0], mcp_request)
+        return jsonify(response)
+    
+    return jsonify({
+        'jsonrpc': '2.0',
+        'error': {
+            'code': -32001,
+            'message': 'No services configured for this MCP service'
+        }
+    }), 404
 
 
 @mcp_bp.route('/tools/<tool_id>', methods=['POST'])
