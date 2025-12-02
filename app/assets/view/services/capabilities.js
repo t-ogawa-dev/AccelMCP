@@ -2,6 +2,7 @@
 const pathParts = window.location.pathname.split('/');
 const mcpServiceId = parseInt(pathParts[2]);
 const serviceId = parseInt(pathParts[4]);
+let isMcpType = false;
 
 async function loadCapabilities() {
     const response = await fetch(`/api/apps/${serviceId}/capabilities`);
@@ -31,7 +32,7 @@ async function loadCapabilities() {
                     <span class="toggle-slider"></span>
                 </label>
                 <a href="/capabilities/${cap.id}/edit" class="btn btn-sm">${t('button_edit')}</a>
-                <button onclick="deleteCapability(${cap.id})" class="btn btn-sm btn-danger">${t('button_delete')}</button>
+                ${!isMcpType ? `<button onclick="deleteCapability(${cap.id})" class="btn btn-sm btn-danger">${t('button_delete')}</button>` : ''}
             </div>
         </div>
     `).join('');
@@ -64,5 +65,23 @@ async function deleteCapability(id) {
 // Initialize language and load capabilities
 (async () => {
     await initLanguageSwitcher();
+    
+    // Get parent app information to check if it's MCP type
+    try {
+        const appResponse = await fetch(`/api/apps/${serviceId}`);
+        const app = await appResponse.json();
+        isMcpType = app.service_type === 'mcp';
+        
+        // Hide "New Capability" button for MCP type
+        if (isMcpType) {
+            const newCapabilityBtn = document.querySelector('a[href*="/capabilities/new"]');
+            if (newCapabilityBtn) {
+                newCapabilityBtn.style.display = 'none';
+            }
+        }
+    } catch (e) {
+        console.error('Failed to fetch app info:', e);
+    }
+    
     loadCapabilities();
 })();

@@ -7,6 +7,18 @@ async function loadService() {
     const response = await fetch(`/api/apps/${serviceId}`);
     const service = await response.json();
     
+    const isMcpType = service.service_type === 'mcp';
+    
+    // Build endpoint URL row for MCP type
+    let endpointRow = '';
+    if (isMcpType && service.mcp_url) {
+        endpointRow = `
+                <tr>
+                    <th>${t('app_endpoint_url')}</th>
+                    <td><code>${service.mcp_url}</code></td>
+                </tr>`;
+    }
+    
     const container = document.getElementById('service-detail');
     container.innerHTML = `
         <div class="detail-section">
@@ -20,7 +32,7 @@ async function loadService() {
                 <tr>
                     <th>${t('app_type_label')}</th>
                     <td><span class="badge badge-${service.service_type}">${service.service_type.toUpperCase()}</span></td>
-                </tr>
+                </tr>${endpointRow}
                 <tr>
                     <th>${t('access_control')}</th>
                     <td>

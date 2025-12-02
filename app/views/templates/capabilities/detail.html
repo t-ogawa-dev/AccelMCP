@@ -33,38 +33,6 @@
 
 <div id="capability-detail" class="detail-card"></div>
 
-<!-- Permissions Section -->
-<div class="detail-card" id="permissions-section" style="display: none;">
-    <h3 data-i18n="permissions_tab">権限管理</h3>
-    <div style="margin-bottom: 15px;">
-        <button onclick="showAddPermissionModal()" class="btn btn-secondary" data-i18n="permission_add">権限を追加</button>
-    </div>
-    <div id="permissions-list">
-        <p data-i18n="permissions_empty">権限が設定されていません</p>
-    </div>
-</div>
-
-<!-- Add Permission Modal -->
-<div id="add-permission-modal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 data-i18n="permission_add">権限を追加</h3>
-            <button onclick="closeAddPermissionModal()" class="btn-close">×</button>
-        </div>
-        <div class="modal-body">
-            <div class="form-group">
-                <label data-i18n="account_name_label">アカウント</label>
-                <select id="permission-account-select" class="form-control">
-                    <option value="">選択してください</option>
-                </select>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button onclick="closeAddPermissionModal()" class="btn btn-secondary" data-i18n="button_cancel">キャンセル</button>
-            <button onclick="addPermission()" class="btn btn-primary" data-i18n="button_save">保存</button>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block scripts %}

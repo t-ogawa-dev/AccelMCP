@@ -18,9 +18,10 @@ async function loadAccount() {
         
         <div class="detail-section">
             <h3>${t('account_bearer_token')}</h3>
-            <div class="token-display">
-                <code>${account.bearer_token}</code>
-                <button onclick="copyToken('${account.bearer_token}')" class="btn btn-sm">${t('account_copy_token')}</button>
+            <div class="token-display" style="display: flex; gap: 10px; align-items: center;">
+                <code style="flex: 1; padding: 10px; background: #f5f5f5; border-radius: 4px; overflow-x: auto;">${account.bearer_token}</code>
+                <button onclick="copyToken('${account.bearer_token}')" class="btn btn-sm btn-secondary">${t('account_copy_token')}</button>
+                <button onclick="regenerateToken()" class="btn btn-sm btn-warning">${t('account_regenerate_token')}</button>
             </div>
         </div>
         
@@ -46,49 +47,6 @@ async function loadAccount() {
     `;
 }
 
-async function loadPermissions() {
-    const response = await fetch(`/api/accounts/${accountId}/permissions`);
-    const permissions = await response.json();
-    
-    const container = document.getElementById('permissions-list');
-    
-    if (permissions.length === 0) {
-        container.innerHTML = `<p class="text-muted">${t('account_no_capabilities')}</p>`;
-        return;
-    }
-    
-    // Group by service
-    const serviceMap = {};
-    permissions.forEach(perm => {
-        const serviceName = perm.capability.service_name || t('account_unknown_service');
-        if (!serviceMap[serviceName]) {
-            serviceMap[serviceName] = [];
-        }
-        serviceMap[serviceName].push(perm.capability);
-    });
-    
-    let html = '';
-    for (const [serviceName, capabilities] of Object.entries(serviceMap)) {
-        html += `
-            <div class="service-section" style="margin-bottom: 20px;">
-                <h4 style="margin-bottom: 10px;">${serviceName}</h4>
-                <div class="permissions-grid">
-                    ${capabilities.map(cap => `
-                        <div class="permission-item">
-                            <div>
-                                <strong>${cap.name}</strong>
-                                <span class="badge badge-${cap.capability_type || cap.type}">${(cap.capability_type || cap.type || 'tool').toUpperCase()}</span>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
-    
-    container.innerHTML = html;
-}
-
 function copyToken(token) {
     navigator.clipboard.writeText(token);
     alert(t('account_token_copied'));
@@ -97,16 +55,24 @@ function copyToken(token) {
 async function regenerateToken() {
     if (!confirm(t('account_regenerate_confirm'))) return;
     
-    await fetch(`/api/accounts/${accountId}/regenerate_token`, { method: 'POST' });
-    loadAccount();
-    alert(t('account_token_regenerated'));
+    try {
+        const response = await fetch(`/api/accounts/${accountId}/regenerate_token`, { method: 'POST' });
+        if (response.ok) {
+            alert(t('account_token_regenerated'));
+            await loadAccount();
+        } else {
+            alert('トークンの再発行に失敗しました');
+        }
+    } catch (error) {
+        console.error('Error regenerating token:', error);
+        alert('トークンの再発行に失敗しました');
+    }
 }
 
 // Initialize and setup
 (async () => {
     await initLanguageSwitcher();
     await loadAccount();
-    await loadPermissions();
     
     // Setup form submit handler
     document.getElementById('edit-form').addEventListener('submit', async (e) => {

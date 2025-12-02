@@ -96,10 +96,23 @@
                 <div id="json-validation-error" style="color: #dc3545; margin-top: 8px; font-size: 0.9rem; display: none;"></div>
             </div>
         </div>
+        
+        <div class="form-group">
+            <label>
+                <span data-i18n="capability_access_control_label">アクセス制限</span>
+            </label>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="access-control-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <small class="text-muted" data-i18n="capability_access_control_hint">制限ありにすると、接続可能アカウントを設定できます</small>
+        </div>
     </form>
 </div>
 
-<div class="form-card" style="margin-top: 20px;">
+<div class="form-card" id="permissions-section" style="margin-top: 20px; display: none;">
     <h3 data-i18n="capability_account_management">接続可能アカウント管理</h3>
     <p class="text-muted" data-i18n="capability_account_management_desc">このCapabilityに接続できるアカウントを設定します</p>
     

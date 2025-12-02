@@ -2,6 +2,18 @@
 const capabilityId = parseInt(window.location.pathname.split('/')[2]);
 let headerIndex = 0;
 let bodyIndex = 0;
+let currentAccessControl = 'public'; // デフォルトはpublic（制限なし）
+
+// Update access control UI
+function updateAccessControlUI(isRestricted) {
+    const permissionsSection = document.getElementById('permissions-section');
+    
+    if (isRestricted) {
+        permissionsSection.style.display = 'block';
+    } else {
+        permissionsSection.style.display = 'none';
+    }
+}
 
 // Show error message
 function showError(message) {
@@ -90,6 +102,22 @@ function updateCounts() {
     document.getElementById('disabled-count').textContent = disabledCount;
 }
 
+// Save permissions
+async function savePermissions() {
+    const enabledSelect = document.getElementById('enabled-accounts');
+    const enabledAccountIds = Array.from(enabledSelect.options).map(opt => parseInt(opt.value));
+    
+    const response = await fetch(`/api/capabilities/${capabilityId}/permissions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ account_ids: enabledAccountIds })
+    });
+    
+    if (!response.ok) {
+        throw new Error('Failed to save permissions');
+    }
+}
+
 function toggleBodyType() {
     const method = document.getElementById('method').value;
     const bodyKeyValue = document.getElementById('body-key-value');
@@ -104,33 +132,41 @@ function toggleBodyType() {
     }
 }
 
-function addHeaderRow(key = '', value = '') {
+function addHeaderRow(key = '', value = '', isReadOnly = false) {
     const container = document.getElementById('headers-container');
     const row = document.createElement('div');
     row.className = 'key-value-row';
     row.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px; align-items: center;';
+    
+    const readOnlyStyle = isReadOnly ? 'background-color: #f5f5f5; cursor: not-allowed;' : '';
+    const readOnlyAttr = isReadOnly ? 'readonly' : '';
+    
     row.innerHTML = `
-        <input type="text" placeholder="${t('form_key_placeholder')}" value="${key}" 
-               style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-        <input type="text" placeholder="${t('form_value_placeholder')}" value="${value}" 
-               style="flex: 2; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-        <button type="button" onclick="this.parentElement.remove()" class="btn btn-sm btn-danger">${t('button_delete')}</button>
+        <input type="text" placeholder="${t('form_key_placeholder')}" value="${key}" ${readOnlyAttr}
+               style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; ${readOnlyStyle}">
+        <input type="text" placeholder="${t('form_value_placeholder')}" value="${value}" ${readOnlyAttr}
+               style="flex: 2; padding: 8px; border: 1px solid #ddd; border-radius: 4px; ${readOnlyStyle}">
+        ${!isReadOnly ? `<button type="button" onclick="this.parentElement.remove()" class="btn btn-sm btn-danger">${t('button_delete')}</button>` : ''}
     `;
     container.appendChild(row);
     headerIndex++;
 }
 
-function addBodyRow(key = '', value = '') {
+function addBodyRow(key = '', value = '', isReadOnly = false) {
     const container = document.getElementById('body-container');
     const row = document.createElement('div');
     row.className = 'key-value-row';
     row.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px; align-items: center;';
+    
+    const readOnlyStyle = isReadOnly ? 'background-color: #f5f5f5; cursor: not-allowed;' : '';
+    const readOnlyAttr = isReadOnly ? 'readonly' : '';
+    
     row.innerHTML = `
-        <input type="text" placeholder="${t('form_key_placeholder')}" value="${key}" 
-               style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-        <input type="text" placeholder="${t('form_value_placeholder')}" value="${value}" 
-               style="flex: 2; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-        <button type="button" onclick="this.parentElement.remove()" class="btn btn-sm btn-danger">${t('button_delete')}</button>
+        <input type="text" placeholder="${t('form_key_placeholder')}" value="${key}" ${readOnlyAttr}
+               style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; ${readOnlyStyle}">
+        <input type="text" placeholder="${t('form_value_placeholder')}" value="${value}" ${readOnlyAttr}
+               style="flex: 2; padding: 8px; border: 1px solid #ddd; border-radius: 4px; ${readOnlyStyle}">
+        ${!isReadOnly ? `<button type="button" onclick="this.parentElement.remove()" class="btn btn-sm btn-danger">${t('button_delete')}</button>` : ''}
     `;
     container.appendChild(row);
     bodyIndex++;
@@ -202,6 +238,11 @@ async function loadCapability() {
     const response = await fetch(`/api/capabilities/${capabilityId}`);
     const cap = await response.json();
     
+    // Get parent app information to check if it's MCP type
+    const appResponse = await fetch(`/api/apps/${cap.service_id}`);
+    const app = await appResponse.json();
+    const isMcpType = app.service_type === 'mcp';
+    
     // Update breadcrumb links
     // Set breadcrumb links
     const mcpServiceId = cap.mcp_service_id || 1; // APIから取得するか、デフォルト値
@@ -216,20 +257,47 @@ async function loadCapability() {
     document.getElementById('url').value = cap.url;
     document.getElementById('description').value = cap.description || '';
     
+    // Set access control (default: public for capabilities)
+    currentAccessControl = cap.access_control || 'public';
+    const isRestricted = currentAccessControl === 'restricted';
+    document.getElementById('access-control-toggle').checked = isRestricted;
+    updateAccessControlUI(isRestricted);
+    
     // Get HTTP method from headers
     const method = cap.headers['X-HTTP-Method'] || 'POST';
     document.getElementById('method').value = method;
+    
+    // If MCP type, make fields read-only
+    if (isMcpType) {
+        document.getElementById('name').readOnly = true;
+        document.getElementById('url').readOnly = true;
+        document.getElementById('description').readOnly = true;
+        document.getElementById('method').disabled = true;
+        
+        // Add visual indication
+        ['name', 'url', 'description', 'method'].forEach(id => {
+            const elem = document.getElementById(id);
+            elem.style.backgroundColor = '#f5f5f5';
+            elem.style.cursor = 'not-allowed';
+        });
+    }
     
     // Load headers (excluding X-HTTP-Method)
     const headers = { ...cap.headers };
     delete headers['X-HTTP-Method'];
     
     if (Object.keys(headers).length === 0) {
-        addHeaderRow(); // Add empty row if no headers
+        if (!isMcpType) addHeaderRow(); // Add empty row if no headers (only for API type)
     } else {
         Object.entries(headers).forEach(([key, value]) => {
-            addHeaderRow(key, value);
+            addHeaderRow(key, value, isMcpType);
         });
+    }
+    
+    // Hide "Add Header" button for MCP type
+    if (isMcpType) {
+        const addHeaderBtn = document.querySelector('button[onclick="addHeaderRow()"]');
+        if (addHeaderBtn) addHeaderBtn.style.display = 'none';
     }
     
     // Load body parameters
@@ -237,22 +305,50 @@ async function loadCapability() {
     
     if (method === 'GET') {
         if (Object.keys(cap.body_params).length === 0) {
-            addBodyRow();
+            if (!isMcpType) addBodyRow();
         } else {
             Object.entries(cap.body_params).forEach(([key, value]) => {
-                addBodyRow(key, value);
+                addBodyRow(key, value, isMcpType);
             });
         }
     } else {
-        document.getElementById('body_json').value = JSON.stringify(cap.body_params, null, 2);
+        const bodyJsonTextarea = document.getElementById('body_json');
+        bodyJsonTextarea.value = JSON.stringify(cap.body_params, null, 2);
+        
+        if (isMcpType) {
+            bodyJsonTextarea.readOnly = true;
+            bodyJsonTextarea.style.backgroundColor = '#f5f5f5';
+            bodyJsonTextarea.style.cursor = 'not-allowed';
+            
+            // Hide validation and format buttons
+            const validateBtn = document.querySelector('button[onclick="validateJson()"]');
+            const formatBtn = document.querySelector('button[onclick="formatJson()"]');
+            if (validateBtn) validateBtn.style.display = 'none';
+            if (formatBtn) formatBtn.style.display = 'none';
+        }
     }
+    
+    // Hide "Add Body Parameter" button for MCP type
+    if (isMcpType) {
+        const addBodyBtn = document.querySelector('button[onclick="addBodyRow()"]');
+        if (addBodyBtn) addBodyBtn.style.display = 'none';
+    }
+    
+    return isMcpType;
 }
 
 // Initialize and setup
 (async () => {
     await initLanguageSwitcher();
-    await loadCapability();
+    const isMcpType = await loadCapability();
     await loadPermissions();
+    
+    // Setup access control toggle
+    document.getElementById('access-control-toggle').addEventListener('change', async (e) => {
+        const isRestricted = e.target.checked;
+        updateAccessControlUI(isRestricted);
+        currentAccessControl = isRestricted ? 'restricted' : 'public';
+    });
     
     // Setup form submit handler
     document.getElementById('capability-form').addEventListener('submit', async (e) => {
@@ -318,22 +414,35 @@ async function loadCapability() {
             body_params: bodyParams
         };
         
-        // Collect enabled account IDs
-        const enabledSelect = document.getElementById('enabled-accounts');
-        const accountIds = Array.from(enabledSelect.options).map(opt => parseInt(opt.value));
-        data.account_ids = accountIds;
-        
         const response = await fetch(`/api/capabilities/${capabilityId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
         
-        if (response.ok) {
-            window.location.href = `/capabilities/${capabilityId}`;
-        } else {
+        if (!response.ok) {
             const error = await response.json();
             showError(t('capability_update_failed') + ': ' + (error.error || t('error_unknown')));
+            return;
         }
+        
+        // Update access control
+        const accessControlResponse = await fetch(`/api/capabilities/${capabilityId}/access-control`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ access_control: currentAccessControl })
+        });
+        
+        if (!accessControlResponse.ok) {
+            showError('Failed to update access control');
+            return;
+        }
+        
+        // Save permissions if restricted
+        if (currentAccessControl === 'restricted') {
+            await savePermissions();
+        }
+        
+        window.location.href = `/capabilities/${capabilityId}`;
     });
 })();
