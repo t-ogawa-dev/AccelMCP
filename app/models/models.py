@@ -39,7 +39,8 @@ class McpService(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    subdomain = db.Column(db.String(50), unique=True, nullable=False)
+    identifier = db.Column(db.String(50), unique=True, nullable=False)
+    routing_type = db.Column(db.String(20), nullable=False, default='subdomain')  # 'subdomain' or 'path'
     description = db.Column(db.Text)
     access_control = db.Column(db.String(20), nullable=False, default='restricted')  # 'public' or 'restricted'
     is_enabled = db.Column(db.Boolean, default=True, nullable=False)
@@ -54,7 +55,8 @@ class McpService(db.Model):
         return {
             'id': self.id,
             'name': self.name,
-            'subdomain': self.subdomain,
+            'identifier': self.identifier,
+            'routing_type': self.routing_type,
             'description': self.description,
             'access_control': self.access_control,
             'is_enabled': self.is_enabled,
@@ -192,7 +194,7 @@ class AccountPermission(db.Model):
                 result['mcp_service'] = {
                     'id': self.mcp_service.id,
                     'name': self.mcp_service.name,
-                    'subdomain': self.mcp_service.subdomain
+                    'identifier': self.mcp_service.identifier
                 }
         elif self.app_id:
             result['app_id'] = self.app_id

@@ -28,7 +28,8 @@ def mcp_services():
         data = request.get_json()
         mcp_service = McpService(
             name=data['name'],
-            subdomain=data['subdomain'],
+            identifier=data['identifier'],
+            routing_type=data.get('routing_type', 'subdomain'),
             description=data.get('description', '')
         )
         db.session.add(mcp_service)
@@ -51,7 +52,8 @@ def mcp_service_detail(mcp_service_id):
     elif request.method == 'PUT':
         data = request.get_json()
         mcp_service.name = data.get('name', mcp_service.name)
-        mcp_service.subdomain = data.get('subdomain', mcp_service.subdomain)
+        mcp_service.identifier = data.get('identifier', mcp_service.identifier)
+        mcp_service.routing_type = data.get('routing_type', mcp_service.routing_type)
         mcp_service.description = data.get('description', mcp_service.description)
         db.session.commit()
         return jsonify(mcp_service.to_dict())
@@ -81,7 +83,7 @@ def export_mcp_service(mcp_service_id):
     # Build nested structure: service -> apps -> capabilities
     export_data = {
         'name': mcp_service.name,
-        'subdomain': mcp_service.subdomain,
+        'identifier': mcp_service.identifier,
         'description': mcp_service.description,
         'apps': []
     }
@@ -125,22 +127,22 @@ def import_mcp_service():
     data = request.get_json()
     
     # Validate required fields
-    if not data.get('name') or not data.get('subdomain'):
-        return jsonify({'error': 'Missing required fields: name, subdomain'}), 400
+    if not data.get('name') or not data.get('identifier'):
+        return jsonify({'error': 'Missing required fields: name, identifier'}), 400
     
-    # Check for subdomain collision
-    original_subdomain = data['subdomain']
-    subdomain = original_subdomain
+    # Check for identifier collision
+    original_identifier = data['identifier']
+    identifier = original_identifier
     
-    # If subdomain exists, append random 5 characters
-    while McpService.query.filter_by(subdomain=subdomain).first():
+    # If identifier exists, append random 5 characters
+    while McpService.query.filter_by(identifier=identifier).first():
         random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=5))
-        subdomain = f"{original_subdomain}-{random_suffix}"
+        identifier = f"{original_identifier}-{random_suffix}"
     
     # Create MCP service
     mcp_service = McpService(
         name=data['name'],
-        subdomain=subdomain,
+        identifier=identifier,
         description=data.get('description', '')
     )
     db.session.add(mcp_service)

@@ -267,15 +267,25 @@ async function loadCapability() {
     const method = cap.headers['X-HTTP-Method'] || 'POST';
     document.getElementById('method').value = method;
     
-    // If MCP type, make fields read-only
+    // If MCP type, make fields read-only and hide URL/method fields
     if (isMcpType) {
         document.getElementById('name').readOnly = true;
         document.getElementById('url').readOnly = true;
         document.getElementById('description').readOnly = true;
         document.getElementById('method').disabled = true;
         
+        // Hide URL and method fields for MCP type
+        const urlFormGroup = document.getElementById('url').closest('.form-group');
+        if (urlFormGroup) {
+            urlFormGroup.style.display = 'none';
+        }
+        const methodFormGroup = document.getElementById('method').closest('.form-group');
+        if (methodFormGroup) {
+            methodFormGroup.style.display = 'none';
+        }
+        
         // Add visual indication
-        ['name', 'url', 'description', 'method'].forEach(id => {
+        ['name', 'description'].forEach(id => {
             const elem = document.getElementById(id);
             elem.style.backgroundColor = '#f5f5f5';
             elem.style.cursor = 'not-allowed';

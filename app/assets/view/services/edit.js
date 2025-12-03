@@ -144,6 +144,54 @@ async function loadService() {
         });
     }
     
+    // If MCP type, make MCP URL and headers read-only
+    if (currentServiceType === 'mcp') {
+        const mcpUrlInput = document.getElementById('mcp_url');
+        mcpUrlInput.readOnly = true;
+        mcpUrlInput.style.backgroundColor = '#f5f5f5';
+        mcpUrlInput.style.cursor = 'not-allowed';
+        
+        // Show readonly hint for MCP URL
+        const mcpUrlHint = document.getElementById('mcp-url-readonly-hint');
+        if (mcpUrlHint) {
+            mcpUrlHint.style.display = 'block';
+        }
+        
+        // Make all header inputs read-only
+        const headerRows = document.querySelectorAll('#headers-container .key-value-row');
+        headerRows.forEach(row => {
+            const inputs = row.querySelectorAll('input[type="text"]');
+            inputs.forEach(input => {
+                input.readOnly = true;
+                input.style.backgroundColor = '#f5f5f5';
+                input.style.cursor = 'not-allowed';
+            });
+            // Hide delete button
+            const deleteBtn = row.querySelector('button');
+            if (deleteBtn) {
+                deleteBtn.style.display = 'none';
+            }
+        });
+        
+        // Show readonly hint for common headers
+        const headersHint = document.getElementById('common-headers-readonly-hint');
+        if (headersHint) {
+            headersHint.style.display = 'block';
+        }
+        
+        // Hide "Add Header" button
+        const addHeaderBtn = document.querySelector('button[onclick="addHeaderRow()"]');
+        if (addHeaderBtn) {
+            addHeaderBtn.style.display = 'none';
+        }
+        
+        // Hide "Test Connection" button
+        const testBtn = document.querySelector('button[onclick="testConnection()"]');
+        if (testBtn) {
+            testBtn.style.display = 'none';
+        }
+    }
+    
     // Set access control (default: public for apps)
     currentAccessControl = service.access_control || 'public';
     const isRestricted = currentAccessControl === 'restricted';

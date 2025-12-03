@@ -43,7 +43,7 @@ async function testConnection() {
         resultDiv.style.border = '1px solid #fcc';
         resultDiv.style.color = '#c33';
         resultDiv.textContent = t('app_mcp_url_required') || 'MCP接続URLを入力してください';
-        return;
+        return false;
     }
     
     // Collect common headers
@@ -85,12 +85,14 @@ async function testConnection() {
             resultDiv.style.border = '1px solid #10b981';
             resultDiv.style.color = '#065f46';
             resultDiv.textContent = '✓ ' + (t('app_connection_success') || '接続成功');
+            return true;
         } else {
             // Failure
             resultDiv.style.backgroundColor = '#fee';
             resultDiv.style.border = '1px solid #fcc';
             resultDiv.style.color = '#c33';
             resultDiv.textContent = '✗ ' + (result.error || t('app_connection_failed') || '接続失敗');
+            return false;
         }
     } catch (e) {
         // Error
@@ -98,6 +100,7 @@ async function testConnection() {
         resultDiv.style.border = '1px solid #fcc';
         resultDiv.style.color = '#c33';
         resultDiv.textContent = '✗ ' + (t('app_connection_error') || '接続エラー') + ': ' + e.message;
+        return false;
     }
 }
 
@@ -125,6 +128,16 @@ async function testConnection() {
         
         const formData = new FormData(e.target);
         const serviceType = formData.get('service_type');
+        
+        // For MCP type, validate connection first
+        if (serviceType === 'mcp') {
+            const connectionSuccess = await testConnection();
+            if (!connectionSuccess) {
+                alert(t('app_mcp_connection_required') || 'MCP接続テストに成功してから登録してください');
+                return;
+            }
+        }
+        
         const data = {
             name: formData.get('name'),
             description: formData.get('description'),

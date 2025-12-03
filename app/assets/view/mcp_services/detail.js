@@ -84,8 +84,38 @@ async function loadMcpService() {
     // Basic info
     document.getElementById('service-name').textContent = service.name;
     document.getElementById('name').textContent = service.name;
-    document.getElementById('subdomain').textContent = service.subdomain;
-    document.getElementById('mcp-endpoint').textContent = `http://${service.subdomain}.lvh.me:5000/mcp`;
+    document.getElementById('identifier').textContent = service.identifier;
+    
+    // Generate endpoint based on routing type
+    const currentHost = window.location.host;
+    const protocol = window.location.protocol;
+    
+    let endpoint;
+    if (service.routing_type === 'path') {
+        endpoint = `${protocol}//${currentHost}/${service.identifier}/mcp`;
+    } else {
+        // For subdomain routing
+        const hostWithoutPort = currentHost.split(':')[0];
+        const port = currentHost.includes(':') ? ':' + currentHost.split(':')[1] : '';
+        const hostParts = hostWithoutPort.split('.');
+        
+        let subdomainHost;
+        if (hostParts.length >= 4 || (hostParts.length === 3 && !['com', 'net', 'org', 'io', 'dev', 'app'].includes(hostParts[hostParts.length-1]))) {
+            // Has subdomain: replace first part
+            hostParts[0] = service.identifier;
+            subdomainHost = hostParts.join('.') + port;
+        } else if (hostParts.length === 3) {
+            // 3 parts with common TLD: replace first
+            hostParts[0] = service.identifier;
+            subdomainHost = hostParts.join('.') + port;
+        } else {
+            // 2 or less parts: add prefix
+            subdomainHost = `${service.identifier}.${currentHost}`;
+        }
+        endpoint = `${protocol}//${subdomainHost}/mcp`;
+    }
+    document.getElementById('mcp-endpoint').textContent = endpoint;
+    
     document.getElementById('description').textContent = service.description || '-';
     
     // Access control

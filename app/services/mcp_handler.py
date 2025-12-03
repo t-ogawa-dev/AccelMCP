@@ -4,6 +4,7 @@ Handles MCP requests with permission checking and API/MCP relay
 """
 import json
 import httpx
+import re
 from typing import Dict, Any, List, Optional
 import asyncio
 import logging
@@ -18,6 +19,64 @@ class MCPHandler:
     
     def __init__(self, db):
         self.db = db
+    
+    def _sanitize_tool_name(self, name: str) -> str:
+        """
+        Sanitize tool name to comply with Google API requirements:
+        - Must start with a letter or underscore
+        - Only alphanumeric, underscores, dots, colons, dashes
+        - Max 64 characters
+        """
+        # Replace spaces and other invalid characters with underscores
+        sanitized = re.sub(r'[^a-zA-Z0-9_.:+-]', '_', name)
+        
+        # Ensure it starts with a letter or underscore
+        if sanitized and not re.match(r'^[a-zA-Z_]', sanitized):
+            sanitized = '_' + sanitized
+        
+        # Limit to 64 characters
+        return sanitized[:64]
+    
+    def handle_mcp_service_request(self, account, mcp_service, mcp_request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle MCP request at MCP Service level (統合エンドポイント)
+        
+        Args:
+            account: ConnectionAccount object
+            mcp_service: McpService object
+            mcp_request: MCP protocol request
+        
+        Returns:
+            MCP protocol response
+        """
+        from app.models.models import Service
+        
+        method = mcp_request.get('method')
+        
+        if method == 'initialize':
+            return self._handle_initialize_for_mcp_service(account, mcp_service, mcp_request)
+        
+        elif method == 'tools/list':
+            return self._handle_tools_list_for_mcp_service(account, mcp_service, mcp_request)
+        
+        elif method == 'tools/call':
+            return self._handle_tool_call_for_mcp_service(account, mcp_service, mcp_request)
+        
+        elif method == 'resources/list':
+            return self._handle_resources_list(mcp_request)
+        
+        elif method == 'prompts/list':
+            return self._handle_prompts_list(mcp_request)
+        
+        else:
+            return {
+                'jsonrpc': '2.0',
+                'id': mcp_request.get('id') or 0,
+                'error': {
+                    'code': -32601,
+                    'message': f'Method not found: {method}'
+                }
+            }
     
     def _check_hierarchical_access(self, account, mcp_service, app=None, capability=None) -> bool:
         """
@@ -56,6 +115,11 @@ class MCPHandler:
         
         # Level 1: McpService access control
         if mcp_service.access_control == 'restricted':
+            # If restricted but no account, deny access
+            if account is None:
+                logger.debug("No account provided for restricted MCP Service")
+                return False
+                
             has_service_permission = self.db.session.query(AccountPermission).filter(
                 AccountPermission.account_id == account.id,
                 AccountPermission.mcp_service_id == mcp_service.id
@@ -67,6 +131,11 @@ class MCPHandler:
         
         # Level 2: App access control (if checking app or capability)
         if app and app.access_control == 'restricted':
+            # If restricted but no account, deny access
+            if account is None:
+                logger.debug("No account provided for restricted App")
+                return False
+                
             has_app_permission = self.db.session.query(AccountPermission).filter(
                 AccountPermission.account_id == account.id,
                 AccountPermission.app_id == app.id
@@ -78,6 +147,11 @@ class MCPHandler:
         
         # Level 3: Capability access control (if checking specific capability)
         if capability and capability.access_control == 'restricted':
+            # If restricted but no account, deny access
+            if account is None:
+                logger.debug("No account provided for restricted Capability")
+                return False
+                
             has_capability_permission = self.db.session.query(AccountPermission).filter(
                 AccountPermission.account_id == account.id,
                 AccountPermission.capability_id == capability.id
@@ -87,7 +161,11 @@ class MCPHandler:
                 logger.debug(f"Account {account.id} denied: no Capability permission")
                 return False
         
-        logger.debug(f"Account {account.id} granted access")
+        # Log access granted
+        if account:
+            logger.debug(f"Account {account.id} granted access")
+        else:
+            logger.debug("Public access granted (no authentication required)")
         return True
     
     def get_capabilities(self, account, service) -> Dict[str, Any]:
@@ -137,16 +215,20 @@ class MCPHandler:
                     }
                 }
                 
-                # Add body_params as input schema
+                # Add body_params as input schema (preserve full schema including enums, descriptions, etc.)
                 if cap.body_params:
                     try:
                         body_params = json.loads(cap.body_params)
-                        for key, value in body_params.items():
-                            tool['inputSchema']['properties'][key] = {
-                                'type': 'string',
-                                'description': f'Parameter: {key}',
-                                'default': value
-                            }
+                        # Use the complete schema from body_params if it has the right structure
+                        if 'properties' in body_params:
+                            tool['inputSchema'] = body_params
+                        else:
+                            # Fallback: treat as simple key-value params
+                            for key, value in body_params.items():
+                                tool['inputSchema']['properties'][key] = {
+                                    'type': 'string',
+                                    'description': f'Parameter: {key}'
+                                }
                     except json.JSONDecodeError:
                         pass
                 
@@ -245,21 +327,250 @@ class MCPHandler:
         """
         method = mcp_request.get('method')
         
-        if method == 'tools/list':
+        if method == 'initialize':
+            return self._handle_initialize(account, service, mcp_request)
+        
+        elif method == 'tools/list':
             return self._handle_tools_list(account, service)
         
         elif method == 'tools/call':
             return self._handle_tool_call(account, service, mcp_request)
         
+        elif method == 'resources/list':
+            return self._handle_resources_list(mcp_request)
+        
+        elif method == 'prompts/list':
+            return self._handle_prompts_list(mcp_request)
+        
         else:
             return {
                 'jsonrpc': '2.0',
-                'id': mcp_request.get('id'),
+                'id': mcp_request.get('id') or 0,
                 'error': {
                     'code': -32601,
                     'message': f'Method not found: {method}'
                 }
             }
+    
+    def _handle_initialize_for_mcp_service(self, account, mcp_service, mcp_request: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle MCP initialize request at MCP Service level"""
+        import uuid
+        
+        return {
+            'jsonrpc': '2.0',
+            'id': mcp_request.get('id') or 0,
+            'result': {
+                'protocolVersion': '2024-11-05',
+                'capabilities': {
+                    'tools': {},
+                    'resources': {},
+                    'prompts': {}
+                },
+                'serverInfo': {
+                    'name': f'AccelMCP - {mcp_service.name}',
+                    'version': '1.0.0'
+                },
+                'sessionId': str(uuid.uuid4())
+            }
+        }
+    
+    def _handle_tools_list_for_mcp_service(self, account, mcp_service, mcp_request: Dict[str, Any]) -> Dict[str, Any]:
+        """Return aggregated tools list from all apps under MCP Service"""
+        from app.models.models import Service, Capability
+        
+        # Check hierarchical access at MCP service level
+        if not self._check_hierarchical_access(account, mcp_service):
+            return {
+                'jsonrpc': '2.0',
+                'id': mcp_request.get('id') or 0,
+                'result': {
+                    'tools': []  # Return empty if no access to MCP service
+                }
+            }
+        
+        # Get all apps under this MCP service
+        apps = self.db.session.query(Service).filter(
+            Service.mcp_service_id == mcp_service.id
+        ).all()
+        
+        # Aggregate tools from all apps
+        all_tools = []
+        for app in apps:
+            # Check app-level access
+            if not self._check_hierarchical_access(account, mcp_service, app=app):
+                continue
+            
+            # Get all capabilities for this app
+            capabilities = self.db.session.query(Capability).filter(
+                Capability.app_id == app.id
+            ).all()
+            
+            for cap in capabilities:
+                # Check capability-level access
+                if not self._check_hierarchical_access(account, mcp_service, app=app, capability=cap):
+                    continue
+                
+                # Use namespace: app_name:capability_name (sanitized for Google API)
+                sanitized_app_name = self._sanitize_tool_name(app.name)
+                sanitized_cap_name = self._sanitize_tool_name(cap.name)
+                tool_name = f"{sanitized_app_name}:{sanitized_cap_name}"
+                
+                tool = {
+                    'name': tool_name,
+                    'description': cap.description or f'{cap.capability_type.upper()} tool: {cap.name} (from {app.name})',
+                    'inputSchema': {
+                        'type': 'object',
+                        'properties': {},
+                        'required': []
+                    }
+                }
+                
+                # Add body_params as input schema (preserve full schema including enums, descriptions, etc.)
+                if cap.body_params:
+                    try:
+                        body_params = json.loads(cap.body_params)
+                        # Use the complete schema from body_params if it has the right structure
+                        if 'properties' in body_params:
+                            tool['inputSchema'] = body_params
+                        else:
+                            # Fallback: treat as simple key-value params
+                            for key, value in body_params.items():
+                                tool['inputSchema']['properties'][key] = {
+                                    'type': 'string',
+                                    'description': f'Parameter: {key}'
+                                }
+                    except json.JSONDecodeError:
+                        pass
+                
+                all_tools.append(tool)
+        
+        return {
+            'jsonrpc': '2.0',
+            'id': mcp_request.get('id') or 0,
+            'result': {
+                'tools': all_tools
+            }
+        }
+    
+    def _handle_tool_call_for_mcp_service(self, account, mcp_service, mcp_request: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute tool call at MCP Service level with namespace support"""
+        from app.models.models import Service, Capability
+        
+        params = mcp_request.get('params', {})
+        tool_name = params.get('name')
+        arguments = params.get('arguments', {})
+        
+        app = None
+        capability = None
+        
+        # Parse tool name: app_name:capability_name or simple capability_name
+        if ':' in tool_name:
+            # Namespaced format
+            sanitized_app_name, sanitized_cap_name = tool_name.split(':', 1)
+            
+            # Find app by matching sanitized name
+            all_apps = self.db.session.query(Service).filter(
+                Service.mcp_service_id == mcp_service.id
+            ).all()
+            
+            for a in all_apps:
+                if self._sanitize_tool_name(a.name) == sanitized_app_name:
+                    app = a
+                    # Find capability by matching sanitized name
+                    all_caps = self.db.session.query(Capability).filter(
+                        Capability.app_id == app.id
+                    ).all()
+                    for c in all_caps:
+                        if self._sanitize_tool_name(c.name) == sanitized_cap_name:
+                            capability = c
+                            break
+                    break
+        else:
+            # Simple format: search across all apps
+            apps = self.db.session.query(Service).filter(
+                Service.mcp_service_id == mcp_service.id
+            ).all()
+            
+            for a in apps:
+                cap = self.db.session.query(Capability).filter(
+                    Capability.app_id == a.id,
+                    Capability.name == tool_name
+                ).first()
+                if cap:
+                    app = a
+                    capability = cap
+                    break
+        
+        if not capability or not app:
+            return {
+                'jsonrpc': '2.0',
+                'id': mcp_request.get('id') or 0,
+                'error': {
+                    'code': -32602,
+                    'message': f'Tool not found: {tool_name}'
+                }
+            }
+        
+        # Check hierarchical permission
+        if not self._check_hierarchical_access(account, mcp_service, app=app, capability=capability):
+            return {
+                'jsonrpc': '2.0',
+                'id': mcp_request.get('id') or 0,
+                'error': {
+                    'code': -32000,
+                    'message': f'Permission denied for tool: {tool_name}'
+                }
+            }
+        
+        # Execute capability
+        if capability.capability_type == 'api':
+            result = self._execute_api_call(app, capability, arguments)
+        elif capability.capability_type in ('mcp', 'mcp_tool'):
+            result = self._execute_mcp_call(app, capability, arguments)
+        else:
+            return {
+                'jsonrpc': '2.0',
+                'id': mcp_request.get('id') or 0,
+                'error': {
+                    'code': -32603,
+                    'message': f'Unknown capability type: {capability.capability_type}'
+                }
+            }
+        
+        return {
+            'jsonrpc': '2.0',
+            'id': mcp_request.get('id') or 0,
+            'result': {
+                'content': [
+                    {
+                        'type': 'text',
+                        'text': json.dumps(result, ensure_ascii=False, indent=2)
+                    }
+                ]
+            }
+        }
+    
+    def _handle_initialize(self, account, service, mcp_request: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle MCP initialize request"""
+        import uuid
+        
+        return {
+            'jsonrpc': '2.0',
+            'id': mcp_request.get('id') or 0,
+            'result': {
+                'protocolVersion': '2024-11-05',
+                'capabilities': {
+                    'tools': {},
+                    'resources': {},
+                    'prompts': {}
+                },
+                'serverInfo': {
+                    'name': f'AccelMCP - {service.name}',
+                    'version': '1.0.0'
+                },
+                'sessionId': str(uuid.uuid4())
+            }
+        }
     
     def _handle_tools_list(self, account, service) -> Dict[str, Any]:
         """Return list of tools user has permission to use"""
@@ -296,21 +607,50 @@ class MCPHandler:
                     }
                 }
                 
-                # Add body_params as input schema
+                # Add body_params as input schema (preserve full schema including enums, descriptions, etc.)
                 if cap.body_params:
-                    body_params = json.loads(cap.body_params)
-                    for key, value in body_params.items():
-                        tool['inputSchema']['properties'][key] = {
-                            'type': 'string',
-                            'description': f'Parameter: {key}'
-                        }
+                    try:
+                        body_params = json.loads(cap.body_params)
+                        # Use the complete schema from body_params if it has the right structure
+                        if 'properties' in body_params:
+                            tool['inputSchema'] = body_params
+                        else:
+                            # Fallback: treat as simple key-value params
+                            for key, value in body_params.items():
+                                tool['inputSchema']['properties'][key] = {
+                                    'type': 'string',
+                                    'description': f'Parameter: {key}'
+                                }
+                    except json.JSONDecodeError:
+                        pass
                 
                 tools.append(tool)
         
         return {
             'jsonrpc': '2.0',
+            'id': 0,
             'result': {
                 'tools': tools
+            }
+        }
+    
+    def _handle_resources_list(self, mcp_request: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle resources/list request (stub implementation)"""
+        return {
+            'jsonrpc': '2.0',
+            'id': mcp_request.get('id') or 0,
+            'result': {
+                'resources': []
+            }
+        }
+    
+    def _handle_prompts_list(self, mcp_request: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle prompts/list request (stub implementation)"""
+        return {
+            'jsonrpc': '2.0',
+            'id': mcp_request.get('id') or 0,
+            'result': {
+                'prompts': []
             }
         }
     
@@ -334,7 +674,7 @@ class MCPHandler:
         if not capability:
             return {
                 'jsonrpc': '2.0',
-                'id': mcp_request.get('id'),
+                'id': mcp_request.get('id') or 0,
                 'error': {
                     'code': -32602,
                     'message': f'Tool not found: {tool_name}'
@@ -345,7 +685,7 @@ class MCPHandler:
         if not self._check_hierarchical_access(account, mcp_service, app=service, capability=capability):
             return {
                 'jsonrpc': '2.0',
-                'id': mcp_request.get('id'),
+                'id': mcp_request.get('id') or 0,
                 'error': {
                     'code': -32000,
                     'message': f'Permission denied for tool: {tool_name}'
@@ -360,7 +700,7 @@ class MCPHandler:
         else:
             return {
                 'jsonrpc': '2.0',
-                'id': mcp_request.get('id'),
+                'id': mcp_request.get('id') or 0,
                 'error': {
                     'code': -32603,
                     'message': f'Unknown capability type: {capability.type}'
@@ -369,7 +709,7 @@ class MCPHandler:
         
         return {
             'jsonrpc': '2.0',
-            'id': mcp_request.get('id'),
+            'id': mcp_request.get('id') or 0,
             'result': {
                 'content': [
                     {
@@ -447,13 +787,68 @@ class MCPHandler:
             # Parse MCP server URL
             # Expected format: http://host:port or mcp://command
             
-            if capability.url.startswith('http'):
+            # For mcp_tool type, use service.mcp_url (capability.service is the Service/App model)
+            app = capability.service
+            mcp_url = app.mcp_url if app else capability.url
+            
+            if not mcp_url:
+                return {
+                    'success': False,
+                    'error': 'MCP server URL is not configured'
+                }
+            
+            if mcp_url.startswith('http'):
                 # HTTP MCP connection
                 headers = {}
                 if service.common_headers:
                     headers.update(json.loads(service.common_headers))
                 if capability.headers:
                     headers.update(json.loads(capability.headers))
+                
+                # Add depth header for daisy-chain loop prevention
+                from flask import request
+                current_depth = int(request.headers.get('X-AccelMCP-Depth', '0'))
+                max_depth = 10  # Maximum daisy-chain depth
+                
+                if current_depth >= max_depth:
+                    return {
+                        'success': False,
+                        'error': f'Maximum MCP daisy-chain depth ({max_depth}) exceeded'
+                    }
+                
+                headers['X-AccelMCP-Depth'] = str(current_depth + 1)
+                
+                # Check if we need to establish a session (GitHub Copilot MCP requires session)
+                if 'Mcp-Session-Id' not in headers:
+                    # Send initialize request to establish session
+                    init_request = {
+                        'jsonrpc': '2.0',
+                        'id': 0,
+                        'method': 'initialize',
+                        'params': {
+                            'protocolVersion': '2024-11-05',
+                            'capabilities': {},
+                            'clientInfo': {
+                                'name': 'AccelMCP',
+                                'version': '1.0.0'
+                            }
+                        }
+                    }
+                    
+                    logger.debug(f"Initializing MCP session at {mcp_url}")
+                    init_response = httpx.post(
+                        mcp_url,
+                        headers=headers,
+                        json=init_request,
+                        timeout=30.0
+                    )
+                    init_response.raise_for_status()
+                    
+                    # Extract session ID from response headers
+                    session_id = init_response.headers.get('Mcp-Session-Id')
+                    if session_id:
+                        headers['Mcp-Session-Id'] = session_id
+                        logger.debug(f"MCP session established: {session_id}")
                 
                 # Make MCP request
                 mcp_request = {
@@ -466,12 +861,17 @@ class MCPHandler:
                     }
                 }
                 
+                logger.debug(f"Sending MCP request to {mcp_url}: {json.dumps(mcp_request, indent=2)}")
+                logger.debug(f"Request headers: {headers}")
+                
                 response = httpx.post(
-                    capability.url,
+                    mcp_url,
                     headers=headers,
                     json=mcp_request,
                     timeout=30.0
                 )
+                
+                logger.debug(f"MCP response status: {response.status_code}, body: {response.text}")
                 response.raise_for_status()
                 
                 return response.json()

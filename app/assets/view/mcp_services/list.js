@@ -13,16 +13,47 @@ async function loadMcpServices() {
         return;
     }
     
-    container.innerHTML = services.map(service => `
+    container.innerHTML = services.map(service => {
+        // Get current host from window.location
+        const currentHost = window.location.host;
+        const protocol = window.location.protocol;
+        
+        let endpoint;
+        if (service.routing_type === 'path') {
+            endpoint = `${protocol}//${currentHost}/${service.identifier}/mcp`;
+        } else {
+            // For subdomain routing
+            const hostWithoutPort = currentHost.split(':')[0];
+            const port = currentHost.includes(':') ? ':' + currentHost.split(':')[1] : '';
+            const hostParts = hostWithoutPort.split('.');
+            
+            let subdomainHost;
+            if (hostParts.length >= 4 || (hostParts.length === 3 && !['com', 'net', 'org', 'io', 'dev', 'app'].includes(hostParts[hostParts.length-1]))) {
+                // Has subdomain: replace first part
+                hostParts[0] = service.identifier;
+                subdomainHost = hostParts.join('.') + port;
+            } else if (hostParts.length === 3) {
+                // 3 parts with common TLD: replace first
+                hostParts[0] = service.identifier;
+                subdomainHost = hostParts.join('.') + port;
+            } else {
+                // 2 or less parts: add prefix
+                subdomainHost = `${service.identifier}.${currentHost}`;
+            }
+            endpoint = `${protocol}//${subdomainHost}/mcp`;
+        }
+        
+        return `
         <div class="list-item ${!service.is_enabled ? 'disabled' : ''}">
             <div class="list-item-main">
                 <h3><a href="/mcp-services/${service.id}">${service.name}</a></h3>
                 <div class="list-item-meta">
-                    <span class="badge">${t('mcp_service_subdomain')}: ${service.subdomain}</span>
+                    <span class="badge">${t('mcp_service_identifier')}: ${service.identifier}</span>
                     ${!service.is_enabled ? `<span class="status-badge disabled">${t('status_disabled')}</span>` : `<span class="status-badge enabled">${t('status_enabled')}</span>`}
                     ${(service.access_control === 'restricted') ? `<span class="badge badge-access-restricted">${t('access_control_restricted')}</span>` : `<span class="badge badge-access-public">${t('access_control_public')}</span>`}
                     <span class="text-muted">${t('mcp_service_apps_count')}: ${service.apps_count || 0}</span>
                 </div>
+                <p class="text-muted" style="font-size: 12px; margin-top: 5px;">Endpoint: <code>${endpoint}</code></p>
                 ${service.description ? `<p class="text-muted">${service.description}</p>` : ''}
             </div>
             <div class="list-item-actions">
@@ -35,7 +66,8 @@ async function loadMcpServices() {
                 <button onclick="deleteMcpService(${service.id})" class="btn btn-sm btn-danger">${t('button_delete')}</button>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 async function toggleMcpService(id) {

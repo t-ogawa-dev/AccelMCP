@@ -26,10 +26,21 @@
         </div>
         
         <div class="form-group">
-            <label for="subdomain"><span data-i18n="mcp_service_subdomain_input">サブドメイン</span> *</label>
-            <input type="text" id="subdomain" name="subdomain" required pattern="[a-z0-9-]+" 
-                   data-i18n-title="mcp_service_subdomain_hint">
-            <small data-i18n="mcp_service_subdomain_url_hint">MCP接続URL: http://{subdomain}.lvh.me:5000/mcp (例: http://myservice.lvh.me:5000/mcp)</small>
+            <label for="identifier"><span data-i18n="mcp_service_identifier_input">識別子</span> *</label>
+            <input type="text" id="identifier" name="identifier" required pattern="[a-z0-9\-]+" 
+                   data-i18n-title="mcp_service_identifier_hint" data-i18n-placeholder="mcp_service_identifier_placeholder">
+            <small data-i18n="mcp_service_identifier_hint">小文字英数字とハイフンのみ使用可能</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="routing_type" data-i18n="mcp_service_routing_type_label">ルーティング方式</label>
+            <select id="routing_type" name="routing_type" required>
+                <option value="subdomain" data-i18n="mcp_service_routing_subdomain">サブドメイン方式</option>
+                <option value="path" data-i18n="mcp_service_routing_path">パス方式</option>
+            </select>
+            <small id="routing-hint" class="form-hint">
+                <span data-i18n="mcp_service_routing_hint_subdomain">サブドメイン方式: http://{subdomain}.lvh.me:5100/mcp</span>
+            </small>
         </div>
         
         <div class="form-group">
