@@ -26,13 +26,37 @@ class MCPHandler:
         - Must start with a letter or underscore
         - Only alphanumeric, underscores, dots, colons, dashes
         - Max 64 characters
+        
+        Handles Japanese and other Unicode characters by transliterating to ASCII.
         """
+        # First, try to transliterate Unicode to ASCII (handles Japanese, Chinese, etc.)
+        try:
+            # Convert to ASCII using unidecode-like approach
+            # This converts "管理" -> "Guan Li", "ツール" -> "tsuru", etc.
+            import unicodedata
+            # Normalize to NFKD form and encode to ASCII, ignoring errors
+            ascii_name = unicodedata.normalize('NFKD', name).encode('ascii', 'ignore').decode('ascii')
+            if ascii_name:
+                name = ascii_name
+        except Exception:
+            pass
+        
         # Replace spaces and other invalid characters with underscores
         sanitized = re.sub(r'[^a-zA-Z0-9_.:+-]', '_', name)
+        
+        # Remove consecutive underscores
+        sanitized = re.sub(r'_+', '_', sanitized)
+        
+        # Remove leading/trailing underscores
+        sanitized = sanitized.strip('_')
         
         # Ensure it starts with a letter or underscore
         if sanitized and not re.match(r'^[a-zA-Z_]', sanitized):
             sanitized = '_' + sanitized
+        
+        # If empty after sanitization, use a default
+        if not sanitized:
+            sanitized = 'tool'
         
         # Limit to 64 characters
         return sanitized[:64]

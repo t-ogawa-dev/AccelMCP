@@ -243,6 +243,8 @@ class McpServiceTemplate(db.Model):
     name = db.Column(db.String(100), nullable=False)
     template_type = db.Column(db.String(20), nullable=False)  # 'builtin' or 'custom'
     service_type = db.Column(db.String(20), nullable=False)  # 'api' or 'mcp'
+    mcp_url = db.Column(db.String(500))  # MCP endpoint URL
+    official_url = db.Column(db.String(500))  # Official documentation URL
     description = db.Column(db.Text)
     common_headers = db.Column(db.Text)  # JSON string
     icon = db.Column(db.String(10))  # emoji icon
@@ -250,15 +252,14 @@ class McpServiceTemplate(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Relationships
-    capability_templates = db.relationship('McpCapabilityTemplate', back_populates='service_template', cascade='all, delete-orphan')
-    
     def to_dict(self):
         return {
             'id': self.id,
             'name': self.name,
             'template_type': self.template_type,
             'service_type': self.service_type,
+            'mcp_url': self.mcp_url,
+            'official_url': self.official_url,
             'description': self.description,
             'common_headers': json.loads(self.common_headers) if self.common_headers else {},
             'icon': self.icon,
@@ -272,58 +273,12 @@ class McpServiceTemplate(db.Model):
         return {
             'name': self.name,
             'service_type': self.service_type,
+            'mcp_url': self.mcp_url,
+            'official_url': self.official_url,
             'description': self.description,
             'common_headers': json.loads(self.common_headers) if self.common_headers else {},
             'icon': self.icon,
-            'category': self.category,
-            'capabilities': [cap.to_export_dict() for cap in self.capability_templates]
-        }
-
-
-class McpCapabilityTemplate(db.Model):
-    """Capabilityテンプレート - サービステンプレートに紐付く"""
-    __tablename__ = 'mcp_capability_templates'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    service_template_id = db.Column(db.Integer, db.ForeignKey('mcp_service_templates.id'), nullable=False)
-    name = db.Column(db.String(100), nullable=False)
-    capability_type = db.Column(db.String(50), nullable=False)  # 'tool', 'resource', 'prompt'
-    url = db.Column(db.String(500))  # endpoint URL
-    headers = db.Column(db.Text)  # JSON string
-    body_params = db.Column(db.Text)  # JSON string
-    template_content = db.Column(db.Text)  # prompt template
-    description = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationships
-    service_template = db.relationship('McpServiceTemplate', back_populates='capability_templates')
-    
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'service_template_id': self.service_template_id,
-            'name': self.name,
-            'capability_type': self.capability_type,
-            'url': self.url,
-            'headers': json.loads(self.headers) if self.headers else {},
-            'body_params': json.loads(self.body_params) if self.body_params else {},
-            'template_content': self.template_content,
-            'description': self.description,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
-        }
-    
-    def to_export_dict(self):
-        """エクスポート用の辞書"""
-        return {
-            'name': self.name,
-            'capability_type': self.capability_type,
-            'url': self.url,
-            'headers': json.loads(self.headers) if self.headers else {},
-            'body_params': json.loads(self.body_params) if self.body_params else {},
-            'template_content': self.template_content,
-            'description': self.description
+            'category': self.category
         }
 
 

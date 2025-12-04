@@ -119,8 +119,61 @@ async function testConnection() {
         return;
     }
     
-    // Add initial header row
-    addHeaderRow();
+    // Check for template data in sessionStorage
+    const templateDataStr = sessionStorage.getItem('app_template_data');
+    if (templateDataStr) {
+        try {
+            const templateData = JSON.parse(templateDataStr);
+            
+            // Fill form with template data
+            if (templateData.name) {
+                document.getElementById('name').value = templateData.name;
+            }
+            if (templateData.description) {
+                document.getElementById('description').value = templateData.description;
+            }
+            if (templateData.service_type) {
+                document.querySelector(`input[name="service_type"][value="${templateData.service_type}"]`).checked = true;
+                toggleServiceType();
+            }
+            if (templateData.mcp_url) {
+                document.getElementById('mcp_url').value = templateData.mcp_url;
+            }
+            
+            // Fill common headers
+            if (templateData.common_headers && Object.keys(templateData.common_headers).length > 0) {
+                // Clear default header row
+                document.getElementById('headers-container').innerHTML = '';
+                
+                // Add headers from template
+                Object.entries(templateData.common_headers).forEach(([key, value]) => {
+                    addHeaderRow(key, value);
+                });
+            } else {
+                // Add initial empty header row
+                addHeaderRow();
+            }
+            
+            // Show info message
+            if (templateData.official_url) {
+                const infoDiv = document.createElement('div');
+                infoDiv.style.cssText = 'margin-bottom: 20px; padding: 12px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; color: #0369a1;';
+                infoDiv.innerHTML = `
+                    📚 テンプレートから作成中: ${templateData.name}<br>
+                    <a href="${templateData.official_url}" target="_blank" style="color: #0369a1; text-decoration: underline;">公式ドキュメント</a>
+                `;
+                document.querySelector('form').insertBefore(infoDiv, document.querySelector('form').firstChild);
+            }
+            
+            // Clear template data from sessionStorage
+            sessionStorage.removeItem('app_template_data');
+        } catch (e) {
+            console.error('Failed to parse template data:', e);
+        }
+    } else {
+        // Add initial header row if no template data
+        addHeaderRow();
+    }
     
     // Setup form submit handler
     document.getElementById('service-form').addEventListener('submit', async (e) => {

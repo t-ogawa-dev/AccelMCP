@@ -32,7 +32,10 @@
     <form id="capability-form">
         <div class="form-group">
             <label for="name"><span data-i18n="capability_name_label">Capability名</span> *</label>
-            <input type="text" id="name" name="name" required>
+            <input type="text" id="name" name="name" required 
+                   pattern="[a-zA-Z0-9_.:+-]+" 
+                   title="英数字と記号 ( _ . : + - ) のみ使用できます">
+            <small style="color: #6b7280;">使用可能文字: a-z A-Z 0-9 _ . : + -</small>
         </div>
         
         <div class="form-group">

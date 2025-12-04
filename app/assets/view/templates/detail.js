@@ -18,6 +18,20 @@ async function loadTemplate() {
         document.getElementById('detail-category').textContent = template.category || '-';
         document.getElementById('detail-icon').textContent = template.icon || '-';
         
+        // MCP URL
+        if (template.mcp_url) {
+            document.getElementById('mcp-url-item').style.display = 'flex';
+            const mcpUrlElement = document.getElementById('detail-mcp-url');
+            mcpUrlElement.innerHTML = `<a href="${template.mcp_url}" target="_blank">${template.mcp_url}</a>`;
+        }
+        
+        // Official URL
+        if (template.official_url) {
+            document.getElementById('official-url-item').style.display = 'flex';
+            const officialUrlElement = document.getElementById('detail-official-url');
+            officialUrlElement.innerHTML = `<a href="${template.official_url}" target="_blank">${template.official_url}</a>`;
+        }
+        
         // Headers
         const headersContainer = document.getElementById('headers-list');
         let headers = {};
@@ -34,21 +48,6 @@ async function loadTemplate() {
                 <div class="header-item">
                     <span class="header-key">${key}</span>
                     <span class="header-value">${value}</span>
-                </div>
-            `).join('');
-        }
-        
-        // Capabilities
-        const capabilitiesContainer = document.getElementById('capabilities-list');
-        if (!template.capabilities || template.capabilities.length === 0) {
-            capabilitiesContainer.innerHTML = '<div class="empty-state">Capabilitiesが登録されていません</div>';
-        } else {
-            capabilitiesContainer.innerHTML = template.capabilities.map(cap => `
-                <div class="capability-item">
-                    <div class="capability-info">
-                        <div class="capability-name">${cap.name}</div>
-                        <div class="capability-type">${cap.capability_type}</div>
-                    </div>
                 </div>
             `).join('');
         }

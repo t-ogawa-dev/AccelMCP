@@ -48,39 +48,29 @@ async function loadTemplates(type) {
         return;
     }
     
-    // Fetch full template details with capabilities for each template
-    const templatesWithDetails = await Promise.all(
-        templates.map(async (template) => {
-            try {
-                const detailResponse = await fetch(`/api/mcp-templates/${template.id}`);
-                const detail = await detailResponse.json();
-                return { ...template, capabilities: detail.capabilities || [] };
-            } catch (e) {
-                return { ...template, capabilities: [] };
-            }
-        })
-    );
-    
-    container.innerHTML = templatesWithDetails.map(template => `
-        <div class="template-card" onclick="window.location.href='/mcp-templates/${template.id}'">
-            <div class="template-header">
-                <div class="template-icon">${template.icon || '📦'}</div>
-                <div class="template-info">
-                    <div class="template-name">${template.name}</div>
-                    <div class="template-category">${template.category || 'General'}</div>
+    container.innerHTML = templates.map(template => {
+        const officialLink = template.official_url ? 
+            `<a href="${template.official_url}" target="_blank" class="template-link" onclick="event.stopPropagation()" title="公式サイト">🔗</a>` : '';
+        
+        return `
+            <div class="template-card" onclick="window.location.href='/mcp-templates/${template.id}'">
+                <div class="template-header">
+                    <div class="template-icon">${template.icon || '📦'}</div>
+                    <div class="template-info">
+                        <div class="template-name">${template.name} ${officialLink}</div>
+                        <div class="template-category">${template.category || 'General'}</div>
+                    </div>
+                </div>
+                <div class="template-description">${template.description || ''}</div>
+                ${template.mcp_url ? `<div class="template-url">${template.mcp_url}</div>` : ''}
+                <div class="template-meta">
+                    <div class="template-actions">
+                        <button class="btn-small btn-use" onclick="useTemplate(${template.id}, event)" data-i18n="mcp_template_use_button">${t('mcp_template_use_button')}</button>
+                    </div>
                 </div>
             </div>
-            <div class="template-description">${template.description || ''}</div>
-            <div class="template-meta">
-                <div class="template-capabilities">
-                    <span data-i18n="mcp_template_capabilities_count">${t('mcp_template_capabilities_count')}</span>: ${template.capabilities.length}
-                </div>
-                <div class="template-actions">
-                    <button class="btn-small btn-use" onclick="useTemplate(${template.id}, event)" data-i18n="mcp_template_use_button">${t('mcp_template_use_button')}</button>
-                </div>
-            </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function useTemplate(templateId, event) {
@@ -111,9 +101,11 @@ async function loadMcpServicesForModal() {
             return;
         }
         
-        select.innerHTML = services.map(service => 
-            `<option value="${service.id}">${service.name} (${service.subdomain})</option>`
-        ).join('');
+        select.innerHTML = services
+            .filter(service => service.is_enabled)
+            .map(service => 
+                `<option value="${service.id}">${service.name} (${service.identifier})</option>`
+            ).join('');
     } catch (e) {
         select.innerHTML = '<option value="" disabled>Failed to load services</option>';
     }
@@ -196,17 +188,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function applyTemplate(templateId, mcpServiceId) {
     try {
-        const response = await fetch(`/api/mcp-templates/${templateId}/apply`, {
+        const response = await fetch(`/api/mcp-templates/${templateId}/prepare-app`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({mcp_service_id: mcpServiceId})
         });
         
         if (response.ok) {
-            const service = await response.json();
-            createdAppId = service.id;
-            closeModal();
-            showSuccessModal(service.name);
+            const result = await response.json();
+            
+            // Store template data in sessionStorage for the form to use
+            sessionStorage.setItem('app_template_data', JSON.stringify(result.template_data));
+            
+            // Redirect to app creation form
+            window.location.href = result.redirect_url;
         } else {
             // Handle non-OK response
             let errorMessage = 'Unknown error';
@@ -216,15 +211,10 @@ async function applyTemplate(templateId, mcpServiceId) {
                 const error = await response.json();
                 errorMessage = error.error || error.message || errorMessage;
             } else {
-                // Server returned HTML (likely an error page)
                 errorMessage = `Server error (${response.status})`;
             }
             
-            if (response.status === 409) {
-                showModalError('このサブドメインは既に使用されています。別のサブドメインを指定してください。');
-            } else {
-                showModalError(t('app_register_failed') + ': ' + errorMessage);
-            }
+            showModalError(t('app_register_failed') + ': ' + errorMessage);
         }
     } catch (e) {
         console.error('Apply template exception:', e);

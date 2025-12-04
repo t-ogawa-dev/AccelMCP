@@ -795,10 +795,7 @@ def template_detail(template_id):
     template = McpServiceTemplate.query.get_or_404(template_id)
     
     if request.method == 'GET':
-        result = template.to_dict()
-        # Include capability templates
-        result['capabilities'] = [c.to_dict() for c in template.capability_templates]
-        return jsonify(result)
+        return jsonify(template.to_dict())
     
     elif request.method == 'PUT':
         # Only custom templates can be updated
@@ -808,6 +805,8 @@ def template_detail(template_id):
         data = request.get_json()
         template.name = data.get('name', template.name)
         template.service_type = data.get('service_type', template.service_type)
+        template.mcp_url = data.get('mcp_url', template.mcp_url)
+        template.official_url = data.get('official_url', template.official_url)
         template.description = data.get('description', template.description)
         template.common_headers = json.dumps(data.get('common_headers', {}))
         template.icon = data.get('icon', template.icon)
@@ -829,108 +828,24 @@ def template_detail(template_id):
 @login_required
 def create_template():
     """Create a new custom template"""
-    from app.models.models import McpServiceTemplate, McpCapabilityTemplate
+    from app.models.models import McpServiceTemplate
     
     data = request.get_json()
     
     template = McpServiceTemplate(
         name=data['name'],
         template_type='custom',
-        service_type=data.get('service_type', 'api'),
+        service_type=data.get('service_type', 'mcp'),
+        mcp_url=data.get('mcp_url', ''),
+        official_url=data.get('official_url', ''),
         description=data.get('description', ''),
         common_headers=json.dumps(data.get('common_headers', {})),
         icon=data.get('icon', '📦'),
         category=data.get('category', 'Custom')
     )
     db.session.add(template)
-    db.session.flush()  # Get template ID
-    
-    # Add capability templates
-    for cap_data in data.get('capabilities', []):
-        capability = McpCapabilityTemplate(
-            service_template_id=template.id,
-            name=cap_data['name'],
-            capability_type=cap_data.get('capability_type', 'tool'),
-            url=cap_data.get('url', ''),
-            headers=json.dumps(cap_data.get('headers', {})),
-            body_params=json.dumps(cap_data.get('body_params', {})),
-            template_content=cap_data.get('template_content', ''),
-            description=cap_data.get('description', '')
-        )
-        db.session.add(capability)
-    
     db.session.commit()
     return jsonify(template.to_dict()), 201
-
-
-@api_bp.route('/mcp-templates/<int:template_id>/capabilities', methods=['GET', 'POST'])
-@login_required
-def template_capabilities(template_id):
-    """Get or add capabilities to a template"""
-    from app.models.models import McpServiceTemplate, McpCapabilityTemplate
-    
-    template = McpServiceTemplate.query.get_or_404(template_id)
-    
-    if request.method == 'GET':
-        capabilities = McpCapabilityTemplate.query.filter_by(service_template_id=template_id).all()
-        return jsonify([c.to_dict() for c in capabilities])
-    
-    elif request.method == 'POST':
-        # Only custom templates can be modified
-        if template.template_type != 'custom':
-            return jsonify({'error': 'Cannot modify builtin templates'}), 403
-        
-        data = request.get_json()
-        capability = McpCapabilityTemplate(
-            service_template_id=template_id,
-            name=data['name'],
-            capability_type=data.get('capability_type', 'tool'),
-            url=data.get('url', ''),
-            headers=json.dumps(data.get('headers', {})),
-            body_params=json.dumps(data.get('body_params', {})),
-            template_content=data.get('template_content', ''),
-            description=data.get('description', '')
-        )
-        db.session.add(capability)
-        db.session.commit()
-        return jsonify(capability.to_dict()), 201
-
-
-@api_bp.route('/mcp-template-capabilities/<int:capability_id>', methods=['GET', 'PUT', 'DELETE'])
-@login_required
-def template_capability_detail(capability_id):
-    """Get, update, or delete a template capability"""
-    from app.models.models import McpCapabilityTemplate
-    
-    capability = McpCapabilityTemplate.query.get_or_404(capability_id)
-    
-    if request.method == 'GET':
-        return jsonify(capability.to_dict())
-    
-    elif request.method == 'PUT':
-        # Check if parent template is custom
-        if capability.service_template.template_type != 'custom':
-            return jsonify({'error': 'Cannot modify builtin templates'}), 403
-        
-        data = request.get_json()
-        capability.name = data.get('name', capability.name)
-        capability.capability_type = data.get('capability_type', capability.capability_type)
-        capability.url = data.get('url', capability.url)
-        capability.headers = json.dumps(data.get('headers', {}))
-        capability.body_params = json.dumps(data.get('body_params', {}))
-        capability.template_content = data.get('template_content', capability.template_content)
-        capability.description = data.get('description', capability.description)
-        db.session.commit()
-        return jsonify(capability.to_dict())
-    
-    elif request.method == 'DELETE':
-        # Check if parent template is custom
-        if capability.service_template.template_type != 'custom':
-            return jsonify({'error': 'Cannot delete builtin templates'}), 403
-        
-        db.session.delete(capability)
-        db.session.commit()
-        return '', 204
 
 
 @api_bp.route('/mcp-templates/<int:template_id>/export', methods=['GET'])
@@ -947,7 +862,7 @@ def export_template(template_id):
 @login_required
 def import_template():
     """Import template from JSON"""
-    from app.models.models import McpServiceTemplate, McpCapabilityTemplate
+    from app.models.models import McpServiceTemplate
     
     data = request.get_json()
     
@@ -955,37 +870,23 @@ def import_template():
     template = McpServiceTemplate(
         name=data['name'],
         template_type='custom',
-        service_type=data.get('service_type', 'api'),
+        service_type=data.get('service_type', 'mcp'),
+        mcp_url=data.get('mcp_url', ''),
+        official_url=data.get('official_url', ''),
         description=data.get('description', ''),
         common_headers=json.dumps(data.get('common_headers', {})),
         icon=data.get('icon', '📦'),
         category=data.get('category', 'Custom')
     )
     db.session.add(template)
-    db.session.flush()
-    
-    # Add capabilities
-    for cap_data in data.get('capabilities', []):
-        capability = McpCapabilityTemplate(
-            service_template_id=template.id,
-            name=cap_data['name'],
-            capability_type=cap_data.get('capability_type', 'tool'),
-            url=cap_data.get('url', ''),
-            headers=json.dumps(cap_data.get('headers', {})),
-            body_params=json.dumps(cap_data.get('body_params', {})),
-            template_content=cap_data.get('template_content', ''),
-            description=cap_data.get('description', '')
-        )
-        db.session.add(capability)
-    
     db.session.commit()
     return jsonify(template.to_dict()), 201
 
 
-@api_bp.route('/mcp-templates/<int:template_id>/apply', methods=['POST'])
+@api_bp.route('/mcp-templates/<int:template_id>/prepare-app', methods=['POST'])
 @login_required
-def apply_template(template_id):
-    """Apply template to create a new app in selected MCP service"""
+def prepare_app_from_template(template_id):
+    """Prepare app creation from template - returns URL to app creation form with pre-filled data"""
     from app.models.models import McpServiceTemplate, McpService
     
     template = McpServiceTemplate.query.get_or_404(template_id)
@@ -998,37 +899,18 @@ def apply_template(template_id):
     # Check if MCP service exists
     mcp_service = McpService.query.get_or_404(mcp_service_id)
     
-    try:
-        # Create app from template
-        service = Service(
-            name=data.get('name', template.name),
-            service_type=template.service_type,
-            common_headers=template.common_headers,
-            description=data.get('description', template.description),
-            mcp_service_id=mcp_service_id
-        )
-        db.session.add(service)
-        db.session.flush()
-        
-        # Create capabilities from template
-        for cap_template in template.capability_templates:
-            capability = Capability(
-                app_id=service.id,
-                name=cap_template.name,
-                capability_type=cap_template.capability_type,
-                url=cap_template.url,
-                headers=cap_template.headers,
-                body_params=cap_template.body_params,
-                template_content=cap_template.template_content,
-                description=cap_template.description
-            )
-            db.session.add(capability)
-        
-        db.session.commit()
-        return jsonify(service.to_dict()), 201
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+    # Return URL to app creation form with template data as query parameters
+    return jsonify({
+        'redirect_url': f'/mcp-services/{mcp_service_id}/apps/new',
+        'template_data': {
+            'name': template.name,
+            'service_type': template.service_type,
+            'mcp_url': template.mcp_url or '',
+            'description': template.description or '',
+            'common_headers': json.loads(template.common_headers) if template.common_headers else {},
+            'official_url': template.official_url or ''
+        }
+    }), 200
 
 
 # ============= Variables API =============

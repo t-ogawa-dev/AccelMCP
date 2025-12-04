@@ -20,7 +20,6 @@
     </div>
     <div class="header-actions">
         <button class="btn btn-secondary" onclick="window.location.href='/mcp-templates/{{ template_id }}/edit'" id="edit-btn" data-i18n="button_edit">編集</button>
-        <button class="btn btn-secondary" onclick="window.location.href='/mcp-templates/{{ template_id }}/capabilities'" data-i18n="mcp_template_capabilities_button">Capabilities</button>
         <button class="btn btn-secondary" onclick="exportTemplate()" id="export-btn" data-i18n="mcp_template_export_button">エクスポート</button>
         <button class="btn btn-danger" onclick="deleteTemplate()" id="delete-btn" data-i18n="button_delete">削除</button>
     </div>
@@ -46,17 +45,20 @@
                 <span class="detail-label" data-i18n="mcp_template_icon_label">アイコン</span>
                 <span class="detail-value" id="detail-icon"></span>
             </div>
+            <div class="detail-item" id="mcp-url-item" style="display: none;">
+                <span class="detail-label">MCP エンドポイントURL</span>
+                <span class="detail-value detail-url" id="detail-mcp-url"></span>
+            </div>
+            <div class="detail-item" id="official-url-item" style="display: none;">
+                <span class="detail-label">公式サイトURL</span>
+                <span class="detail-value detail-url" id="detail-official-url"></span>
+            </div>
         </div>
     </div>
 
     <div class="detail-section">
         <h2 data-i18n="mcp_template_common_headers">共通ヘッダー</h2>
         <div id="headers-list" class="headers-list"></div>
-    </div>
-
-    <div class="detail-section">
-        <h2 data-i18n="mcp_template_capabilities_list">Capabilities</h2>
-        <div id="capabilities-list" class="capabilities-list"></div>
     </div>
 </div>
 
@@ -139,6 +141,21 @@
 .detail-value {
     font-size: 15px;
     color: #333;
+}
+
+.detail-url {
+    word-break: break-all;
+    font-family: monospace;
+    font-size: 13px;
+}
+
+.detail-url a {
+    color: #667eea;
+    text-decoration: none;
+}
+
+.detail-url a:hover {
+    text-decoration: underline;
 }
 
 .headers-list {
