@@ -26,37 +26,13 @@ class MCPHandler:
         - Must start with a letter or underscore
         - Only alphanumeric, underscores, dots, colons, dashes
         - Max 64 characters
-        
-        Handles Japanese and other Unicode characters by transliterating to ASCII.
         """
-        # First, try to transliterate Unicode to ASCII (handles Japanese, Chinese, etc.)
-        try:
-            # Convert to ASCII using unidecode-like approach
-            # This converts "管理" -> "Guan Li", "ツール" -> "tsuru", etc.
-            import unicodedata
-            # Normalize to NFKD form and encode to ASCII, ignoring errors
-            ascii_name = unicodedata.normalize('NFKD', name).encode('ascii', 'ignore').decode('ascii')
-            if ascii_name:
-                name = ascii_name
-        except Exception:
-            pass
-        
         # Replace spaces and other invalid characters with underscores
         sanitized = re.sub(r'[^a-zA-Z0-9_.:+-]', '_', name)
-        
-        # Remove consecutive underscores
-        sanitized = re.sub(r'_+', '_', sanitized)
-        
-        # Remove leading/trailing underscores
-        sanitized = sanitized.strip('_')
         
         # Ensure it starts with a letter or underscore
         if sanitized and not re.match(r'^[a-zA-Z_]', sanitized):
             sanitized = '_' + sanitized
-        
-        # If empty after sanitization, use a default
-        if not sanitized:
-            sanitized = 'tool'
         
         # Limit to 64 characters
         return sanitized[:64]
@@ -245,7 +221,9 @@ class MCPHandler:
                         body_params = json.loads(cap.body_params)
                         # Use the complete schema from body_params if it has the right structure
                         if 'properties' in body_params:
-                            tool['inputSchema'] = body_params
+                            # Remove _fixed field before sending to LLM (it's for internal use)
+                            schema = {k: v for k, v in body_params.items() if k != '_fixed'}
+                            tool['inputSchema'] = schema
                         else:
                             # Fallback: treat as simple key-value params
                             for key, value in body_params.items():
@@ -455,7 +433,9 @@ class MCPHandler:
                         body_params = json.loads(cap.body_params)
                         # Use the complete schema from body_params if it has the right structure
                         if 'properties' in body_params:
-                            tool['inputSchema'] = body_params
+                            # Remove _fixed field before sending to LLM (it's for internal use)
+                            schema = {k: v for k, v in body_params.items() if k != '_fixed'}
+                            tool['inputSchema'] = schema
                         else:
                             # Fallback: treat as simple key-value params
                             for key, value in body_params.items():
@@ -465,8 +445,6 @@ class MCPHandler:
                                 }
                     except json.JSONDecodeError:
                         pass
-                
-                all_tools.append(tool)
         
         return {
             'jsonrpc': '2.0',
@@ -637,7 +615,9 @@ class MCPHandler:
                         body_params = json.loads(cap.body_params)
                         # Use the complete schema from body_params if it has the right structure
                         if 'properties' in body_params:
-                            tool['inputSchema'] = body_params
+                            # Remove _fixed field before sending to LLM (it's for internal use)
+                            schema = {k: v for k, v in body_params.items() if k != '_fixed'}
+                            tool['inputSchema'] = schema
                         else:
                             # Fallback: treat as simple key-value params
                             for key, value in body_params.items():
@@ -763,32 +743,74 @@ class MCPHandler:
         
         # Merge body params with arguments
         body = {}
+        fixed_params = {}
+        
         if capability.body_params:
             # body_params can be string (JSON) or dict
             body_params = capability.body_params
             if isinstance(body_params, str):
-                # JSON string: replace with type preservation
-                body = VariableReplacer.replace_in_json(body_params)
-                if not isinstance(body, dict):
-                    body = {}
+                # JSON string: parse it
+                try:
+                    parsed = json.loads(body_params)
+                    
+                    # Check if it's new format with JSON Schema structure
+                    if 'properties' in parsed and '_fixed' in parsed:
+                        # New format: extract fixed params and prepare for LLM arguments
+                        fixed_params = parsed.get('_fixed', {})
+                        # Properties define the schema for LLM arguments
+                        # The actual values come from 'arguments'
+                    elif 'properties' in parsed:
+                        # JSON Schema without fixed params (MCP auto-discovered)
+                        # Schema only, no fixed params
+                        pass
+                    else:
+                        # Old format: simple key-value, treat as fixed params
+                        fixed_params = parsed
+                    
+                    # Replace variables in fixed params
+                    fixed_params = VariableReplacer.replace_in_dict(fixed_params)
+                except (json.JSONDecodeError, TypeError):
+                    pass
             else:
                 # Dict: parse and replace
                 try:
                     parsed = json.loads(body_params)
-                    body = VariableReplacer.replace_in_body_params(parsed)
+                    if 'properties' in parsed and '_fixed' in parsed:
+                        fixed_params = parsed.get('_fixed', {})
+                        fixed_params = VariableReplacer.replace_in_dict(fixed_params)
+                    elif 'properties' in parsed:
+                        pass  # Schema only
+                    else:
+                        fixed_params = VariableReplacer.replace_in_body_params(parsed)
                 except (json.JSONDecodeError, TypeError):
-                    body = {}
+                    pass
         
+        # Start with fixed params, then merge LLM-provided arguments
+        body.update(fixed_params)
         body.update(arguments)
+        
+        # Check HTTP method from headers
+        http_method = headers.get('X-HTTP-Method', 'POST').upper()
         
         try:
             # Make HTTP request
-            response = httpx.post(
-                url,
-                headers=headers,
-                json=body,
-                timeout=30.0
-            )
+            if http_method == 'GET':
+                # For GET, use query parameters instead of body
+                response = httpx.get(
+                    url,
+                    params=body,  # Query parameters
+                    headers=headers,
+                    timeout=30.0
+                )
+            else:
+                # POST or other methods
+                response = httpx.post(
+                    url,
+                    headers=headers,
+                    json=body,
+                    timeout=30.0
+                )
+            
             response.raise_for_status()
             
             return {
