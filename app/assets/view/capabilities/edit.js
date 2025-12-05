@@ -1189,6 +1189,49 @@ async function loadCapability() {
     const isMcpType = await loadCapability();
     await loadPermissions();
     
+    // Setup auto-update for request sample (debounced)
+    let sampleUpdateTimer;
+    function scheduleRequestSampleUpdate() {
+        clearTimeout(sampleUpdateTimer);
+        sampleUpdateTimer = setTimeout(() => {
+            generateRequestSample();
+        }, 500); // 500ms debounce
+    }
+    
+    // Listen to method changes
+    document.getElementById('method').addEventListener('change', () => {
+        toggleBodyType();
+        scheduleRequestSampleUpdate();
+    });
+    
+    // Listen to URL changes
+    document.getElementById('url').addEventListener('input', scheduleRequestSampleUpdate);
+    
+    // Use event delegation for dynamically added parameter rows
+    document.addEventListener('input', (e) => {
+        // Check if the input is in parameter containers
+        if (e.target.closest('#fixed-params-container') ||
+            e.target.closest('#llm-params-container') ||
+            e.target.closest('#fixed-params-post-container') ||
+            e.target.closest('#llm-params-tree-container')) {
+            scheduleRequestSampleUpdate();
+        }
+    });
+    
+    // Listen to checkbox changes in parameter rows
+    document.addEventListener('change', (e) => {
+        if (e.target.closest('#llm-params-container') ||
+            e.target.closest('#llm-params-tree-container')) {
+            scheduleRequestSampleUpdate();
+        }
+    });
+    
+    // Listen to advanced mode toggle
+    document.getElementById('use-advanced-mode').addEventListener('change', scheduleRequestSampleUpdate);
+    
+    // Initial sample generation
+    setTimeout(generateRequestSample, 100);
+    
     // Setup access control toggle
     document.getElementById('access-control-toggle').addEventListener('change', async (e) => {
         const isRestricted = e.target.checked;
