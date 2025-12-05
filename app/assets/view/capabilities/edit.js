@@ -237,10 +237,9 @@ function addLlmParamRow(paramData = null, isReadOnly = false) {
                     <option value="number" ${data.type === 'number' ? 'selected' : ''}>number</option>
                     <option value="integer" ${data.type === 'integer' ? 'selected' : ''}>integer</option>
                     <option value="boolean" ${data.type === 'boolean' ? 'selected' : ''}>boolean</option>
-                    <option value="array" ${data.type === 'array' ? 'selected' : ''}>array</option>
-                    <option value="object" ${data.type === 'object' ? 'selected' : ''}>object</option>
                     <option value="enum" ${data.type === 'enum' ? 'selected' : ''}>enum (選択肢)</option>
                 </select>
+                <small style="display: block; color: #6c757d; font-size: 0.75rem; margin-top: 2px;">※ GETメソッドではシンプルな型のみ使用可能</small>
             </div>
         </div>
         <div style="margin-bottom: 10px;">
