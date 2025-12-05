@@ -219,7 +219,397 @@ function toggleEnumField(selectElement) {
     }
 }
 
-// JSON validation and formatting
+// ========== POST用の階層エディタ機能 ==========
+
+let treeNodeIdCounter = 0;
+
+// モード切り替え
+function toggleBodyEditorMode() {
+    const checkbox = document.getElementById('use-advanced-mode');
+    const visualEditor = document.getElementById('visual-editor');
+    const jsonEditor = document.getElementById('json-editor');
+    
+    if (checkbox.checked) {
+        // 詳細モード: ビジュアルエディタ→JSON
+        const schema = buildSchemaFromTree();
+        document.getElementById('body_json').value = JSON.stringify(schema, null, 2);
+        visualEditor.style.display = 'none';
+        jsonEditor.style.display = 'block';
+    } else {
+        // ビジュアルモード: JSON→ツリー
+        visualEditor.style.display = 'block';
+        jsonEditor.style.display = 'none';
+    }
+}
+
+// 固定パラメータ（POST用・ネストなし）
+function addFixedParamPostRow(key = '', value = '') {
+    const container = document.getElementById('fixed-params-post-container');
+    const row = document.createElement('div');
+    row.className = 'key-value-row';
+    row.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px; align-items: center;';
+    row.innerHTML = `
+        <input type="text" placeholder="Key" value="${key}" 
+               style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+        <input type="text" placeholder="Value (or {{VARIABLE}})" value="${value}" 
+               style="flex: 2; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+        <button type="button" onclick="this.parentElement.remove()" class="btn btn-sm btn-danger">${t('button_delete')}</button>
+    `;
+    container.appendChild(row);
+}
+
+// 階層構造のLLMパラメータ追加
+function addLlmParamTreeRow(containerOrParent = null, depth = 0, paramData = null) {
+    const nodeId = `tree-node-${treeNodeIdCounter++}`;
+    
+    // containerOrParentが配列コンテナ要素かどうかをチェック
+    let container;
+    if (!containerOrParent) {
+        // ルート要素の場合
+        container = document.getElementById('llm-params-tree-container');
+    } else if (containerOrParent.classList && (containerOrParent.classList.contains('tree-children') || containerOrParent.classList.contains('tree-array-item-properties'))) {
+        // 既にコンテナ要素が渡されている場合
+        container = containerOrParent;
+    } else if (containerOrParent.id === 'llm-params-tree-container') {
+        // ルートコンテナが直接渡されている場合
+        container = containerOrParent;
+    } else {
+        // 親ノードが渡されている場合（後方互換性）
+        container = containerOrParent.querySelector('.tree-children');
+    }
+    
+    if (!container) {
+        console.error('Container not found for:', containerOrParent);
+        return null;
+    }
+    
+    const data = paramData || {
+        name: '',
+        type: 'string',
+        description: '',
+        required: false,
+        enum: '',
+        default: '',
+        itemsType: 'string'
+    };
+    
+    const indentPx = depth * 30;
+    const node = document.createElement('div');
+    node.className = 'tree-node';
+    node.setAttribute('data-node-id', nodeId);
+    node.setAttribute('data-depth', depth);
+    node.style.cssText = `margin-left: ${indentPx}px; margin-bottom: 8px; border-left: ${depth > 0 ? '2px solid #cce5ff' : 'none'}; padding-left: ${depth > 0 ? '10px' : '0'};`;
+    
+    const isExpandable = data.type === 'object';
+    const expandButton = isExpandable ? `<button type="button" class="tree-expand-btn" onclick="toggleTreeNode('${nodeId}')" style="width: 24px; height: 24px; padding: 0; margin-right: 5px; border: 1px solid #ccc; background: white; cursor: pointer; border-radius: 3px;">▼</button>` : '<span style="display: inline-block; width: 24px;"></span>';
+    
+    node.innerHTML = `
+        <div style="border: 1px solid #cce5ff; border-radius: 4px; padding: 12px; background: white;">
+            <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: ${isExpandable || data.type === 'array' ? '10px' : '0'};">
+                ${expandButton}
+                <div style="flex: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #333; display: block; margin-bottom: 2px;">プロパティ名 *</label>
+                        <input type="text" class="tree-param-name" value="${data.name}" placeholder="property_name"
+                               style="width: 100%; padding: 5px 6px; border: 1px solid #ddd; border-radius: 3px; font-size: 0.85rem;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #333; display: block; margin-bottom: 2px;">型 *</label>
+                        <select class="tree-param-type" onchange="handleTreeTypeChange('${nodeId}')" style="width: 100%; padding: 5px 6px; border: 1px solid #ddd; border-radius: 3px; font-size: 0.85rem;">
+                            <option value="string" ${data.type === 'string' ? 'selected' : ''}>string</option>
+                            <option value="number" ${data.type === 'number' ? 'selected' : ''}>number</option>
+                            <option value="integer" ${data.type === 'integer' ? 'selected' : ''}>integer</option>
+                            <option value="boolean" ${data.type === 'boolean' ? 'selected' : ''}>boolean</option>
+                            <option value="enum" ${data.type === 'enum' ? 'selected' : ''}>enum</option>
+                            <option value="array" ${data.type === 'array' ? 'selected' : ''}>array</option>
+                            <option value="object" ${data.type === 'object' ? 'selected' : ''}>object</option>
+                        </select>
+                    </div>
+                    <div class="tree-array-items" style="display: ${data.type === 'array' ? 'block' : 'none'};">
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #333; display: block; margin-bottom: 2px;">配列要素の型 *</label>
+                        <select class="tree-array-items-type" onchange="handleArrayItemsTypeChange('${nodeId}')" style="width: 100%; padding: 5px 6px; border: 1px solid #ddd; border-radius: 3px; font-size: 0.85rem;">
+                            <option value="string" ${data.itemsType === 'string' ? 'selected' : ''}>string</option>
+                            <option value="number" ${data.itemsType === 'number' ? 'selected' : ''}>number</option>
+                            <option value="integer" ${data.itemsType === 'integer' ? 'selected' : ''}>integer</option>
+                            <option value="boolean" ${data.itemsType === 'boolean' ? 'selected' : ''}>boolean</option>
+                            <option value="object" ${data.itemsType === 'object' ? 'selected' : ''}>object</option>
+                        </select>
+                    </div>
+                    <div class="tree-enum-field" style="display: ${data.type === 'enum' ? 'block' : 'none'};">
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #333; display: block; margin-bottom: 2px;">Enum値 *</label>
+                        <input type="text" class="tree-param-enum" value="${data.enum}" placeholder="opt1,opt2,opt3"
+                               style="width: 100%; padding: 5px 6px; border: 1px solid #ddd; border-radius: 3px; font-size: 0.85rem;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #333; display: block; margin-bottom: 2px;">説明</label>
+                        <input type="text" class="tree-param-description" value="${data.description}" placeholder="説明"
+                               style="width: 100%; padding: 5px 6px; border: 1px solid #ddd; border-radius: 3px; font-size: 0.85rem;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #333; display: block; margin-bottom: 2px;">デフォルト値</label>
+                        <input type="text" class="tree-param-default" value="${data.default}" placeholder="デフォルト値"
+                               style="width: 100%; padding: 5px 6px; border: 1px solid #ddd; border-radius: 3px; font-size: 0.85rem;">
+                    </div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap;">
+                        <input type="checkbox" class="tree-param-required" ${data.required ? 'checked' : ''} style="width: 14px; height: 14px;">
+                        <span>必須</span>
+                    </label>
+                    <button type="button" onclick="removeTreeNode('${nodeId}')" class="btn btn-sm btn-danger" style="font-size: 0.75rem; padding: 3px 8px;">削除</button>
+                </div>
+            </div>
+            <div class="tree-add-child" style="display: ${isExpandable ? 'block' : 'none'}; margin-top: 8px;">
+                <button type="button" onclick="addChildToTreeNode('${nodeId}')" class="btn btn-sm btn-primary" style="font-size: 0.8rem; padding: 4px 10px;">+ 子プロパティを追加</button>
+            </div>
+            <div class="tree-add-array-item-property" style="display: ${data.type === 'array' && data.itemsType === 'object' ? 'block' : 'none'}; margin-top: 8px;">
+                <button type="button" onclick="addArrayItemPropertyNode('${nodeId}')" class="btn btn-sm btn-secondary" style="font-size: 0.8rem; padding: 4px 10px;">+ 配列要素のプロパティを定義</button>
+            </div>
+            <div class="tree-children" style="margin-top: 10px;"></div>
+            <div class="tree-array-item-properties" style="margin-top: 10px;"></div>
+        </div>
+    `;
+    
+    container.appendChild(node);
+    return node;
+}
+
+function toggleTreeNode(nodeId) {
+    const node = document.querySelector(`[data-node-id="${nodeId}"]`);
+    const childrenContainer = node.querySelector('.tree-children');
+    const expandBtn = node.querySelector('.tree-expand-btn');
+    
+    if (childrenContainer.style.display === 'none') {
+        childrenContainer.style.display = 'block';
+        expandBtn.textContent = '▼';
+    } else {
+        childrenContainer.style.display = 'none';
+        expandBtn.textContent = '▶';
+    }
+}
+
+function handleTreeTypeChange(nodeId) {
+    const node = document.querySelector(`[data-node-id="${nodeId}"]`);
+    const typeSelect = node.querySelector('.tree-param-type');
+    const arrayItemsField = node.querySelector('.tree-array-items');
+    const enumField = node.querySelector('.tree-enum-field');
+    const addChildBtn = node.querySelector('.tree-add-child');
+    const addArrayItemPropertyBtn = node.querySelector('.tree-add-array-item-property');
+    const expandBtn = node.querySelector('.tree-expand-btn');
+    
+    const selectedType = typeSelect.value;
+    
+    // array表示制御
+    if (selectedType === 'array') {
+        arrayItemsField.style.display = 'block';
+        addChildBtn.style.display = 'none';
+        if (expandBtn) expandBtn.style.display = 'none';
+        
+        // Check if array items type is object
+        const itemsType = node.querySelector('.tree-array-items-type').value;
+        addArrayItemPropertyBtn.style.display = itemsType === 'object' ? 'block' : 'none';
+    } else {
+        arrayItemsField.style.display = 'none';
+        addArrayItemPropertyBtn.style.display = 'none';
+    }
+    
+    // enum表示制御
+    if (selectedType === 'enum') {
+        enumField.style.display = 'block';
+    } else {
+        enumField.style.display = 'none';
+    }
+    
+    // object表示制御
+    if (selectedType === 'object') {
+        addChildBtn.style.display = 'block';
+        if (expandBtn) expandBtn.style.display = 'inline-block';
+    } else {
+        addChildBtn.style.display = 'none';
+        if (expandBtn) expandBtn.style.display = 'none';
+    }
+}
+
+function handleArrayItemsTypeChange(nodeId) {
+    const node = document.querySelector(`[data-node-id="${nodeId}"]`);
+    const itemsType = node.querySelector('.tree-array-items-type').value;
+    const addArrayItemPropertyBtn = node.querySelector('.tree-add-array-item-property');
+    
+    addArrayItemPropertyBtn.style.display = itemsType === 'object' ? 'block' : 'none';
+}
+
+function addChildToTreeNode(parentNodeId) {
+    console.log('addChildToTreeNode called with:', parentNodeId);
+    const parentNode = document.querySelector(`[data-node-id="${parentNodeId}"]`);
+    console.log('Parent node found:', parentNode);
+    
+    if (!parentNode) {
+        console.error('Parent node not found:', parentNodeId);
+        return;
+    }
+    
+    const childrenContainer = parentNode.querySelector('.tree-children');
+    console.log('Children container:', childrenContainer);
+    
+    if (!childrenContainer) {
+        console.error('Children container not found');
+        console.log('Parent node:', parentNode);
+        return;
+    }
+    
+    const depth = parseInt(parentNode.getAttribute('data-depth')) + 1;
+    console.log('Adding child with depth:', depth);
+    addLlmParamTreeRow(childrenContainer, depth);
+    childrenContainer.style.display = 'block';
+    
+    // Update expand button if it exists
+    const expandBtn = parentNode.querySelector('.tree-expand-btn');
+    if (expandBtn) expandBtn.textContent = '▼';
+}
+
+function addArrayItemPropertyNode(nodeId) {
+    const parentNode = document.querySelector(`[data-node-id="${nodeId}"]`);
+    if (!parentNode) {
+        console.error('Parent node not found:', nodeId);
+        return;
+    }
+    
+    const arrayItemPropertiesContainer = parentNode.querySelector('.tree-array-item-properties');
+    if (!arrayItemPropertiesContainer) {
+        console.error('Array item properties container not found');
+        console.log('Parent node:', parentNode);
+        return;
+    }
+    
+    const depth = parseInt(parentNode.dataset.depth) + 1;
+    addLlmParamTreeRow(arrayItemPropertiesContainer, depth);
+    arrayItemPropertiesContainer.style.display = 'block';
+}
+
+function removeTreeNode(nodeId) {
+    const node = document.querySelector(`[data-node-id="${nodeId}"]`);
+    if (node) node.remove();
+}
+
+// ツリー構造からJSON Schemaを構築
+function buildSchemaFromTree() {
+    const fixedParams = {};
+    const fixedRows = document.querySelectorAll('#fixed-params-post-container .key-value-row');
+    fixedRows.forEach(row => {
+        const inputs = row.querySelectorAll('input[type="text"]');
+        const key = inputs[0].value.trim();
+        const value = inputs[1].value.trim();
+        if (key) fixedParams[key] = value;
+    });
+    
+    const properties = {};
+    const required = [];
+    
+    const rootNodes = document.querySelectorAll('#llm-params-tree-container > .tree-node');
+    rootNodes.forEach(node => {
+        const prop = buildPropertyFromNode(node);
+        if (prop && prop.name) {
+            properties[prop.name] = prop.schema;
+            if (prop.required) required.push(prop.name);
+        }
+    });
+    
+    if (Object.keys(properties).length > 0) {
+        return {
+            type: 'object',
+            properties: properties,
+            required: required,
+            _fixed: fixedParams
+        };
+    } else if (Object.keys(fixedParams).length > 0) {
+        return fixedParams;
+    }
+    
+    return {};
+}
+
+function buildPropertyFromNode(node) {
+    const nameInput = node.querySelector('.tree-param-name');
+    const typeSelect = node.querySelector('.tree-param-type');
+    const descriptionInput = node.querySelector('.tree-param-description');
+    const defaultInput = node.querySelector('.tree-param-default');
+    const enumInput = node.querySelector('.tree-param-enum');
+    const arrayItemsTypeSelect = node.querySelector('.tree-array-items-type');
+    const requiredCheckbox = node.querySelector('.tree-param-required');
+    
+    const name = nameInput.value.trim();
+    if (!name) return null;
+    
+    const type = typeSelect.value;
+    const description = descriptionInput.value.trim();
+    const defaultValue = defaultInput.value.trim();
+    const enumValue = enumInput ? enumInput.value.trim() : '';
+    const isRequired = requiredCheckbox.checked;
+    
+    let schema = { type: type === 'enum' ? 'string' : type };
+    if (description) schema.description = description;
+    
+    if (type === 'enum' && enumValue) {
+        schema.enum = enumValue.split(',').map(v => v.trim()).filter(v => v);
+    }
+    
+    if (type === 'array' && arrayItemsTypeSelect) {
+        const itemsType = arrayItemsTypeSelect.value;
+        schema.items = { type: itemsType };
+        
+        // If array items type is object, collect properties from array-item-properties container
+        if (itemsType === 'object') {
+            const arrayItemPropertiesContainer = node.querySelector('.tree-array-item-properties');
+            const itemPropertyNodes = arrayItemPropertiesContainer.querySelectorAll(':scope > .tree-node');
+            const itemProperties = {};
+            const itemRequired = [];
+            
+            itemPropertyNodes.forEach(itemPropNode => {
+                const itemProp = buildPropertyFromNode(itemPropNode);
+                if (itemProp && itemProp.name) {
+                    itemProperties[itemProp.name] = itemProp.schema;
+                    if (itemProp.required) itemRequired.push(itemProp.name);
+                }
+            });
+            
+            if (Object.keys(itemProperties).length > 0) {
+                schema.items.properties = itemProperties;
+                if (itemRequired.length > 0) {
+                    schema.items.required = itemRequired;
+                }
+            }
+        }
+    }
+    
+    if (type === 'object') {
+        const childNodes = node.querySelector('.tree-children').querySelectorAll(':scope > .tree-node');
+        const childProperties = {};
+        const childRequired = [];
+        
+        childNodes.forEach(childNode => {
+            const childProp = buildPropertyFromNode(childNode);
+            if (childProp && childProp.name) {
+                childProperties[childProp.name] = childProp.schema;
+                if (childProp.required) childRequired.push(childProp.name);
+            }
+        });
+        
+        schema.properties = childProperties;
+        if (childRequired.length > 0) schema.required = childRequired;
+    }
+    
+    if (defaultValue) {
+        try {
+            schema.default = JSON.parse(defaultValue);
+        } catch {
+            schema.default = defaultValue;
+        }
+    }
+    
+    return { name, schema, required: isRequired };
+}
+
+// Initialize and setup
 function validateJson() {
     const textarea = document.getElementById('body_json');
     const errorDiv = document.getElementById('json-validation-error');
@@ -369,18 +759,27 @@ function formatJson() {
                 bodyParams = fixedParams;
             }
         } else {
-            const jsonText = document.getElementById('body_json').value.trim();
-            if (jsonText) {
-                try {
-                    bodyParams = JSON.parse(jsonText);
-                } catch (e) {
-                    const errorDiv = document.getElementById('json-validation-error');
-                    errorDiv.style.display = 'block';
-                    errorDiv.style.color = '#dc3545';
-                    errorDiv.innerHTML = '✗ ' + t('json_invalid') + ': ' + e.message;
-                    document.getElementById('body_json').focus();
-                    return;
+            // POST method
+            const useAdvancedMode = document.getElementById('use-advanced-mode').checked;
+            
+            if (useAdvancedMode) {
+                // JSON直接編集モード
+                const jsonText = document.getElementById('body_json').value.trim();
+                if (jsonText) {
+                    try {
+                        bodyParams = JSON.parse(jsonText);
+                    } catch (e) {
+                        const errorDiv = document.getElementById('json-validation-error');
+                        errorDiv.style.display = 'block';
+                        errorDiv.style.color = '#dc3545';
+                        errorDiv.innerHTML = '✗ ' + t('json_invalid') + ': ' + e.message;
+                        document.getElementById('body_json').focus();
+                        return;
+                    }
                 }
+            } else {
+                // ビジュアルエディタモード
+                bodyParams = buildSchemaFromTree();
             }
         }
         

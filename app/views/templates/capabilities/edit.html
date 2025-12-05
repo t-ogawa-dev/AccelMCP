@@ -102,16 +102,47 @@
                 </div>
             </div>
             <div id="body-json">
-                <textarea id="body_json" name="body_json" rows="8" placeholder='{"key": "value"}'></textarea>
-                <div style="display: flex; gap: 10px; margin: 10px 0;">
-                    <button type="button" onclick="validateJson()" class="btn btn-sm btn-secondary">
-                        <span data-i18n="button_validate_json">JSON構造チェック</span>
-                    </button>
-                    <button type="button" onclick="formatJson()" class="btn btn-sm btn-secondary">
-                        <span data-i18n="button_format_json">整形</span>
-                    </button>
+                <!-- POST用の階層エディタとJSON直接編集の切り替え -->
+                <div style="margin-bottom: 10px;">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="checkbox" id="use-advanced-mode" onchange="toggleBodyEditorMode()" style="width: 16px; height: 16px;">
+                        <span style="font-weight: 500;">詳細モード（JSON直接編集）</span>
+                    </label>
+                    <small style="color: #6c757d; margin-left: 26px;">複雑な構造の場合はJSON直接編集も可能</small>
                 </div>
-                <div id="json-validation-error" style="color: #dc3545; margin-top: 8px; font-size: 0.9rem; display: none;"></div>
+                
+                <!-- ビジュアルエディタ（階層構造） -->
+                <div id="visual-editor" style="display: block;">
+                    <!-- 固定パラメータ -->
+                    <div style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 4px;">
+                        <h4 style="margin-top: 0; font-size: 0.95rem; color: #495057;">固定パラメータ (Fixed Parameters)</h4>
+                        <small style="display: block; margin-bottom: 10px; color: #6c757d;">リクエストボディに常に含まれる固定値（API Key等）。変数 {{VARIABLE_NAME}} も利用可能。</small>
+                        <div id="fixed-params-post-container"></div>
+                        <button type="button" onclick="addFixedParamPostRow()" class="btn btn-sm btn-secondary" style="margin-top: 10px;">+ 固定パラメータを追加</button>
+                    </div>
+                    
+                    <!-- LLMパラメータ（階層構造） -->
+                    <div style="padding: 15px; background-color: #e7f3ff; border-radius: 4px;">
+                        <h4 style="margin-top: 0; font-size: 0.95rem; color: #004085;">LLMパラメータ (LLM Parameters)</h4>
+                        <small style="display: block; margin-bottom: 10px; color: #004085;">LLMが値を設定するパラメータ。階層構造で定義できます。</small>
+                        <div id="llm-params-tree-container"></div>
+                        <button type="button" onclick="addLlmParamTreeRow(null, 0)" class="btn btn-sm btn-primary" style="margin-top: 10px;">+ LLMパラメータを追加</button>
+                    </div>
+                </div>
+                
+                <!-- JSON直接編集 -->
+                <div id="json-editor" style="display: none;">
+                    <textarea id="body_json" name="body_json" rows="12" placeholder='{"key": "value"}'></textarea>
+                    <div style="display: flex; gap: 10px; margin: 10px 0;">
+                        <button type="button" onclick="validateJson()" class="btn btn-sm btn-secondary">
+                            <span data-i18n="button_validate_json">JSON構造チェック</span>
+                        </button>
+                        <button type="button" onclick="formatJson()" class="btn btn-sm btn-secondary">
+                            <span data-i18n="button_format_json">整形</span>
+                        </button>
+                    </div>
+                    <div id="json-validation-error" style="color: #dc3545; margin-top: 8px; font-size: 0.9rem; display: none;"></div>
+                </div>
             </div>
         </div>
         
