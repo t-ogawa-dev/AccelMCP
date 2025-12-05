@@ -353,6 +353,150 @@ function formatJson() {
     }
 }
 
+// Generate request sample based on current parameter definitions
+function generateRequestSample() {
+    const method = document.getElementById('method').value;
+    const url = document.getElementById('url').value || '/api/endpoint';
+    
+    if (method === 'GET') {
+        generateGetRequestSample(url);
+    } else {
+        generatePostRequestSample();
+    }
+}
+
+function generateGetRequestSample(baseUrl) {
+    const outputElement = document.getElementById('request-sample-output-get');
+    
+    // Collect fixed parameters
+    const fixedParams = [];
+    const fixedRows = document.querySelectorAll('#fixed-params-container .key-value-row');
+    fixedRows.forEach(row => {
+        const inputs = row.querySelectorAll('input[type="text"]');
+        const key = inputs[0].value.trim();
+        const value = inputs[1].value.trim();
+        if (key) {
+            const displayValue = value.startsWith('{{') ? value : `"${value}"`;
+            fixedParams.push(`${key}=${displayValue}`);
+        }
+    });
+    
+    // Collect LLM parameters
+    const llmParams = [];
+    const llmRows = document.querySelectorAll('#llm-params-container .llm-param-row');
+    llmRows.forEach(row => {
+        const name = row.querySelector('.llm-param-name').value.trim();
+        const type = row.querySelector('.llm-param-type').value;
+        if (name) {
+            let sampleValue;
+            if (type === 'enum') {
+                const enumValues = row.querySelector('.llm-param-enum').value.trim();
+                sampleValue = enumValues ? `"${enumValues.split(',')[0].trim()}"` : '<string>';
+            } else if (type === 'string') {
+                sampleValue = '<string>';
+            } else if (type === 'number' || type === 'integer') {
+                sampleValue = '<number>';
+            } else if (type === 'boolean') {
+                sampleValue = '<boolean>';
+            }
+            llmParams.push(`${name}=${sampleValue}`);
+        }
+    });
+    
+    const allParams = [...fixedParams, ...llmParams];
+    const queryString = allParams.length > 0 ? '?' + allParams.join('&') : '';
+    const fullUrl = `${baseUrl}${queryString}`;
+    
+    outputElement.textContent = fullUrl || '(パラメータを追加してください)';
+}
+
+function generatePostRequestSample() {
+    const outputElement = document.getElementById('request-sample-output-post');
+    const useAdvancedMode = document.getElementById('use-advanced-mode').checked;
+    
+    if (useAdvancedMode) {
+        // JSON direct edit mode - show the textarea content
+        const jsonText = document.getElementById('body_json').value.trim();
+        outputElement.textContent = jsonText || '{}';
+        return;
+    }
+    
+    // Visual editor mode - build sample from tree
+    const sampleBody = {};
+    
+    // Add fixed parameters
+    const fixedRows = document.querySelectorAll('#fixed-params-post-container .key-value-row');
+    fixedRows.forEach(row => {
+        const inputs = row.querySelectorAll('input[type="text"]');
+        const key = inputs[0]?.value.trim();
+        const value = inputs[1]?.value.trim();
+        if (key) {
+            // Keep variable syntax as-is, otherwise show actual value
+            sampleBody[key] = value || '<value>';
+        }
+    });
+    
+    // Add LLM parameters from tree
+    const rootNodes = document.querySelectorAll('#llm-params-tree-container > .tree-node');
+    rootNodes.forEach(node => {
+        const name = node.querySelector('.tree-param-name').value.trim();
+        if (name) {
+            sampleBody[name] = generateSampleValue(node);
+        }
+    });
+    
+    outputElement.textContent = JSON.stringify(sampleBody, null, 2);
+}
+
+function generateSampleValue(node) {
+    const type = node.querySelector('.tree-param-type').value;
+    
+    if (type === 'string') {
+        return '<string>';
+    } else if (type === 'number' || type === 'integer') {
+        return '<number>';
+    } else if (type === 'boolean') {
+        return '<boolean>';
+    } else if (type === 'enum') {
+        const enumValues = node.querySelector('.tree-param-enum').value.trim();
+        return enumValues ? `"${enumValues.split(',')[0].trim()}"` : '<string>';
+    } else if (type === 'array') {
+        const itemsType = node.querySelector('.tree-array-items-type').value;
+        if (itemsType === 'object') {
+            // Build sample object from array item properties
+            const arrayItemPropertiesContainer = node.querySelector('.tree-array-item-properties');
+            const itemPropertyNodes = arrayItemPropertiesContainer.querySelectorAll(':scope > .tree-node');
+            const sampleItem = {};
+            itemPropertyNodes.forEach(itemNode => {
+                const itemName = itemNode.querySelector('.tree-param-name').value.trim();
+                if (itemName) {
+                    sampleItem[itemName] = generateSampleValue(itemNode);
+                }
+            });
+            return [sampleItem];
+        } else {
+            // Simple type array
+            const sampleValue = itemsType === 'string' ? '<string>' : 
+                               itemsType === 'number' || itemsType === 'integer' ? '<number>' : 
+                               itemsType === 'boolean' ? '<boolean>' : '<value>';
+            return [sampleValue];
+        }
+    } else if (type === 'object') {
+        const childrenContainer = node.querySelector('.tree-children');
+        const childNodes = childrenContainer.querySelectorAll(':scope > .tree-node');
+        const sampleObj = {};
+        childNodes.forEach(childNode => {
+            const childName = childNode.querySelector('.tree-param-name').value.trim();
+            if (childName) {
+                sampleObj[childName] = generateSampleValue(childNode);
+            }
+        });
+        return sampleObj;
+    }
+    
+    return '<value>';
+}
+
 // ============================================
 // POST Method: Hierarchical Tree Editor
 // ============================================

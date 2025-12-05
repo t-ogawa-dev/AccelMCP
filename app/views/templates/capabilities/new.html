@@ -81,6 +81,16 @@
                     <div id="llm-params-container"></div>
                     <button type="button" onclick="addLlmParamRow()" class="btn btn-sm btn-primary" style="margin-top: 10px;">+ LLMパラメータを追加</button>
                 </div>
+                
+                <!-- Request Sample (GET) -->
+                <div id="request-sample-get" style="margin-top: 20px; padding: 15px; background-color: #fff3cd; border-radius: 4px; border-left: 4px solid #ffc107;">
+                    <h4 style="margin-top: 0; font-size: 0.95rem; color: #856404; display: flex; align-items: center; gap: 8px;">
+                        <span>📤</span> APIリクエストサンプル
+                    </h4>
+                    <small style="display: block; margin-bottom: 10px; color: #856404;">このパラメータ定義でAPIに送信されるリクエストの例</small>
+                    <button type="button" onclick="generateRequestSample()" class="btn btn-sm btn-warning" style="margin-bottom: 10px;">サンプル生成</button>
+                    <pre id="request-sample-output-get" style="background: white; padding: 12px; border-radius: 4px; border: 1px solid #ffc107; font-size: 0.85rem; overflow-x: auto; margin: 0;"></pre>
+                </div>
             </div>
             <div id="body-json">
                 <!-- POST用の階層エディタとJSON直接編集の切り替え -->
@@ -108,6 +118,16 @@
                         <small style="display: block; margin-bottom: 10px; color: #004085;">LLMが値を設定するパラメータ。階層構造で定義できます。</small>
                         <div id="llm-params-tree-container"></div>
                         <button type="button" onclick="addLlmParamTreeRow(null, 0)" class="btn btn-sm btn-primary" style="margin-top: 10px;">+ LLMパラメータを追加</button>
+                    </div>
+                    
+                    <!-- Request Sample (POST Visual) -->
+                    <div id="request-sample-post" style="margin-top: 20px; padding: 15px; background-color: #fff3cd; border-radius: 4px; border-left: 4px solid #ffc107;">
+                        <h4 style="margin-top: 0; font-size: 0.95rem; color: #856404; display: flex; align-items: center; gap: 8px;">
+                            <span>📤</span> APIリクエストサンプル (JSONボディ)
+                        </h4>
+                        <small style="display: block; margin-bottom: 10px; color: #856404;">このパラメータ定義でAPIに送信されるリクエストボディの例</small>
+                        <button type="button" onclick="generateRequestSample()" class="btn btn-sm btn-warning" style="margin-bottom: 10px;">サンプル生成</button>
+                        <pre id="request-sample-output-post" style="background: white; padding: 12px; border-radius: 4px; border: 1px solid #ffc107; font-size: 0.85rem; overflow-x: auto; margin: 0;"></pre>
                     </div>
                 </div>
                 
