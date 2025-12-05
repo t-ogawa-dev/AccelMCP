@@ -3,6 +3,35 @@ const capabilityId = parseInt(window.location.pathname.split('/')[2]);
 let headerIndex = 0;
 let bodyIndex = 0;
 let currentAccessControl = 'public'; // デフォルトはpublic（制限なし）
+let baseUrl = ''; // App's base URL
+
+// Update URL preview
+function updateUrlPreview() {
+    const urlInput = document.getElementById('url');
+    const urlPreviewBase = document.getElementById('url-preview-base');
+    const urlPreviewPath = document.getElementById('url-preview-path');
+    
+    const inputPath = urlInput.value.trim();
+    
+    if (baseUrl) {
+        // Show baseUrl + inputPath (or placeholder if empty)
+        const separator = baseUrl.endsWith('/') || inputPath.startsWith('/') ? '' : '/';
+        urlPreviewBase.textContent = baseUrl;
+        
+        if (inputPath && !inputPath.startsWith('http')) {
+            urlPreviewPath.textContent = separator + inputPath;
+        } else if (!inputPath) {
+            urlPreviewPath.textContent = separator + '<input path>';
+        } else {
+            // Absolute URL entered
+            urlPreviewPath.textContent = '';
+        }
+    } else {
+        // No base URL - clear preview
+        urlPreviewBase.textContent = '';
+        urlPreviewPath.textContent = '';
+    }
+}
 
 // Update access control UI
 function updateAccessControlUI(isRestricted) {
@@ -238,10 +267,11 @@ async function loadCapability() {
     const response = await fetch(`/api/capabilities/${capabilityId}`);
     const cap = await response.json();
     
-    // Get parent app information to check if it's MCP type
+    // Get parent app information to check if it's MCP type and get base URL
     const appResponse = await fetch(`/api/apps/${cap.service_id}`);
     const app = await appResponse.json();
     const isMcpType = app.service_type === 'mcp';
+    baseUrl = app.mcp_url || '';
     
     // Update breadcrumb links
     // Set breadcrumb links
@@ -256,6 +286,13 @@ async function loadCapability() {
     document.getElementById('name').value = cap.name;
     document.getElementById('url').value = cap.url;
     document.getElementById('description').value = cap.description || '';
+    
+    // Add input event listener for URL preview
+    const urlInput = document.getElementById('url');
+    urlInput.addEventListener('input', updateUrlPreview);
+    
+    // Initial URL preview update
+    updateUrlPreview();
     
     // Set access control (default: public for capabilities)
     currentAccessControl = cap.access_control || 'public';
@@ -415,10 +452,21 @@ async function loadCapability() {
             }
         }
         
+        // URL validation: skip if baseUrl exists (relative paths are valid)
+        const urlValue = formData.get('url').trim();
+        if (!baseUrl && urlValue) {
+            // No baseUrl - must be absolute URL
+            if (!urlValue.startsWith('http://') && !urlValue.startsWith('https://')) {
+                showError(t('error_invalid_url') || 'URLを入力してください');
+                document.getElementById('url').focus();
+                return;
+            }
+        }
+        
         const data = {
             name: formData.get('name'),
             capability_type: 'tool',
-            url: formData.get('url'),
+            url: urlValue,
             description: formData.get('description'),
             headers: headers,
             body_params: bodyParams

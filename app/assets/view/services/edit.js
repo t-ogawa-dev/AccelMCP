@@ -21,13 +21,28 @@ function showServiceTypeSection() {
     const serviceType = document.querySelector('input[name="service_type"]:checked').value;
     const mcpUrlSection = document.getElementById('mcp-url-section');
     const mcpUrlInput = document.getElementById('mcp_url');
+    const mcpUrlLabel = document.querySelector('#mcp-url-label span:first-child');
+    const mcpUrlRequired = document.getElementById('mcp-url-required');
+    const mcpUrlHint = document.getElementById('mcp-url-hint');
+    const testConnectionBtn = document.getElementById('test-connection-btn');
     
     if (serviceType === 'mcp') {
         mcpUrlSection.style.display = 'block';
         mcpUrlInput.setAttribute('required', 'required');
+        mcpUrlLabel.textContent = 'MCP接続URL';
+        mcpUrlRequired.textContent = '*';
+        mcpUrlHint.textContent = 'MCPサーバーのSSEエンドポイントURLを入力してください';
+        mcpUrlInput.placeholder = 'http://localhost:3000/sse';
+        testConnectionBtn.style.display = 'block';
     } else {
-        mcpUrlSection.style.display = 'none';
+        // API type
+        mcpUrlSection.style.display = 'block';
         mcpUrlInput.removeAttribute('required');
+        mcpUrlLabel.textContent = 'API ベースURL';
+        mcpUrlRequired.textContent = '';
+        mcpUrlHint.textContent = 'APIの共通ベースURL（任意）例: https://api.example.com/v1/';
+        mcpUrlInput.placeholder = 'https://api.example.com/v1/';
+        testConnectionBtn.style.display = 'none';
     }
 }
 
@@ -128,11 +143,13 @@ async function loadService() {
     currentServiceType = service.service_type || 'api';
     document.querySelector(`input[name="service_type"][value="${currentServiceType}"]`).checked = true;
     
-    if (currentServiceType === 'mcp') {
-        document.getElementById('mcp_url').value = service.mcp_url || '';
-    }
-    
+    // Show service type section before setting value
     showServiceTypeSection();
+    
+    // Set mcp_url for both MCP and API types
+    if (service.mcp_url) {
+        document.getElementById('mcp_url').value = service.mcp_url;
+    }
     
     // Load headers for both API and MCP types
     const headers = service.common_headers || {};
@@ -314,8 +331,10 @@ async function savePermissions() {
                 common_headers: {}
             };
             
-            if (currentServiceType === 'mcp') {
-                data.mcp_url = formData.get('mcp_url');
+            // Get mcp_url for both MCP and API types
+            const mcpUrlValue = formData.get('mcp_url');
+            if (mcpUrlValue && mcpUrlValue.trim()) {
+                data.mcp_url = mcpUrlValue.trim();
             }
             
             // Collect headers for both API and MCP types

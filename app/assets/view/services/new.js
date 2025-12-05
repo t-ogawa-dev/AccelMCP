@@ -5,13 +5,30 @@ function toggleServiceType() {
     const serviceType = document.querySelector('input[name="service_type"]:checked').value;
     const mcpUrlSection = document.getElementById('mcp-url-section');
     const mcpUrlInput = document.getElementById('mcp_url');
+    const mcpUrlLabel = document.querySelector('#mcp-url-label span:first-child');
+    const mcpUrlRequired = document.getElementById('mcp-url-required');
+    const mcpUrlHint = document.getElementById('mcp-url-hint');
+    const testConnectionBtn = document.getElementById('test-connection-btn');
     
     if (serviceType === 'mcp') {
         mcpUrlSection.style.display = 'block';
         mcpUrlInput.setAttribute('required', 'required');
+        mcpUrlLabel.setAttribute('data-i18n', 'app_mcp_url_label');
+        mcpUrlLabel.textContent = 'MCP接続URL';
+        mcpUrlRequired.textContent = '*';
+        mcpUrlHint.setAttribute('data-i18n', 'app_mcp_url_hint');
+        mcpUrlHint.textContent = 'MCPサーバーのSSEエンドポイントURLを入力してください';
+        mcpUrlInput.placeholder = 'http://localhost:3000/sse';
+        testConnectionBtn.style.display = 'block';
     } else {
-        mcpUrlSection.style.display = 'none';
+        // API type
+        mcpUrlSection.style.display = 'block';
         mcpUrlInput.removeAttribute('required');
+        mcpUrlLabel.textContent = 'API ベースURL';
+        mcpUrlRequired.textContent = '';
+        mcpUrlHint.textContent = 'APIの共通ベースURL（任意）例: https://api.example.com/v1/';
+        mcpUrlInput.placeholder = 'https://api.example.com/v1/';
+        testConnectionBtn.style.display = 'none';
     }
 }
 
@@ -121,9 +138,16 @@ async function testConnection() {
     
     // Check for template data in sessionStorage
     const templateDataStr = sessionStorage.getItem('app_template_data');
+    let templateCapabilities = null;
+    
     if (templateDataStr) {
         try {
             const templateData = JSON.parse(templateDataStr);
+            
+            // Save capabilities for later use
+            if (templateData.capabilities) {
+                templateCapabilities = templateData.capabilities;
+            }
             
             // Fill form with template data
             if (templateData.name) {
@@ -162,6 +186,12 @@ async function testConnection() {
                     📚 テンプレートから作成中: ${templateData.name}<br>
                     <a href="${templateData.official_url}" target="_blank" style="color: #0369a1; text-decoration: underline;">公式ドキュメント</a>
                 `;
+                
+                // If API template with capabilities, show capability count
+                if (templateData.service_type === 'api' && templateCapabilities && templateCapabilities.length > 0) {
+                    infoDiv.innerHTML += `<br>📌 ${templateCapabilities.length}個のCapabilityが自動登録されます`;
+                }
+                
                 document.querySelector('form').insertBefore(infoDiv, document.querySelector('form').firstChild);
             }
             
@@ -199,8 +229,10 @@ async function testConnection() {
             mcp_service_id: mcpServiceId
         };
         
-        if (serviceType === 'mcp') {
-            data.mcp_url = formData.get('mcp_url');
+        // Get mcp_url for both MCP and API types
+        const mcpUrlValue = formData.get('mcp_url');
+        if (mcpUrlValue && mcpUrlValue.trim()) {
+            data.mcp_url = mcpUrlValue.trim();
         }
         
         // Collect headers for both API and MCP types
@@ -214,6 +246,7 @@ async function testConnection() {
             }
         });
         
+        // Create the app
         const response = await fetch('/api/apps', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -221,6 +254,62 @@ async function testConnection() {
         });
         
         if (response.ok) {
+            const app = await response.json();
+            const appId = app.id;
+            
+            // For API templates with capabilities, register them
+            if (serviceType === 'api' && templateCapabilities && templateCapabilities.length > 0) {
+                console.log(`Registering ${templateCapabilities.length} capabilities...`);
+                
+                for (const capTemplate of templateCapabilities) {
+                    try {
+                        // Parse headers and body_params if they are strings
+                        let headers = capTemplate.headers || {};
+                        let bodyParams = capTemplate.body_params || {};
+                        
+                        if (typeof headers === 'string') {
+                            try {
+                                headers = JSON.parse(headers);
+                            } catch (e) {
+                                headers = {};
+                            }
+                        }
+                        
+                        if (typeof bodyParams === 'string') {
+                            try {
+                                bodyParams = JSON.parse(bodyParams);
+                            } catch (e) {
+                                bodyParams = {};
+                            }
+                        }
+                        
+                        const capData = {
+                            name: capTemplate.name,
+                            capability_type: capTemplate.capability_type,
+                            url: capTemplate.endpoint_path || '',
+                            headers: headers,
+                            body_params: bodyParams,
+                            description: capTemplate.description || '',
+                            method: capTemplate.method || 'GET'
+                        };
+                        
+                        const capResponse = await fetch(`/api/apps/${appId}/capabilities`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(capData)
+                        });
+                        
+                        if (!capResponse.ok) {
+                            console.error(`Failed to register capability: ${capTemplate.name}`);
+                        }
+                    } catch (error) {
+                        console.error(`Error registering capability ${capTemplate.name}:`, error);
+                    }
+                }
+                
+                console.log('All capabilities registered');
+            }
+            
             window.location.href = `/mcp-services/${mcpServiceId}/apps`;
         } else {
             const error = await response.json();

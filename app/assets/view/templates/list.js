@@ -48,9 +48,28 @@ async function loadTemplates(type) {
         return;
     }
     
+    // For API templates, fetch capability counts
+    const capabilityCounts = {};
+    if (type === 'api') {
+        for (const template of templates) {
+            try {
+                const capResponse = await fetch(`/api/mcp-templates/${template.id}/capabilities`);
+                if (capResponse.ok) {
+                    const capabilities = await capResponse.json();
+                    capabilityCounts[template.id] = capabilities.length;
+                }
+            } catch (e) {
+                console.error(`Failed to load capabilities for template ${template.id}:`, e);
+            }
+        }
+    }
+    
     container.innerHTML = templates.map(template => {
         const officialLink = template.official_url ? 
             `<a href="${template.official_url}" target="_blank" class="template-link" onclick="event.stopPropagation()" title="公式サイト">🔗</a>` : '';
+        
+        const capabilityBadge = type === 'api' && capabilityCounts[template.id] ? 
+            `<span class="capability-badge">${capabilityCounts[template.id]} APIs</span>` : '';
         
         return `
             <div class="template-card" onclick="window.location.href='/mcp-templates/${template.id}'">
@@ -58,7 +77,7 @@ async function loadTemplates(type) {
                     <div class="template-icon">${template.icon || '📦'}</div>
                     <div class="template-info">
                         <div class="template-name">${template.name} ${officialLink}</div>
-                        <div class="template-category">${template.category || 'General'}</div>
+                        <div class="template-category">${template.category || 'General'} ${capabilityBadge}</div>
                     </div>
                 </div>
                 <div class="template-description">${template.description || ''}</div>

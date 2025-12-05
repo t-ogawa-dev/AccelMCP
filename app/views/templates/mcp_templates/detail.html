@@ -60,6 +60,11 @@
         <h2 data-i18n="mcp_template_common_headers">共通ヘッダー</h2>
         <div id="headers-list" class="headers-list"></div>
     </div>
+    
+    <div class="detail-section" id="capabilities-section" style="display: none;">
+        <h2>Capabilities</h2>
+        <div id="capabilities-list"></div>
+    </div>
 </div>
 
 <style>
@@ -218,6 +223,77 @@
     text-align: center;
     padding: 40px;
     color: #999;
+}
+
+.capability-card {
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+    margin-bottom: 12px;
+}
+
+.capability-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.capability-type-badge {
+    padding: 4px 10px;
+    background: #667eea;
+    color: white;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.http-method {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+}
+
+.http-method.get {
+    background: #10b981;
+}
+
+.http-method.post {
+    background: #3b82f6;
+}
+
+.http-method.put {
+    background: #f59e0b;
+}
+
+.http-method.delete {
+    background: #ef4444;
+}
+
+.capability-name {
+    font-weight: 600;
+    color: #333;
+    flex: 1;
+}
+
+.capability-endpoint {
+    font-family: monospace;
+    font-size: 12px;
+    color: #666;
+    padding: 6px 10px;
+    background: white;
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.capability-description {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.4;
 }
 </style>
 {% endblock %}

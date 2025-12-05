@@ -3,6 +3,7 @@ const pathParts = window.location.pathname.split('/');
 const mcpServiceId = parseInt(pathParts[2]);
 const serviceId = parseInt(pathParts[4]);
 let isMcpType = false;
+let baseUrl = '';
 
 async function loadCapabilities() {
     const response = await fetch(`/api/apps/${serviceId}/capabilities`);
@@ -15,7 +16,16 @@ async function loadCapabilities() {
         return;
     }
     
-    container.innerHTML = capabilities.map(cap => `
+    container.innerHTML = capabilities.map(cap => {
+        // Build full URL display: baseUrl + endpoint_path
+        let urlDisplay = cap.url || 'N/A';
+        if (baseUrl && cap.url && !cap.url.startsWith('http')) {
+            // If cap.url is a relative path, combine with baseUrl
+            const separator = baseUrl.endsWith('/') || cap.url.startsWith('/') ? '' : '/';
+            urlDisplay = `<span style="color: #666;">${baseUrl}</span>${separator}<span style="font-weight: 600;">${cap.url}</span>`;
+        }
+        
+        return `
         <div class="list-item ${!cap.is_enabled ? 'disabled' : ''}">
             <div class="list-item-main">
                 <h3><a href="/capabilities/${cap.id}">${cap.name}</a></h3>
@@ -23,7 +33,7 @@ async function loadCapabilities() {
                     <span class="badge badge-${cap.capability_type}">${cap.capability_type.toUpperCase()}</span>
                     ${!cap.is_enabled ? `<span class="status-badge disabled">${t('status_disabled')}</span>` : `<span class="status-badge enabled">${t('status_enabled')}</span>`}
                     ${(cap.access_control === 'restricted') ? `<span class="badge badge-access-restricted">${t('access_control_restricted')}</span>` : `<span class="badge badge-access-public">${t('access_control_public')}</span>`}
-                    <span class="text-muted">${cap.url || 'N/A'}</span>
+                    <span class="text-muted" style="font-family: monospace; font-size: 0.9em;">${urlDisplay}</span>
                 </div>
                 ${cap.description ? `<p class="text-muted">${cap.description}</p>` : ''}
             </div>
@@ -36,7 +46,8 @@ async function loadCapabilities() {
                 ${!isMcpType ? `<button onclick="deleteCapability(${cap.id})" class="btn btn-sm btn-danger">${t('button_delete')}</button>` : ''}
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 async function toggleCapability(id) {
@@ -67,11 +78,12 @@ async function deleteCapability(id) {
 (async () => {
     await initLanguageSwitcher();
     
-    // Get parent app information to check if it's MCP type
+    // Get parent app information to check if it's MCP type and get base URL
     try {
         const appResponse = await fetch(`/api/apps/${serviceId}`);
         const app = await appResponse.json();
         isMcpType = app.service_type === 'mcp';
+        baseUrl = app.mcp_url || '';
         
         // Hide "New Capability" button for MCP type
         if (isMcpType) {

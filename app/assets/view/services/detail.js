@@ -9,12 +9,13 @@ async function loadService() {
     
     const isMcpType = service.service_type === 'mcp';
     
-    // Build endpoint URL row for MCP type
+    // Build endpoint URL row (show for both MCP and API types)
     let endpointRow = '';
-    if (isMcpType && service.mcp_url) {
+    if (service.mcp_url) {
+        const urlLabel = isMcpType ? t('app_endpoint_url') : 'ベースURL';
         endpointRow = `
                 <tr>
-                    <th>${t('app_endpoint_url')}</th>
+                    <th>${urlLabel}</th>
                     <td><code>${service.mcp_url}</code></td>
                 </tr>`;
     }

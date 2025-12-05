@@ -18,11 +18,21 @@ async function loadTemplate() {
         document.getElementById('detail-category').textContent = template.category || '-';
         document.getElementById('detail-icon').textContent = template.icon || '-';
         
-        // MCP URL
+        // MCP URL / API Base URL
         if (template.mcp_url) {
-            document.getElementById('mcp-url-item').style.display = 'flex';
-            const mcpUrlElement = document.getElementById('detail-mcp-url');
-            mcpUrlElement.innerHTML = `<a href="${template.mcp_url}" target="_blank">${template.mcp_url}</a>`;
+            const urlItem = document.getElementById('mcp-url-item');
+            const urlLabel = urlItem.querySelector('.detail-label');
+            const urlValue = document.getElementById('detail-mcp-url');
+            
+            // Change label based on service type
+            if (template.service_type === 'api') {
+                urlLabel.textContent = 'API ベースURL';
+            } else {
+                urlLabel.textContent = 'MCP エンドポイントURL';
+            }
+            
+            urlItem.style.display = 'flex';
+            urlValue.innerHTML = `<a href="${template.mcp_url}" target="_blank">${template.mcp_url}</a>`;
         }
         
         // Official URL
@@ -52,6 +62,14 @@ async function loadTemplate() {
             `).join('');
         }
         
+        // For API templates, show capabilities section
+        if (template.service_type === 'api') {
+            document.getElementById('capabilities-section').style.display = 'block';
+            await loadCapabilities();
+        } else {
+            document.getElementById('capabilities-section').style.display = 'none';
+        }
+        
         // Hide edit/delete/export buttons for builtin templates
         if (template.template_type === 'builtin') {
             document.getElementById('edit-btn').style.display = 'none';
@@ -61,6 +79,39 @@ async function loadTemplate() {
         
     } catch (e) {
         alert('Failed to load template: ' + e.message);
+    }
+}
+
+async function loadCapabilities() {
+    try {
+        const response = await fetch(`/api/mcp-templates/${TEMPLATE_ID}/capabilities`);
+        const capabilities = await response.json();
+        
+        const container = document.getElementById('capabilities-list');
+        
+        if (capabilities.length === 0) {
+            container.innerHTML = '<div class="empty-state">Capabilityが定義されていません</div>';
+            return;
+        }
+        
+        container.innerHTML = capabilities.map(cap => {
+            const method = cap.method || 'GET';
+            const methodClass = method.toLowerCase();
+            
+            return `
+                <div class="capability-card">
+                    <div class="capability-header">
+                        <span class="capability-type-badge">${cap.capability_type}</span>
+                        <span class="http-method ${methodClass}">${method}</span>
+                        <span class="capability-name">${cap.name}</span>
+                    </div>
+                    ${cap.endpoint_path ? `<div class="capability-endpoint">${cap.endpoint_path}</div>` : ''}
+                    ${cap.description ? `<div class="capability-description">${cap.description}</div>` : ''}
+                </div>
+            `;
+        }).join('');
+    } catch (e) {
+        console.error('Failed to load capabilities:', e);
     }
 }
 

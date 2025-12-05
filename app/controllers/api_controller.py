@@ -7,7 +7,7 @@ import secrets
 from flask import Blueprint, request, jsonify
 from app.controllers.auth_controller import login_required
 
-from app.models.models import db, ConnectionAccount, McpService, Service, Capability, AccountPermission, AdminSettings, Variable
+from app.models.models import db, ConnectionAccount, McpService, Service, Capability, AccountPermission, AdminSettings, Variable, McpServiceTemplate, McpCapabilityTemplate
 
 # Service is now mapped to 'apps' table, but keep the class name for compatibility
 
@@ -790,12 +790,15 @@ def templates():
 @login_required
 def template_detail(template_id):
     """Get, update, or delete a specific template"""
-    from app.models.models import McpServiceTemplate
     
     template = McpServiceTemplate.query.get_or_404(template_id)
     
     if request.method == 'GET':
-        return jsonify(template.to_dict())
+        result = template.to_dict()
+        # For API templates, include capabilities
+        if template.service_type == 'api':
+            result['capabilities'] = [cap.to_dict() for cap in template.capability_templates]
+        return jsonify(result)
     
     elif request.method == 'PUT':
         # Only custom templates can be updated
@@ -887,7 +890,6 @@ def import_template():
 @login_required
 def prepare_app_from_template(template_id):
     """Prepare app creation from template - returns URL to app creation form with pre-filled data"""
-    from app.models.models import McpServiceTemplate, McpService
     
     template = McpServiceTemplate.query.get_or_404(template_id)
     data = request.get_json()
@@ -899,18 +901,99 @@ def prepare_app_from_template(template_id):
     # Check if MCP service exists
     mcp_service = McpService.query.get_or_404(mcp_service_id)
     
+    template_data = {
+        'name': template.name,
+        'service_type': template.service_type,
+        'mcp_url': template.mcp_url or '',
+        'description': template.description or '',
+        'common_headers': json.loads(template.common_headers) if template.common_headers else {},
+        'official_url': template.official_url or ''
+    }
+    
+    # For API templates, include capabilities
+    if template.service_type == 'api':
+        template_data['capabilities'] = [cap.to_dict() for cap in template.capability_templates]
+    
     # Return URL to app creation form with template data as query parameters
     return jsonify({
         'redirect_url': f'/mcp-services/{mcp_service_id}/apps/new',
-        'template_data': {
-            'name': template.name,
-            'service_type': template.service_type,
-            'mcp_url': template.mcp_url or '',
-            'description': template.description or '',
-            'common_headers': json.loads(template.common_headers) if template.common_headers else {},
-            'official_url': template.official_url or ''
-        }
+        'template_data': template_data
     }), 200
+
+
+# ============= Template Capability API =============
+
+@api_bp.route('/mcp-templates/<int:template_id>/capabilities', methods=['GET', 'POST'])
+@login_required
+def template_capabilities(template_id):
+    """Get all capabilities for a template or create new capability"""
+    template = McpServiceTemplate.query.get_or_404(template_id)
+    
+    # Only API templates have capabilities
+    if template.service_type != 'api':
+        return jsonify({'error': 'Only API templates can have capabilities'}), 400
+    
+    if request.method == 'GET':
+        capabilities = McpCapabilityTemplate.query.filter_by(template_id=template_id).all()
+        return jsonify([cap.to_dict() for cap in capabilities])
+    
+    elif request.method == 'POST':
+        # Only custom templates can be modified
+        if template.template_type != 'custom':
+            return jsonify({'error': 'Cannot modify builtin templates'}), 403
+        
+        data = request.get_json()
+        capability = McpCapabilityTemplate(
+            template_id=template_id,
+            name=data['name'],
+            capability_type=data.get('capability_type', 'tool'),
+            endpoint_path=data.get('endpoint_path', ''),
+            method=data.get('method', 'GET'),
+            description=data.get('description', ''),
+            headers=json.dumps(data.get('headers', {})),
+            body_params=json.dumps(data.get('body_params', {})),
+            query_params=json.dumps(data.get('query_params', {}))
+        )
+        db.session.add(capability)
+        db.session.commit()
+        return jsonify(capability.to_dict()), 201
+
+
+@api_bp.route('/mcp-template-capabilities/<int:capability_id>', methods=['GET', 'PUT', 'DELETE'])
+@login_required
+def template_capability_detail(capability_id):
+    """Get, update, or delete a specific template capability"""
+    capability = McpCapabilityTemplate.query.get_or_404(capability_id)
+    template = capability.service_template
+    
+    if request.method == 'GET':
+        return jsonify(capability.to_dict())
+    
+    elif request.method == 'PUT':
+        # Only custom templates can be modified
+        if template.template_type != 'custom':
+            return jsonify({'error': 'Cannot modify builtin templates'}), 403
+        
+        data = request.get_json()
+        capability.name = data.get('name', capability.name)
+        capability.capability_type = data.get('capability_type', capability.capability_type)
+        capability.endpoint_path = data.get('endpoint_path', capability.endpoint_path)
+        capability.method = data.get('method', capability.method)
+        capability.description = data.get('description', capability.description)
+        capability.headers = json.dumps(data.get('headers', {}))
+        capability.body_params = json.dumps(data.get('body_params', {}))
+        capability.query_params = json.dumps(data.get('query_params', {}))
+        db.session.commit()
+        return jsonify(capability.to_dict())
+    
+    elif request.method == 'DELETE':
+        # Only custom templates can be modified
+        if template.template_type != 'custom':
+            return jsonify({'error': 'Cannot modify builtin templates'}), 403
+        
+        db.session.delete(capability)
+        db.session.commit()
+        return '', 204
 
 
 # ============= Variables API =============

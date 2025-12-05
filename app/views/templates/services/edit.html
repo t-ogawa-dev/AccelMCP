@@ -56,14 +56,14 @@
         
         <div id="mcp-url-section" style="display: none;">
             <div class="form-group">
-                <label for="mcp_url"><span data-i18n="app_mcp_url_label">MCP接続URL</span> *</label>
+                <label for="mcp_url" id="mcp-url-label"><span data-i18n="app_mcp_url_label">MCP接続URL</span> <span id="mcp-url-required">*</span></label>
                 <div style="display: flex; gap: 10px; align-items: start;">
                     <div style="flex: 1;">
                         <input type="url" id="mcp_url" name="mcp_url" placeholder="http://localhost:3000/sse">
-                        <small data-i18n="app_mcp_url_hint">MCPサーバーのSSＥエンドポイントURLを入力してください</small>
+                        <small id="mcp-url-hint" data-i18n="app_mcp_url_hint">MCPサーバーのSSEエンドポイントURLを入力してください</small>
                         <small id="mcp-url-readonly-hint" style="color: #6b7280; margin-top: 4px; display: none;" data-i18n="app_mcp_url_readonly_hint">MCP接続URLは登録後に変更できません</small>
                     </div>
-                    <button type="button" onclick="testConnection()" class="btn btn-secondary" data-i18n="app_test_connection">接続テスト</button>
+                    <button type="button" id="test-connection-btn" onclick="testConnection()" class="btn btn-secondary" data-i18n="app_test_connection">接続テスト</button>
                 </div>
                 <div id="connection-test-result" style="display: none; margin-top: 10px;"></div>
             </div>

@@ -6,7 +6,8 @@ from .models import (
     Capability,
     AccountPermission,
     AdminSettings,
-    McpServiceTemplate
+    McpServiceTemplate,
+    McpCapabilityTemplate
 )
 
 __all__ = [
@@ -17,5 +18,6 @@ __all__ = [
     'Capability',
     'AccountPermission',
     'AdminSettings',
-    'McpServiceTemplate'
+    'McpServiceTemplate',
+    'McpCapabilityTemplate'
 ]

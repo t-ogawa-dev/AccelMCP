@@ -252,6 +252,9 @@ class McpServiceTemplate(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # Relationships
+    capability_templates = db.relationship('McpCapabilityTemplate', back_populates='service_template', cascade='all, delete-orphan')
+    
     def to_dict(self):
         return {
             'id': self.id,
@@ -270,7 +273,7 @@ class McpServiceTemplate(db.Model):
     
     def to_export_dict(self):
         """エクスポート用の辞書"""
-        return {
+        result = {
             'name': self.name,
             'service_type': self.service_type,
             'mcp_url': self.mcp_url,
@@ -279,6 +282,62 @@ class McpServiceTemplate(db.Model):
             'common_headers': json.loads(self.common_headers) if self.common_headers else {},
             'icon': self.icon,
             'category': self.category
+        }
+        
+        # APIテンプレートの場合はcapabilitiesも含める
+        if self.service_type == 'api' and self.capability_templates:
+            result['capabilities'] = [cap.to_export_dict() for cap in self.capability_templates]
+        
+        return result
+
+
+class McpCapabilityTemplate(db.Model):
+    """MCPサービステンプレートのCapability定義（APIテンプレート用）"""
+    __tablename__ = 'mcp_capability_templates'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    template_id = db.Column(db.Integer, db.ForeignKey('mcp_service_templates.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    capability_type = db.Column(db.String(20), nullable=False)  # 'tool', 'resource', 'prompt'
+    endpoint_path = db.Column(db.String(500))  # API endpoint path (relative to mcp_url)
+    method = db.Column(db.String(10))  # HTTP method: GET, POST, PUT, DELETE, etc.
+    description = db.Column(db.Text)
+    headers = db.Column(db.Text)  # JSON string - 個別ヘッダー
+    body_params = db.Column(db.Text)  # JSON string - リクエストボディパラメータ定義
+    query_params = db.Column(db.Text)  # JSON string - クエリパラメータ定義
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    service_template = db.relationship('McpServiceTemplate', back_populates='capability_templates')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'template_id': self.template_id,
+            'name': self.name,
+            'capability_type': self.capability_type,
+            'endpoint_path': self.endpoint_path,
+            'method': self.method,
+            'description': self.description,
+            'headers': json.loads(self.headers) if self.headers else {},
+            'body_params': json.loads(self.body_params) if self.body_params else {},
+            'query_params': json.loads(self.query_params) if self.query_params else {},
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+    
+    def to_export_dict(self):
+        """エクスポート用の辞書"""
+        return {
+            'name': self.name,
+            'capability_type': self.capability_type,
+            'endpoint_path': self.endpoint_path,
+            'method': self.method,
+            'description': self.description,
+            'headers': json.loads(self.headers) if self.headers else {},
+            'body_params': json.loads(self.body_params) if self.body_params else {},
+            'query_params': json.loads(self.query_params) if self.query_params else {}
         }
 
 

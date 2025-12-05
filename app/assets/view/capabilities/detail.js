@@ -5,7 +5,9 @@ async function loadCapability() {
     const response = await fetch(`/api/capabilities/${capabilityId}`);
     const cap = await response.json();
     
-    // Update breadcrumb links
+    let baseUrl = '';
+    
+    // Update breadcrumb links and fetch base URL
     if (cap.mcp_service_id && cap.service_id) {
         const mcpServiceId = cap.mcp_service_id;
         const serviceId = cap.service_id;
@@ -15,19 +17,27 @@ async function loadCapability() {
         document.getElementById('service-link').href = `/mcp-services/${mcpServiceId}/apps/${serviceId}`;
         document.getElementById('capabilities-link').href = `/mcp-services/${mcpServiceId}/apps/${serviceId}/capabilities`;
         
-        // Fetch service name for breadcrumb
+        // Fetch service name and base URL for breadcrumb
         try {
             const serviceResponse = await fetch(`/api/apps/${serviceId}`);
             const service = await serviceResponse.json();
             if (service.mcp_service_name) {
                 document.getElementById('mcp-service-link').textContent = service.mcp_service_name;
             }
+            baseUrl = service.mcp_url || '';
         } catch (e) {
             console.error('Failed to fetch service info for breadcrumb:', e);
         }
     }
     
     document.getElementById('edit-link').href = `/capabilities/${capabilityId}/edit`;
+    
+    // Build full URL display
+    let urlDisplay = cap.url || 'N/A';
+    if (baseUrl && cap.url && !cap.url.startsWith('http')) {
+        const separator = baseUrl.endsWith('/') || cap.url.startsWith('/') ? '' : '/';
+        urlDisplay = `<span style="color: #666;">${baseUrl}</span>${separator}<span style="font-weight: 600;">${cap.url}</span>`;
+    }
     
     const container = document.getElementById('capability-detail');
     container.innerHTML = `
@@ -56,7 +66,7 @@ async function loadCapability() {
                 </tr>
                 <tr>
                     <th>${t("capability_url_label")}</th>
-                    <td><code>${cap.url || 'N/A'}</code></td>
+                    <td><code style="font-size: 0.9em;">${urlDisplay}</code></td>
                 </tr>
                 <tr>
                     <th>${t("capability_registered_at")}</th>
