@@ -485,9 +485,9 @@ class MCPHandler:
                         body_params = json.loads(cap.body_params)
                         # Use the complete schema from body_params if it has the right structure
                         if 'properties' in body_params:
-                            # Remove _fixed field before sending to LLM (it's for internal use)
-                            schema = {k: v for k, v in body_params.items() if k != '_fixed'}
-                            tool['inputSchema'] = schema
+                            # Send full schema to LLM (including const-constrained fixed params)
+                            # const制約により、LLMはパラメータを認識するが値は変更できない
+                            tool['inputSchema'] = {k: v for k, v in body_params.items()}
                         else:
                             # Fallback: treat as simple key-value params
                             for key, value in body_params.items():
@@ -667,9 +667,9 @@ class MCPHandler:
                         body_params = json.loads(cap.body_params)
                         # Use the complete schema from body_params if it has the right structure
                         if 'properties' in body_params:
-                            # Remove _fixed field before sending to LLM (it's for internal use)
-                            schema = {k: v for k, v in body_params.items() if k != '_fixed'}
-                            tool['inputSchema'] = schema
+                            # Send full schema to LLM (including const-constrained fixed params)
+                            # const制約により、LLMはパラメータを認識するが値は変更できない
+                            tool['inputSchema'] = {k: v for k, v in body_params.items()}
                         else:
                             # Fallback: treat as simple key-value params
                             for key, value in body_params.items():
@@ -793,9 +793,8 @@ class MCPHandler:
         # Replace variables in URL (always as strings)
         url = VariableReplacer.replace_in_string(capability.url)
         
-        # Merge body params with arguments
+        # Build final request body
         body = {}
-        fixed_params = {}
         
         if capability.body_params:
             # body_params can be string (JSON) or dict
@@ -805,63 +804,64 @@ class MCPHandler:
                 try:
                     parsed = json.loads(body_params)
                     
-                    # Check if it's new format with JSON Schema structure
-                    if 'properties' in parsed and '_fixed' in parsed:
-                        # New format: extract fixed params and prepare for LLM arguments
-                        fixed_params_raw = parsed.get('_fixed', {})
-                        # Convert fixed params according to their type
-                        fixed_params = {}
-                        for key, value_obj in fixed_params_raw.items():
-                            if isinstance(value_obj, dict) and 'value' in value_obj:
-                                # New format with type info: {value: "...", type: "string"}
-                                raw_value = value_obj.get('value', '')
-                                param_type = value_obj.get('type', 'string')
-                                fixed_params[key] = self._convert_param_type(raw_value, param_type)
-                            else:
-                                # Old format: direct value (string)
-                                fixed_params[key] = value_obj
-                        # Properties define the schema for LLM arguments
-                        # The actual values come from 'arguments'
-                    elif 'properties' in parsed:
-                        # JSON Schema without fixed params (MCP auto-discovered)
-                        # Schema only, no fixed params
-                        pass
+                    # Check if it's JSON Schema format with properties
+                    if 'properties' in parsed:
+                        # Extract const-constrained fixed params from schema
+                        properties = parsed.get('properties', {})
+                        
+                        # First, add const values (fixed params)
+                        for key, prop_def in properties.items():
+                            if 'const' in prop_def:
+                                # This is a fixed parameter with const constraint
+                                const_value = prop_def['const']
+                                # Replace variables in const value
+                                if isinstance(const_value, str):
+                                    body[key] = VariableReplacer.replace_in_string(const_value)
+                                else:
+                                    body[key] = const_value
+                        
+                        # Then, merge LLM-provided arguments (override if not const)
+                        for key, value in arguments.items():
+                            if key in properties and 'const' not in properties[key]:
+                                # This is an LLM parameter (no const constraint)
+                                body[key] = value
+                            elif key not in properties:
+                                # Unknown parameter from LLM (allow it)
+                                body[key] = value
+                            # If key has const constraint, ignore LLM value (already set above)
                     else:
                         # Old format: simple key-value, treat as fixed params
-                        fixed_params = parsed
-                    
-                    # Replace variables in fixed params
-                    fixed_params = VariableReplacer.replace_in_dict(fixed_params)
+                        body.update(VariableReplacer.replace_in_dict(parsed))
+                        body.update(arguments)
                 except (json.JSONDecodeError, TypeError):
                     pass
             else:
-                # Dict: parse and replace
+                # Dict: should not happen, but handle it
                 try:
                     parsed = json.loads(body_params)
-                    if 'properties' in parsed and '_fixed' in parsed:
-                        fixed_params_raw = parsed.get('_fixed', {})
-                        # Convert fixed params according to their type
-                        fixed_params = {}
-                        for key, value_obj in fixed_params_raw.items():
-                            if isinstance(value_obj, dict) and 'value' in value_obj:
-                                # New format with type info
-                                raw_value = value_obj.get('value', '')
-                                param_type = value_obj.get('type', 'string')
-                                fixed_params[key] = self._convert_param_type(raw_value, param_type)
-                            else:
-                                # Old format
-                                fixed_params[key] = value_obj
-                        fixed_params = VariableReplacer.replace_in_dict(fixed_params)
-                    elif 'properties' in parsed:
-                        pass  # Schema only
+                    if 'properties' in parsed:
+                        # Same logic as above
+                        properties = parsed.get('properties', {})
+                        for key, prop_def in properties.items():
+                            if 'const' in prop_def:
+                                const_value = prop_def['const']
+                                if isinstance(const_value, str):
+                                    body[key] = VariableReplacer.replace_in_string(const_value)
+                                else:
+                                    body[key] = const_value
+                        for key, value in arguments.items():
+                            if key in properties and 'const' not in properties[key]:
+                                body[key] = value
+                            elif key not in properties:
+                                body[key] = value
                     else:
-                        fixed_params = VariableReplacer.replace_in_body_params(parsed)
+                        body.update(VariableReplacer.replace_in_dict(parsed))
+                        body.update(arguments)
                 except (json.JSONDecodeError, TypeError):
                     pass
-        
-        # Start with fixed params, then merge LLM-provided arguments
-        body.update(fixed_params)
-        body.update(arguments)
+        else:
+            # No body_params defined, use LLM arguments directly
+            body.update(arguments)
         
         # Check HTTP method from headers
         http_method = headers.get('X-HTTP-Method', 'POST').upper()

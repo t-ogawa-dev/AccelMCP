@@ -424,15 +424,29 @@ function generatePostRequestSample() {
     // Visual editor mode - build sample from tree
     const sampleBody = {};
     
-    // Add fixed parameters
-    const fixedRows = document.querySelectorAll('#fixed-params-post-container .key-value-row');
-    fixedRows.forEach(row => {
-        const inputs = row.querySelectorAll('input[type="text"]');
-        const key = inputs[0]?.value.trim();
-        const value = inputs[1]?.value.trim();
-        if (key) {
-            // Keep variable syntax as-is, otherwise show actual value
-            sampleBody[key] = value || '<value>';
+    // Add fixed parameters from tree structure
+    const fixedNodes = document.querySelectorAll('#fixed-params-post-container > .tree-node');
+    fixedNodes.forEach(node => {
+        const name = node.querySelector('.tree-param-name').value.trim();
+        const type = node.querySelector('.tree-param-type').value;
+        const defaultValue = node.querySelector('.tree-param-default').value.trim();
+        if (name && defaultValue) {
+            // Convert value based on type
+            let value = defaultValue;
+            if (type === 'number') {
+                value = parseFloat(defaultValue);
+            } else if (type === 'integer') {
+                value = parseInt(defaultValue);
+            } else if (type === 'boolean') {
+                value = defaultValue.toLowerCase() === 'true';
+            } else if (type === 'object' || type === 'array') {
+                try {
+                    value = JSON.parse(defaultValue);
+                } catch (e) {
+                    value = defaultValue;
+                }
+            }
+            sampleBody[name] = value;
         }
     });
     
@@ -610,10 +624,23 @@ function addLlmParamTreeRow(containerOrParent = null, depth = 0, paramData = nul
         </div>
         
         <!-- Default value field -->
-        <div class="tree-default-field" style="display: ${data.type === 'object' || data.type === 'array' ? 'none' : 'block'}; margin-bottom: 8px; margin-left: 34px;">
+        <div class="tree-default-field tree-default-value-field" style="display: ${data.type === 'object' || data.type === 'array' ? 'none' : 'block'}; margin-bottom: 8px; margin-left: 34px;">
             <label style="font-size: 0.85rem; font-weight: 600; color: #333; display: block; margin-bottom: 4px;" class="tree-default-label">${isFixedParam ? '値:' : 'デフォルト値:'}</label>
-            <input type="text" class="tree-param-default" placeholder="${isFixedParam ? '値' : 'デフォルト値'}"
-                   style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem;">
+            ${
+                data.type === 'boolean' ?
+                (isFixedParam ?
+                    `<select class="tree-param-default" style="width: 200px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem;">
+                        <option value="true" ${data.default === true || data.default === 'true' || !data.default ? 'selected' : ''}>true</option>
+                        <option value="false" ${data.default === false || data.default === 'false' ? 'selected' : ''}>false</option>
+                    </select>` :
+                    `<select class="tree-param-default" style="width: 200px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem;">
+                        <option value="" ${!data.default && data.default !== false ? 'selected' : ''}>未設定</option>
+                        <option value="true" ${data.default === true || data.default === 'true' ? 'selected' : ''}>true</option>
+                        <option value="false" ${data.default === false || data.default === 'false' ? 'selected' : ''}>false</option>
+                    </select>`
+                ) :
+                `<input type="text" class="tree-param-default" placeholder="${isFixedParam ? '値' : 'デフォルト値'}" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem;">`
+            }
         </div>
         
         <!-- Array items type field (shown when type is array) -->
@@ -659,7 +686,10 @@ function addLlmParamTreeRow(containerOrParent = null, depth = 0, paramData = nul
     if (nameInput) nameInput.value = data.name || '';
     if (descInput) descInput.value = data.description || '';
     if (enumInput) enumInput.value = data.enum || '';
-    if (defaultInput) defaultInput.value = data.default || '';
+    // boolean型selectboxの場合はtemplate内のselected属性で値が設定されているためスキップ
+    if (defaultInput && defaultInput.tagName !== 'SELECT') {
+        defaultInput.value = data.default || '';
+    }
     
     // Recursively add children if any
     if (data.children && data.children.length > 0) {
@@ -708,7 +738,7 @@ function handleTreeTypeChange(nodeId) {
     const addArrayItemPropertyBtn = node.querySelector('.tree-add-array-item-property');
     const expandBtn = node.querySelector('.expand-btn');
     const childrenContainer = node.querySelector('.tree-children');
-    const defaultField = node.querySelector('.tree-default-field');
+    const defaultFieldContainer = node.querySelector('.tree-default-value-field');
     
     // Show/hide fields based on type
     enumField.style.display = selectedType === 'enum' ? 'block' : 'none';
@@ -716,9 +746,51 @@ function handleTreeTypeChange(nodeId) {
     addChildBtn.style.display = selectedType === 'object' ? 'block' : 'none';
     expandBtn.style.display = selectedType === 'object' ? 'block' : 'none';
     
-    // デフォルト値/値フィールド表示制御 (object/arrayの場合は非表示)
-    if (defaultField) {
-        defaultField.style.display = (selectedType === 'object' || selectedType === 'array') ? 'none' : 'block';
+    // デフォルト値/値フィールド表示制御とフィールド再構築
+    if (defaultFieldContainer) {
+        const shouldShow = selectedType !== 'object' && selectedType !== 'array';
+        defaultFieldContainer.style.display = shouldShow ? 'block' : 'none';
+        
+        if (shouldShow) {
+            // 現在の値を保持
+            const currentInput = defaultFieldContainer.querySelector('.tree-param-default');
+            const currentValue = currentInput ? currentInput.value : '';
+            
+            // ラベルテキストを判定（固定パラメータか否か）
+            const label = defaultFieldContainer.querySelector('.tree-default-label');
+            const isFixedParam = label && label.textContent.includes('値:');
+            const labelText = isFixedParam ? '値:' : 'デフォルト値:';
+            const placeholderText = isFixedParam ? '値' : 'デフォルト値';
+            
+            // フィールドを再構築
+            if (selectedType === 'boolean') {
+                if (isFixedParam) {
+                    // 固定パラメータ: true/falseのみ、デフォルトtrue
+                    defaultFieldContainer.innerHTML = `
+                        <label style="font-size: 0.85rem; font-weight: 600; color: #333; display: block; margin-bottom: 4px;" class="tree-default-label">${labelText}</label>
+                        <select class="tree-param-default" style="width: 200px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem;">
+                            <option value="true" ${currentValue === 'true' || !currentValue ? 'selected' : ''}>true</option>
+                            <option value="false" ${currentValue === 'false' ? 'selected' : ''}>false</option>
+                        </select>
+                    `;
+                } else {
+                    // LLMパラメータ: 未設定/true/false
+                    defaultFieldContainer.innerHTML = `
+                        <label style="font-size: 0.85rem; font-weight: 600; color: #333; display: block; margin-bottom: 4px;" class="tree-default-label">${labelText}</label>
+                        <select class="tree-param-default" style="width: 200px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem;">
+                            <option value="" ${!currentValue ? 'selected' : ''}>未設定</option>
+                            <option value="true" ${currentValue === 'true' ? 'selected' : ''}>true</option>
+                            <option value="false" ${currentValue === 'false' ? 'selected' : ''}>false</option>
+                        </select>
+                    `;
+                }
+            } else {
+                defaultFieldContainer.innerHTML = `
+                    <label style="font-size: 0.85rem; font-weight: 600; color: #333; display: block; margin-bottom: 4px;" class="tree-default-label">${labelText}</label>
+                    <input type="text" class="tree-param-default" placeholder="${placeholderText}" value="${currentValue}" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem;">
+                `;
+            }
+        }
     }
     
     // Array items object control
@@ -784,11 +856,50 @@ function removeTreeNode(nodeId) {
 
 // Build JSON Schema from tree structure
 function buildSchemaFromTree() {
-    const treeContainer = document.getElementById('llm-params-tree-container');
-    const rootNodes = Array.from(treeContainer.children).filter(child => child.classList.contains('tree-node'));
-    
     const properties = {};
     const required = [];
+    
+    // 固定パラメータをconst制約付きでpropertiesに含める
+    const fixedContainer = document.getElementById('fixed-params-post-container');
+    const fixedNodes = Array.from(fixedContainer.children).filter(child => child.classList.contains('tree-node'));
+    
+    fixedNodes.forEach(node => {
+        const name = node.querySelector('.tree-param-name').value.trim();
+        if (!name) return;
+        
+        const propDef = buildPropertyFromNode(node);
+        const defaultValue = node.querySelector('.tree-param-default').value.trim();
+        
+        if (defaultValue) {
+            // const制約を追加（LLMは認識するが値は変更不可）
+            let constValue = defaultValue;
+            // 型に応じて値を変換
+            if (propDef.type === 'number' || propDef.type === 'integer') {
+                constValue = propDef.type === 'integer' ? parseInt(defaultValue) : parseFloat(defaultValue);
+            } else if (propDef.type === 'boolean') {
+                constValue = defaultValue.toLowerCase() === 'true';
+            } else if (propDef.type === 'object' || propDef.type === 'array') {
+                try {
+                    constValue = JSON.parse(defaultValue);
+                } catch (e) {
+                    constValue = defaultValue;
+                }
+            }
+            
+            properties[name] = {
+                ...propDef,
+                const: constValue,
+                default: constValue,
+                description: propDef.description || '固定値パラメータ（変更不可）'
+            };
+            // 固定パラメータは常にrequiredに含める
+            required.push(name);
+        }
+    });
+    
+    // LLMパラメータを追加
+    const treeContainer = document.getElementById('llm-params-tree-container');
+    const rootNodes = Array.from(treeContainer.children).filter(child => child.classList.contains('tree-node'));
     
     rootNodes.forEach(node => {
         const name = node.querySelector('.tree-param-name').value.trim();
@@ -1001,58 +1112,31 @@ function toggleBodyEditorMode() {
 
 // JSONスキーマをツリー構造に読み込む
 function loadSchemaToTree(schema) {
-    // 固定パラメータの処理
+    // 固定パラメータとLLMパラメータを分離
     const fixedContainer = document.getElementById('fixed-params-post-container');
-    
-    // _fixedフィールドがある場合のみクリア&再構築
-    if (schema._fixed !== undefined) {
-        fixedContainer.innerHTML = '';
-        if (schema._fixed && typeof schema._fixed === 'object') {
-            Object.entries(schema._fixed).forEach(([key, valueOrObj]) => {
-                let paramData;
-                if (typeof valueOrObj === 'object' && valueOrObj.schema) {
-                    // 新形式: 階層構造あり
-                    paramData = buildParamDataFromProperty(key, valueOrObj.schema, []);
-                    paramData.default = valueOrObj.value || '';
-                } else if (typeof valueOrObj === 'object' && valueOrObj.value !== undefined) {
-                    // 中間形式: {value: "...", type: "string"}
-                    paramData = {
-                        name: key,
-                        type: valueOrObj.type || 'string',
-                        default: valueOrObj.value,
-                        description: '',
-                        required: false,
-                        enum: '',
-                        children: [],
-                        itemsType: 'string'
-                    };
-                } else {
-                    // 旧形式互換: 直接値
-                    paramData = {
-                        name: key,
-                        type: 'string',
-                        default: valueOrObj,
-                        description: '',
-                        required: false,
-                        enum: '',
-                        children: [],
-                        itemsType: 'string'
-                    };
-                }
-                addFixedParamPostRow(null, 0, paramData);
-            });
-        }
-    }
-    // _fixedがない場合は現在の固定パラメータを保持
-    
-    // LLMパラメータツリーをクリア&再構築
     const treeContainer = document.getElementById('llm-params-tree-container');
+    
+    // クリア
+    fixedContainer.innerHTML = '';
     treeContainer.innerHTML = '';
+    
     if (schema.properties) {
         const required = schema.required || [];
+        
         Object.entries(schema.properties).forEach(([name, propDef]) => {
             const paramData = buildParamDataFromProperty(name, propDef, required);
-            addLlmParamTreeRow(null, 0, paramData);
+            
+            // const制約があれば固定パラメータ、なければLLMパラメータ
+            if (propDef.const !== undefined) {
+                // 固定パラメータ
+                paramData.default = typeof propDef.const === 'object' 
+                    ? JSON.stringify(propDef.const) 
+                    : String(propDef.const);
+                addFixedParamPostRow(paramData, 0);  // 引数順序修正
+            } else {
+                // LLMパラメータ
+                addLlmParamTreeRow(null, 0, paramData);
+            }
         });
     }
 }
@@ -1384,22 +1468,29 @@ async function loadCapability() {
         // Collect body parameters
         let bodyParams = {};
         if (method === 'GET') {
-            // Collect fixed parameters
-            const fixedParams = {};
+            const properties = {};
+            const required = [];
+            
+            // 固定パラメータをconst制約付きでpropertiesに含める
             const fixedRows = document.querySelectorAll('#fixed-params-container .key-value-row');
             fixedRows.forEach(row => {
                 const inputs = row.querySelectorAll('input[type="text"]');
                 const key = inputs[0].value.trim();
                 const value = inputs[1].value.trim();
                 if (key) {
-                    fixedParams[key] = value;
+                    // GET固定パラメータはstring型のconst制約
+                    properties[key] = {
+                        type: 'string',
+                        const: value,
+                        default: value,
+                        description: '固定値パラメータ（変更不可）'
+                    };
+                    required.push(key);
                 }
             });
             
             // Collect LLM parameters and build JSON Schema
             const llmRows = document.querySelectorAll('#llm-params-container .llm-param-row');
-            const properties = {};
-            const required = [];
             
             llmRows.forEach(row => {
                 const name = row.querySelector('.llm-param-name').value.trim();
@@ -1443,16 +1534,12 @@ async function loadCapability() {
             
             // Build final body_params structure
             if (Object.keys(properties).length > 0) {
-                // MCP JSON Schema format with fixed params included
+                // MCP JSON Schema format (固定パラメータもpropertiesに含まれている)
                 bodyParams = {
                     type: 'object',
                     properties: properties,
-                    required: required,
-                    _fixed: fixedParams  // Store fixed params separately
+                    required: required
                 };
-            } else if (Object.keys(fixedParams).length > 0) {
-                // Only fixed params, no schema
-                bodyParams = fixedParams;
             }
         } else {
             // POST method: check if using visual editor or JSON direct edit
