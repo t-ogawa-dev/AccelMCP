@@ -409,6 +409,18 @@ function addLlmParamTreeRow(containerOrParent = null, depth = 0, paramData = nul
                             <option value="object" ${data.itemsType === 'object' ? 'selected' : ''}>object</option>
                         </select>
                     </div>
+                    <div class="tree-array-value-field" style="display: ${isFixedParam && data.type === 'array' && data.itemsType !== 'object' ? 'block' : 'none'};">
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #333; display: block; margin-bottom: 2px;">値 (カンマ区切り)</label>
+                        <input type="text" class="tree-array-value" placeholder="${
+                            data.itemsType === 'string' ? 'value1, value2, value3' :
+                            data.itemsType === 'number' || data.itemsType === 'integer' ? '1, 2, 3' :
+                            data.itemsType === 'boolean' ? 'true, false, true' : ''
+                        }" value="${data.arrayValue || ''}" style="width: 100%; padding: 5px 6px; border: 1px solid #ddd; border-radius: 3px; font-size: 0.85rem;">
+                    </div>
+                    <div class="tree-array-object-value-field" style="display: ${isFixedParam && data.type === 'array' && data.itemsType === 'object' ? 'block' : 'none'};">
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #333; display: block; margin-bottom: 2px;">値 (オブジェクトをカンマ区切り)</label>
+                        <textarea class="tree-array-object-value" rows="4" placeholder='{"key": "value"}, {"key": "value"}' style="width: 100%; padding: 5px 6px; border: 1px solid #ddd; border-radius: 3px; font-size: 0.85rem; font-family: monospace;">${data.arrayObjectValue || ''}</textarea>
+                    </div>
                     <div class="tree-enum-field" style="display: ${data.type === 'enum' ? 'block' : 'none'};">
                         <label style="font-size: 0.75rem; font-weight: 600; color: #333; display: block; margin-bottom: 2px;">Enum値 *</label>
                         <input type="text" class="tree-param-enum" placeholder="opt1,opt2,opt3"
@@ -440,16 +452,20 @@ function addLlmParamTreeRow(containerOrParent = null, depth = 0, paramData = nul
                                    style="width: 100%; padding: 5px 6px; border: 1px solid #ddd; border-radius: 3px; font-size: 0.85rem;">
                         `}
                     </div>
+                    <div class="tree-object-value-field" style="display: ${isFixedParam && data.type === 'object' && depth >= 1 ? 'block' : 'none'};">
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #333; display: block; margin-bottom: 2px;">値 (JSON形式)</label>
+                        <textarea class="tree-param-default" rows="4" placeholder='{"key": "value"}' style="width: 100%; padding: 5px 6px; border: 1px solid #ddd; border-radius: 3px; font-size: 0.85rem; font-family: monospace;">${data.default || ''}</textarea>
+                    </div>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 5px; justify-content: center; align-self: center;">
-                    <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap; margin-bottom: 0;">
+                    <label style="font-size: 0.85rem; display: ${isFixedParam ? 'none' : 'flex'}; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap; margin-bottom: 0;">
                         <input type="checkbox" class="tree-param-required" ${data.required ? 'checked' : ''} style="width: 14px; height: 14px; margin-bottom: 0;">
                         <span style="color: #333;">必須</span>
                     </label>
                     <button type="button" onclick="removeTreeNode('${nodeId}')" class="btn btn-sm btn-danger" style="font-size: 0.75rem; padding: 3px 8px;">削除</button>
                 </div>
             </div>
-            <div class="tree-add-child" style="display: ${isExpandable ? 'block' : 'none'}; margin-top: 8px;">
+            <div class="tree-add-child" style="display: ${isExpandable && (!isFixedParam || depth === 0) ? 'block' : 'none'}; margin-top: 8px;">
                 <button type="button" onclick="addChildToTreeNode('${nodeId}')" class="btn btn-sm btn-primary" style="font-size: 0.8rem; padding: 4px 10px;">+ 子プロパティを追加</button>
             </div>
             <div class="tree-add-array-item-property" style="display: ${data.type === 'array' && data.itemsType === 'object' ? 'block' : 'none'}; margin-top: 8px;">
@@ -536,9 +552,11 @@ function handleTreeTypeChange(nodeId) {
             }
         } else {
             // それ以外: input
+            // booleanから変更された場合はtrue/false値をクリア
+            const shouldClearValue = (currentValue === 'true' || currentValue === 'false');
             defaultFieldContainer.innerHTML = `
                 <label style="font-size: 0.75rem; font-weight: 600; color: #333; display: block; margin-bottom: 2px;">${label}</label>
-                <input type="text" class="tree-param-default" placeholder="${label}" value="${currentValue}"
+                <input type="text" class="tree-param-default" placeholder="${label}" value="${shouldClearValue ? '' : currentValue}"
                        style="width: 100%; padding: 5px 6px; border: 1px solid #ddd; border-radius: 3px; font-size: 0.85rem;">
             `;
         }
@@ -548,6 +566,10 @@ function handleTreeTypeChange(nodeId) {
     }
     
     // array表示制御
+    const arrayValueField = node.querySelector('.tree-array-value-field');
+    const arrayObjectValueField = node.querySelector('.tree-array-object-value-field');
+    const objectValueField = node.querySelector('.tree-object-value-field');
+    
     if (selectedType === 'array') {
         arrayItemsField.style.display = 'block';
         addChildBtn.style.display = 'none';
@@ -555,10 +577,27 @@ function handleTreeTypeChange(nodeId) {
         
         // Check if array items type is object
         const itemsType = node.querySelector('.tree-array-items-type').value;
-        addArrayItemPropertyBtn.style.display = itemsType === 'object' ? 'block' : 'none';
+        const isFixedParam = node.closest('#fixed-params-post-container') !== null;
+        
+        // 固定パラメータの場合はボタンを非表示（JSON直接入力するため）
+        addArrayItemPropertyBtn.style.display = (itemsType === 'object' && !isFixedParam) ? 'block' : 'none';
+        
+        // array値フィールド：固定パラメータの場合のみ表示
+        if (arrayValueField) {
+            arrayValueField.style.display = (isFixedParam && itemsType !== 'object') ? 'block' : 'none';
+        }
+        if (arrayObjectValueField) {
+            arrayObjectValueField.style.display = (isFixedParam && itemsType === 'object') ? 'block' : 'none';
+        }
+        if (objectValueField) {
+            objectValueField.style.display = 'none';
+        }
     } else {
         arrayItemsField.style.display = 'none';
         addArrayItemPropertyBtn.style.display = 'none';
+        if (arrayValueField) arrayValueField.style.display = 'none';
+        if (arrayObjectValueField) arrayObjectValueField.style.display = 'none';
+        if (objectValueField) objectValueField.style.display = 'none';
     }
     
     // enum表示制御
@@ -569,9 +608,16 @@ function handleTreeTypeChange(nodeId) {
     }
     
     // object表示制御
+    const isFixedParam = node.closest('#fixed-params-post-container') !== null;
+    const depth = parseInt(node.getAttribute('data-depth')) || 0;
     if (selectedType === 'object') {
-        addChildBtn.style.display = 'block';
+        // 固定パラメータの場合、depth=0のみ子追加可能
+        addChildBtn.style.display = (!isFixedParam || depth === 0) ? 'block' : 'none';
         if (expandBtn) expandBtn.style.display = 'inline-block';
+        // 固定パラメータのdepth>=1の場合、object値フィールドを表示
+        if (objectValueField) {
+            objectValueField.style.display = (isFixedParam && depth >= 1) ? 'block' : 'none';
+        }
     } else {
         addChildBtn.style.display = 'none';
         if (expandBtn) expandBtn.style.display = 'none';
@@ -582,8 +628,37 @@ function handleArrayItemsTypeChange(nodeId) {
     const node = document.querySelector(`[data-node-id="${nodeId}"]`);
     const itemsType = node.querySelector('.tree-array-items-type').value;
     const addArrayItemPropertyBtn = node.querySelector('.tree-add-array-item-property');
+    const arrayValueField = node.querySelector('.tree-array-value-field');
+    const arrayObjectValueField = node.querySelector('.tree-array-object-value-field');
     
-    addArrayItemPropertyBtn.style.display = itemsType === 'object' ? 'block' : 'none';
+    const isFixedParam = node.closest('#fixed-params-post-container') !== null;
+    
+    // 固定パラメータの場合はボタンを非表示（JSON直接入力するため）
+    addArrayItemPropertyBtn.style.display = (itemsType === 'object' && !isFixedParam) ? 'block' : 'none';
+    
+    // array値フィールド：固定パラメータの場合のみ表示
+    if (arrayValueField) {
+        arrayValueField.style.display = (isFixedParam && itemsType !== 'object') ? 'block' : 'none';
+        
+        // プリミティブ型の場合、プレースホルダーを更新
+        if (itemsType !== 'object') {
+            const arrayValueInput = arrayValueField.querySelector('.tree-array-value');
+            if (arrayValueInput) {
+                if (itemsType === 'string') {
+                    arrayValueInput.placeholder = 'value1, value2, value3';
+                } else if (itemsType === 'number' || itemsType === 'integer') {
+                    arrayValueInput.placeholder = '1, 2, 3';
+                } else if (itemsType === 'boolean') {
+                    arrayValueInput.placeholder = 'true, false, true';
+                }
+            }
+        }
+    }
+    
+    // array object値フィールド：object型の場合のみ表示
+    if (arrayObjectValueField) {
+        arrayObjectValueField.style.display = (isFixedParam && itemsType === 'object') ? 'block' : 'none';
+    }
 }
 
 function addChildToTreeNode(parentNodeId) {
@@ -639,6 +714,114 @@ function removeTreeNode(nodeId) {
     if (node) node.remove();
 }
 
+// 固定パラメータのobject型子プロパティから値オブジェクトを構築
+function buildConstObjectValueFromChildren(node) {
+    const childrenContainer = node.querySelector('.tree-children');
+    if (!childrenContainer) return null;
+    
+    const childNodes = childrenContainer.querySelectorAll(':scope > .tree-node');
+    if (childNodes.length === 0) return null;
+    
+    const obj = {};
+    childNodes.forEach(childNode => {
+        const nameInput = childNode.querySelector('.tree-param-name');
+        const typeSelect = childNode.querySelector('.tree-param-type');
+        
+        if (!nameInput || !typeSelect) return;
+        
+        const name = nameInput.value.trim();
+        if (!name) return;
+        
+        const type = typeSelect.value;
+        
+        // 型に応じて値を取得
+        if (type === 'array') {
+            // array型: 配列要素の型を確認
+            const arrayItemsTypeSelect = childNode.querySelector('.tree-array-items-type');
+            const itemsType = arrayItemsTypeSelect ? arrayItemsTypeSelect.value : 'string';
+            
+            if (itemsType === 'object') {
+                // object配列: tree-array-object-valueからJSON取得
+                const arrayObjectValueInput = childNode.querySelector('.tree-array-object-value');
+                if (arrayObjectValueInput && arrayObjectValueInput.value.trim()) {
+                    try {
+                        const inputValue = arrayObjectValueInput.value.trim();
+                        obj[name] = JSON.parse(`[${inputValue}]`);
+                    } catch (e) {
+                        console.error('Invalid JSON for array object value:', e);
+                        obj[name] = [];
+                    }
+                } else {
+                    obj[name] = [];
+                }
+            } else {
+                // プリミティブ型配列: tree-array-valueからCSV取得
+                const arrayValueInput = childNode.querySelector('.tree-array-value');
+                if (arrayValueInput && arrayValueInput.value.trim()) {
+                    const csvValue = arrayValueInput.value.trim();
+                    const arrayItems = csvValue.split(',').map(v => v.trim()).filter(v => v);
+                    
+                    // 型に応じて変換
+                    if (itemsType === 'number') {
+                        obj[name] = arrayItems.map(v => parseFloat(v));
+                    } else if (itemsType === 'integer') {
+                        obj[name] = arrayItems.map(v => parseInt(v));
+                    } else if (itemsType === 'boolean') {
+                        obj[name] = arrayItems.map(v => v.toLowerCase() === 'true');
+                    } else {
+                        obj[name] = arrayItems; // string
+                    }
+                } else {
+                    obj[name] = [];
+                }
+            }
+        } else if (type === 'object') {
+            // 2階層目のobject: まず子プロパティから再帰的に構築を試み、なければtextareaからJSON取得
+            const nestedObj = buildConstObjectValueFromChildren(childNode);
+            if (nestedObj) {
+                obj[name] = nestedObj;
+            } else {
+                // tree-object-value-field内のtextareaから取得
+                const objectValueField = childNode.querySelector('.tree-object-value-field');
+                if (objectValueField) {
+                    const textarea = objectValueField.querySelector('.tree-param-default');
+                    const value = textarea ? textarea.value.trim() : '';
+                    if (value) {
+                        try {
+                            obj[name] = JSON.parse(value);
+                        } catch (e) {
+                            console.error('Invalid JSON for nested object:', e);
+                        }
+                    }
+                }
+            }
+        } else {
+            // その他の型: tree-default-value-field内のinputから取得
+            const defaultValueField = childNode.querySelector('.tree-default-value-field');
+            if (!defaultValueField) return;
+            
+            const defaultInput = defaultValueField.querySelector('.tree-param-default');
+            if (!defaultInput) return;
+            
+            const value = defaultInput.value.trim();
+            if (!value) return;
+            
+            // 型に応じて値を変換
+            if (type === 'number') {
+                obj[name] = parseFloat(value);
+            } else if (type === 'integer') {
+                obj[name] = parseInt(value);
+            } else if (type === 'boolean') {
+                obj[name] = value.toLowerCase() === 'true';
+            } else {
+                obj[name] = value;
+            }
+        }
+    });
+    
+    return Object.keys(obj).length > 0 ? obj : null;
+}
+
 // ツリー構造からJSON Schemaを構築
 function buildSchemaFromTree() {
     const properties = {};
@@ -651,23 +834,88 @@ function buildSchemaFromTree() {
     fixedNodes.forEach(node => {
         const prop = buildPropertyFromNode(node);
         if (prop && prop.name) {
-            const defaultValue = node.querySelector('.tree-param-default').value.trim();
-            if (defaultValue) {
-                // const制約を追加（LLMは認識するが値は変更不可）
-                let constValue = defaultValue;
-                // 型に応じて値を変換
-                if (prop.schema.type === 'number' || prop.schema.type === 'integer') {
-                    constValue = prop.schema.type === 'integer' ? parseInt(defaultValue) : parseFloat(defaultValue);
-                } else if (prop.schema.type === 'boolean') {
-                    constValue = defaultValue.toLowerCase() === 'true';
-                } else if (prop.schema.type === 'object' || prop.schema.type === 'array') {
-                    try {
-                        constValue = JSON.parse(defaultValue);
-                    } catch (e) {
+            const typeSelect = node.querySelector('.tree-param-type');
+            const type = typeSelect.value;
+            
+            let constValue;
+            
+            // array型の場合、arrayValueフィールドからCSV値を取得して配列に変換
+            if (type === 'array') {
+                const arrayItemsTypeSelect = node.querySelector('.tree-array-items-type');
+                const itemsType = arrayItemsTypeSelect ? arrayItemsTypeSelect.value : 'string';
+                
+                if (itemsType === 'object') {
+                    // object配列の場合、オブジェクトのカンマ区切りを配列化
+                    const arrayObjectValueInput = node.querySelector('.tree-array-object-value');
+                    if (arrayObjectValueInput && arrayObjectValueInput.value.trim()) {
+                        try {
+                            // 入力値を[]で囲んで配列としてパース
+                            const inputValue = arrayObjectValueInput.value.trim();
+                            constValue = JSON.parse(`[${inputValue}]`);
+                            // 配列であることを確認
+                            if (!Array.isArray(constValue)) {
+                                console.error('Array object value must be an array');
+                                constValue = [];
+                            }
+                        } catch (e) {
+                            console.error('Invalid JSON for array object value:', e);
+                            constValue = [];
+                        }
+                    } else {
+                        constValue = [];
+                    }
+                } else {
+                    // プリミティブ型配列の場合、CSV形式のinputから取得
+                    const arrayValueInput = node.querySelector('.tree-array-value');
+                    if (arrayValueInput && arrayValueInput.value.trim()) {
+                        const csvValue = arrayValueInput.value.trim();
+                        const arrayItems = csvValue.split(',').map(v => v.trim()).filter(v => v);
+                        
+                        // 型に応じて配列要素を変換
+                        if (itemsType === 'number') {
+                            constValue = arrayItems.map(v => parseFloat(v));
+                        } else if (itemsType === 'integer') {
+                            constValue = arrayItems.map(v => parseInt(v));
+                        } else if (itemsType === 'boolean') {
+                            constValue = arrayItems.map(v => v.toLowerCase() === 'true');
+                        } else {
+                            constValue = arrayItems; // string
+                        }
+                    } else {
+                        constValue = []; // 空配列
+                    }
+                }
+            } else if (type === 'object') {
+                // object型の場合、子プロパティから値を構築
+                constValue = buildConstObjectValueFromChildren(node);
+                
+                // 子プロパティがない場合は、値フィールドからJSONをパース
+                if (!constValue) {
+                    const defaultValue = node.querySelector('.tree-param-default').value.trim();
+                    if (defaultValue) {
+                        try {
+                            constValue = JSON.parse(defaultValue);
+                        } catch (e) {
+                            constValue = defaultValue;
+                        }
+                    }
+                }
+            } else {
+                // 通常の値フィールドから取得
+                const defaultValue = node.querySelector('.tree-param-default').value.trim();
+                if (defaultValue) {
+                    // 型に応じて値を変換
+                    if (prop.schema.type === 'number' || prop.schema.type === 'integer') {
+                        constValue = prop.schema.type === 'integer' ? parseInt(defaultValue) : parseFloat(defaultValue);
+                    } else if (prop.schema.type === 'boolean') {
+                        constValue = defaultValue.toLowerCase() === 'true';
+                    } else {
                         constValue = defaultValue;
                     }
                 }
-                
+            }
+            
+            if (constValue !== undefined && constValue !== null && constValue !== '') {
                 properties[prop.name] = {
                     ...prop.schema,
                     const: constValue,
@@ -904,24 +1152,77 @@ function generatePostRequestSample() {
     fixedNodes.forEach(node => {
         const name = node.querySelector('.tree-param-name').value.trim();
         const type = node.querySelector('.tree-param-type').value;
-        const defaultValue = node.querySelector('.tree-param-default').value.trim();
-        if (name && defaultValue) {
-            // Convert value based on type
-            let value = defaultValue;
-            if (type === 'number') {
-                value = parseFloat(defaultValue);
-            } else if (type === 'integer') {
-                value = parseInt(defaultValue);
-            } else if (type === 'boolean') {
-                value = defaultValue.toLowerCase() === 'true';
-            } else if (type === 'object' || type === 'array') {
-                try {
-                    value = JSON.parse(defaultValue);
-                } catch (e) {
-                    value = defaultValue;
+        
+        if (!name) return;
+        
+        // array型の場合、arrayValueフィールドから値を取得
+        if (type === 'array') {
+            const arrayItemsTypeSelect = node.querySelector('.tree-array-items-type');
+            const itemsType = arrayItemsTypeSelect ? arrayItemsTypeSelect.value : 'string';
+            
+            if (itemsType === 'object') {
+                // object配列の場合、オブジェクトのカンマ区切りを配列化
+                const arrayObjectValueInput = node.querySelector('.tree-array-object-value');
+                if (arrayObjectValueInput && arrayObjectValueInput.value.trim()) {
+                    try {
+                        const inputValue = arrayObjectValueInput.value.trim();
+                        sampleBody[name] = JSON.parse(`[${inputValue}]`);
+                    } catch (e) {
+                        console.error('Invalid JSON for array object value:', e);
+                        sampleBody[name] = [];
+                    }
+                }
+            } else {
+                // プリミティブ型配列の場合、CSV形式のinputから取得
+                const arrayValueInput = node.querySelector('.tree-array-value');
+                if (arrayValueInput && arrayValueInput.value.trim()) {
+                    const csvValue = arrayValueInput.value.trim();
+                    const arrayItems = csvValue.split(',').map(v => v.trim()).filter(v => v);
+                    
+                    // 型に応じて変換
+                    if (itemsType === 'number') {
+                        sampleBody[name] = arrayItems.map(v => parseFloat(v));
+                    } else if (itemsType === 'integer') {
+                        sampleBody[name] = arrayItems.map(v => parseInt(v));
+                    } else if (itemsType === 'boolean') {
+                        sampleBody[name] = arrayItems.map(v => v.toLowerCase() === 'true');
+                    } else {
+                        sampleBody[name] = arrayItems; // string
+                    }
                 }
             }
-            sampleBody[name] = value;
+        } else if (type === 'object') {
+            // object型の場合、子プロパティから値を構築
+            const objValue = buildConstObjectValueFromChildren(node);
+            
+            // 子プロパティがない場合は、値フィールドからJSONをパース
+            if (objValue) {
+                sampleBody[name] = objValue;
+            } else {
+                const defaultValue = node.querySelector('.tree-param-default').value.trim();
+                if (defaultValue) {
+                    try {
+                        sampleBody[name] = JSON.parse(defaultValue);
+                    } catch (e) {
+                        sampleBody[name] = defaultValue;
+                    }
+                }
+            }
+        } else {
+            // 通常の型
+            const defaultValue = node.querySelector('.tree-param-default').value.trim();
+            if (defaultValue) {
+                // Convert value based on type
+                let value = defaultValue;
+                if (type === 'number') {
+                    value = parseFloat(defaultValue);
+                } else if (type === 'integer') {
+                    value = parseInt(defaultValue);
+                } else if (type === 'boolean') {
+                    value = defaultValue.toLowerCase() === 'true';
+                }
+                sampleBody[name] = value;
+            }
         }
     });
     
