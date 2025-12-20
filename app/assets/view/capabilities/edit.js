@@ -412,14 +412,6 @@ function generateGetRequestSample(baseUrl) {
 
 function generatePostRequestSample() {
     const outputElement = document.getElementById('request-sample-output-post');
-    const useAdvancedMode = document.getElementById('use-advanced-mode').checked;
-    
-    if (useAdvancedMode) {
-        // JSON direct edit mode - show the textarea content
-        const jsonText = document.getElementById('body_json').value.trim();
-        outputElement.textContent = jsonText || '{}';
-        return;
-    }
     
     // Visual editor mode - build sample from tree
     const sampleBody = {};
@@ -1400,93 +1392,6 @@ function buildPropertyFromNode(node) {
     return propDef;
 }
 
-// Toggle between visual editor and JSON direct edit
-function toggleBodyEditorMode() {
-    const useAdvancedMode = document.getElementById('use-advanced-mode').checked;
-    const visualEditor = document.getElementById('visual-editor');
-    const jsonEditor = document.getElementById('json-editor');
-    const bodyJsonTextarea = document.getElementById('body_json');
-    
-    if (useAdvancedMode) {
-        // Switching to JSON mode: build JSON from tree and populate textarea
-        const fixedParams = {};
-        const fixedContainer = document.getElementById('fixed-params-post-container');
-        const fixedNodes = Array.from(fixedContainer.children).filter(child => child.classList.contains('tree-node'));
-        
-        fixedNodes.forEach(node => {
-            const prop = buildPropertyFromNode(node);
-            if (prop && prop.name) {
-                // 固定パラメータは値と型情報を保存
-                const defaultValue = node.querySelector('.tree-param-default').value.trim();
-                if (defaultValue) {
-                    fixedParams[prop.name] = {
-                        value: defaultValue,
-                        type: prop.schema.type,
-                        schema: prop.schema  // 階層構造の場合のため
-                    };
-                }
-            }
-        });
-        
-        const schema = buildSchemaFromTree();
-        
-        const fullSchema = {
-            ...schema,
-            _fixed: fixedParams
-        };
-        
-        bodyJsonTextarea.value = JSON.stringify(fullSchema, null, 2);
-        visualEditor.style.display = 'none';
-        jsonEditor.style.display = 'block';
-    } else {
-        // Switching to visual mode: parse JSON and rebuild tree
-        try {
-            const jsonText = bodyJsonTextarea.value.trim();
-            if (jsonText) {
-                const schema = JSON.parse(jsonText);
-                loadSchemaToTree(schema);
-            }
-        } catch (e) {
-            alert('JSONの解析エラー: ' + e.message);
-            document.getElementById('use-advanced-mode').checked = true;
-            return;
-        }
-        visualEditor.style.display = 'block';
-        jsonEditor.style.display = 'none';
-    }
-}
-
-// JSONスキーマをツリー構造に読み込む
-function loadSchemaToTree(schema) {
-    // 固定パラメータとLLMパラメータを分離
-    const fixedContainer = document.getElementById('fixed-params-post-container');
-    const treeContainer = document.getElementById('llm-params-tree-container');
-    
-    // クリア
-    fixedContainer.innerHTML = '';
-    treeContainer.innerHTML = '';
-    
-    if (schema.properties) {
-        const required = schema.required || [];
-        
-        Object.entries(schema.properties).forEach(([name, propDef]) => {
-            const paramData = buildParamDataFromProperty(name, propDef, required);
-            
-            // const制約があれば固定パラメータ、なければLLMパラメータ
-            if (propDef.const !== undefined) {
-                // 固定パラメータ
-                paramData.default = typeof propDef.const === 'object' 
-                    ? JSON.stringify(propDef.const) 
-                    : String(propDef.const);
-                addFixedParamPostRow(paramData, 0);  // 引数順序修正
-            } else {
-                // LLMパラメータ
-                addLlmParamTreeRow(null, 0, paramData);
-            }
-        });
-    }
-}
-
 async function loadCapability() {
     const response = await fetch(`/api/capabilities/${capabilityId}`);
     const cap = await response.json();
@@ -1775,9 +1680,6 @@ async function loadCapability() {
         }
     });
     
-    // Listen to advanced mode toggle
-    document.getElementById('use-advanced-mode').addEventListener('change', scheduleRequestSampleUpdate);
-    
     // Initial sample generation
     setTimeout(generateRequestSample, 100);
     
@@ -1888,47 +1790,8 @@ async function loadCapability() {
                 };
             }
         } else {
-            // POST method: check if using visual editor or JSON direct edit
-            const useAdvancedMode = document.getElementById('use-advanced-mode').checked;
-            
-            if (!useAdvancedMode) {
-                // Visual editor mode: build from tree structure
-                const fixedParams = {};
-                const fixedRows = document.querySelectorAll('#fixed-params-post-container .key-value-row');
-                fixedRows.forEach(row => {
-                    const key = row.querySelector('.fixed-param-post-key').value.trim();
-                    const value = row.querySelector('.fixed-param-post-value').value.trim();
-                    if (key) {
-                        fixedParams[key] = value;
-                    }
-                });
-                
-                const schema = buildSchemaFromTree();
-                
-                bodyParams = {
-                    ...schema,
-                    _fixed: fixedParams
-                };
-            } else {
-                // JSON direct edit mode
-                const jsonText = document.getElementById('body_json').value.trim();
-                if (jsonText) {
-                    try {
-                        // Replace {{VARIABLE}} placeholders with dummy values for validation
-                        const testJson = jsonText.replace(/\{\{[^}]+\}\}/g, '"__VARIABLE__"');
-                        bodyParams = JSON.parse(testJson);
-                        // Store original JSON with variables intact
-                        bodyParams = jsonText;
-                    } catch (e) {
-                        const errorDiv = document.getElementById('json-validation-error');
-                        errorDiv.style.display = 'block';
-                        errorDiv.style.color = '#dc3545';
-                        errorDiv.innerHTML = '✗ ' + t('json_invalid') + ': ' + e.message;
-                        document.getElementById('body_json').focus();
-                        return;
-                    }
-                }
-            }
+            // POST method: always use visual editor mode
+            bodyParams = buildSchemaFromTree();
         }
         
         // URL validation: skip if baseUrl exists (relative paths are valid)

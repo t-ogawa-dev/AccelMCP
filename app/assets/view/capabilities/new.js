@@ -292,36 +292,6 @@ function loadSchemaToTree(schema) {
     }
 }
 
-// モード切り替え
-function toggleBodyEditorMode() {
-    const checkbox = document.getElementById('use-advanced-mode');
-    const visualEditor = document.getElementById('visual-editor');
-    const jsonEditor = document.getElementById('json-editor');
-    
-    if (checkbox.checked) {
-        // 詳細モード: ビジュアルエディタ→JSON
-        const schema = buildSchemaFromTree();
-        document.getElementById('body_json').value = JSON.stringify(schema, null, 2);
-        visualEditor.style.display = 'none';
-        jsonEditor.style.display = 'block';
-    } else {
-        // ビジュアルモード: JSON→ツリー
-        try {
-            const jsonText = document.getElementById('body_json').value.trim();
-            if (jsonText) {
-                const schema = JSON.parse(jsonText);
-                loadSchemaToTree(schema);
-            }
-        } catch (e) {
-            alert('JSONの解析エラー: ' + e.message);
-            checkbox.checked = true;
-            return;
-        }
-        visualEditor.style.display = 'block';
-        jsonEditor.style.display = 'none';
-    }
-}
-
 // 固定パラメータ（POST用・ネストなし）
 function addFixedParamPostRow(paramData = null, depth = 0) {
     const container = document.getElementById('fixed-params-post-container');
@@ -1135,14 +1105,6 @@ function generateGetRequestSample(baseUrl) {
 
 function generatePostRequestSample() {
     const outputElement = document.getElementById('request-sample-output-post');
-    const useAdvancedMode = document.getElementById('use-advanced-mode').checked;
-    
-    if (useAdvancedMode) {
-        // JSON direct edit mode - show the textarea content
-        const jsonText = document.getElementById('body_json').value.trim();
-        outputElement.textContent = jsonText || '{}';
-        return;
-    }
     
     // Visual editor mode - build sample from tree
     const sampleBody = {};
@@ -1334,9 +1296,6 @@ function generateSampleValue(node) {
         }
     });
     
-    // Listen to advanced mode toggle
-    document.getElementById('use-advanced-mode').addEventListener('change', scheduleRequestSampleUpdate);
-    
     // Initial sample generation
     setTimeout(generateRequestSample, 100);
     
@@ -1437,28 +1396,8 @@ function generateSampleValue(node) {
                 };
             }
         } else {
-            // POST method
-            const useAdvancedMode = document.getElementById('use-advanced-mode').checked;
-            
-            if (useAdvancedMode) {
-                // JSON直接編集モード
-                const jsonText = document.getElementById('body_json').value.trim();
-                if (jsonText) {
-                    try {
-                        bodyParams = JSON.parse(jsonText);
-                    } catch (e) {
-                        const errorDiv = document.getElementById('json-validation-error');
-                        errorDiv.style.display = 'block';
-                        errorDiv.style.color = '#dc3545';
-                        errorDiv.innerHTML = '✗ ' + t('json_invalid') + ': ' + e.message;
-                        document.getElementById('body_json').focus();
-                        return;
-                    }
-                }
-            } else {
-                // ビジュアルエディタモード
-                bodyParams = buildSchemaFromTree();
-            }
+            // POST method - always use visual editor mode
+            bodyParams = buildSchemaFromTree();
         }
         
         const data = {
