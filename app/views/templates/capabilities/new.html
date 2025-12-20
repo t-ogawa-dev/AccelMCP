@@ -51,8 +51,9 @@
         </div>
         
         <div class="form-group">
-            <label for="description" data-i18n="capability_description_label">説明</label>
-            <textarea id="description" name="description" rows="3"></textarea>
+            <label for="description"><span data-i18n="capability_description_label">説明</span> *</label>
+            <textarea id="description" name="description" rows="3" required></textarea>
+            <small data-i18n="capability_description_hint" style="color: #6c757d;">LLMはこの説明を参考に、使用するtoolを選択します。具体的で分かりやすい説明を記載してください。</small>
         </div>
         
         <div class="form-group">
