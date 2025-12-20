@@ -565,17 +565,17 @@ function addLlmParamTreeRow(containerOrParent = null, depth = 0, paramData = nul
     const expandIcon = isExpandable ? (hasChildren ? '▼' : '▶') : '';
     
     node.innerHTML = `
-        <div class="tree-node-header" style="display: flex; gap: 10px; align-items: start; margin-bottom: 8px;">
+        <div class="tree-node-header" style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
             <button type="button" class="expand-btn" onclick="toggleTreeNode(${nodeId})" 
                     style="width: 24px; height: 24px; border: none; background: #f0f0f0; border-radius: 4px; cursor: pointer; font-size: 0.8rem; display: ${isExpandable ? 'block' : 'none'};">
                 ${expandIcon}
             </button>
-            <div style="flex: 1; display: grid; grid-template-columns: 1fr 1fr 2fr auto; gap: 8px; align-items: start;">
-                <div>
+            <div style="flex: 1; display: grid; grid-template-columns: 1fr 1fr 2fr auto; gap: 8px; align-items: center;">
+                <div style="display: flex; align-items: center;">
                     <input type="text" class="tree-param-name" placeholder="param_name"
                            style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem;">
                 </div>
-                <div>
+                <div style="display: flex; align-items: center;">
                     <select class="tree-param-type" onchange="handleTreeTypeChange(${nodeId})" 
                             style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem;">
                         <option value="string" ${data.type === 'string' ? 'selected' : ''}>string</option>
@@ -587,14 +587,15 @@ function addLlmParamTreeRow(containerOrParent = null, depth = 0, paramData = nul
                         <option value="array" ${data.type === 'array' ? 'selected' : ''}>array</option>
                     </select>
                 </div>
-                <div style="display: ${isFixedParam ? 'none' : 'block'};">
+                <div style="display: ${isFixedParam ? 'none' : 'flex'}; align-items: center;">
                     <input type="text" class="tree-param-description" placeholder="説明"
                            style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem;">
                 </div>
-                <div style="display: flex; gap: 6px; align-items: center;">
-                    <label title="必須" style="display: flex; align-items: center; cursor: pointer;">
+                <div style="display: flex; gap: 8px; align-items: center; justify-content: center;">
+                    <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 0.85rem; white-space: nowrap; margin-bottom: 0;">
                         <input type="checkbox" class="tree-param-required" ${data.required ? 'checked' : ''}
                                style="width: 16px; height: 16px; margin: 0;">
+                        <span style="color: #333;">必須</span>
                     </label>
                     <button type="button" onclick="removeTreeNode(${nodeId})" class="btn btn-sm btn-danger" style="padding: 4px 8px; font-size: 0.8rem;">×</button>
                 </div>

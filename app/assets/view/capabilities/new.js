@@ -406,7 +406,7 @@ function addLlmParamTreeRow(containerOrParent = null, depth = 0, paramData = nul
     
     node.innerHTML = `
         <div style="border: 1px solid #cce5ff; border-radius: 4px; padding: 12px; background: white;">
-            <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: ${isExpandable || data.type === 'array' ? '10px' : '0'};">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: ${isExpandable || data.type === 'array' ? '10px' : '0'};">
                 ${expandButton}
                 <div style="flex: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
                     <div>
@@ -452,10 +452,10 @@ function addLlmParamTreeRow(containerOrParent = null, depth = 0, paramData = nul
                                style="width: 100%; padding: 5px 6px; border: 1px solid #ddd; border-radius: 3px; font-size: 0.85rem;">
                     </div>
                 </div>
-                <div style="display: flex; flex-direction: column; gap: 5px;">
-                    <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap;">
-                        <input type="checkbox" class="tree-param-required" ${data.required ? 'checked' : ''} style="width: 14px; height: 14px;">
-                        <span>必須</span>
+                <div style="display: flex; flex-direction: column; gap: 5px; justify-content: center; align-self: center;">
+                    <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap; margin-bottom: 0;">
+                        <input type="checkbox" class="tree-param-required" ${data.required ? 'checked' : ''} style="width: 14px; height: 14px; margin-bottom: 0;">
+                        <span style="color: #333;">必須</span>
                     </label>
                     <button type="button" onclick="removeTreeNode('${nodeId}')" class="btn btn-sm btn-danger" style="font-size: 0.75rem; padding: 3px 8px;">削除</button>
                 </div>
