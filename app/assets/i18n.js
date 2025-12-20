@@ -109,7 +109,7 @@ const translations = {
         variable_name_hint: '英数字とアンダースコアのみ使用可能',
         variable_value_placeholder: '変数の値を入力',
         variable_description_placeholder: 'この変数の説明を入力',
-        variable_is_secret_hint: 'ONの場合、一覧で値がマスク表示されます',
+        variable_is_secret_hint: 'ONの場合、一覧で値がマスク表示され、エクスポート時に値が除外されます',
         variable_register_failed: '登録に失敗しました',
         variable_update_failed: '更新に失敗しました',
         
@@ -568,7 +568,7 @@ const translations = {
         variable_name_hint: 'Only alphanumeric characters and underscores allowed',
         variable_value_placeholder: 'Enter variable value',
         variable_description_placeholder: 'Enter description for this variable',
-        variable_is_secret_hint: 'When ON, value will be masked in the list',
+        variable_is_secret_hint: 'When ON, value will be masked in the list and excluded from exports',
         variable_register_failed: 'Registration failed',
         variable_update_failed: 'Update failed',
         
