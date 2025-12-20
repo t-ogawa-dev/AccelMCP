@@ -20,6 +20,58 @@ class MCPHandler:
     def __init__(self, db):
         self.db = db
     
+    def _convert_param_type(self, value: str, param_type: str):
+        """
+        Convert string value to specified type
+        
+        Args:
+            value: String value (may contain {{VARIABLE}})
+            param_type: Target type ('string', 'number', 'integer', 'boolean', 'object', 'array')
+        
+        Returns:
+            Converted value with appropriate type
+        """
+        # If value contains variable placeholder, keep as string for now
+        # Variable replacement happens later
+        if '{{' in value and '}}' in value:
+            return value
+        
+        if param_type == 'integer':
+            try:
+                return int(value)
+            except (ValueError, AttributeError):
+                return value  # Keep as string if conversion fails
+        elif param_type == 'number':
+            try:
+                # Try to convert to float
+                return float(value)
+            except (ValueError, AttributeError):
+                return value  # Keep as string if conversion fails
+        elif param_type == 'boolean':
+            # Convert to boolean
+            return value.lower() in ('true', '1', 'yes', 'on')
+        elif param_type == 'object':
+            # Try to parse as JSON object
+            try:
+                parsed = json.loads(value)
+                if isinstance(parsed, dict):
+                    return parsed
+                return value
+            except (json.JSONDecodeError, ValueError):
+                return value
+        elif param_type == 'array':
+            # Try to parse as JSON array
+            try:
+                parsed = json.loads(value)
+                if isinstance(parsed, list):
+                    return parsed
+                return value
+            except (json.JSONDecodeError, ValueError):
+                return value
+        else:
+            # Default: keep as string
+            return value
+    
     def _sanitize_tool_name(self, name: str) -> str:
         """
         Sanitize tool name to comply with Google API requirements:
@@ -756,7 +808,18 @@ class MCPHandler:
                     # Check if it's new format with JSON Schema structure
                     if 'properties' in parsed and '_fixed' in parsed:
                         # New format: extract fixed params and prepare for LLM arguments
-                        fixed_params = parsed.get('_fixed', {})
+                        fixed_params_raw = parsed.get('_fixed', {})
+                        # Convert fixed params according to their type
+                        fixed_params = {}
+                        for key, value_obj in fixed_params_raw.items():
+                            if isinstance(value_obj, dict) and 'value' in value_obj:
+                                # New format with type info: {value: "...", type: "string"}
+                                raw_value = value_obj.get('value', '')
+                                param_type = value_obj.get('type', 'string')
+                                fixed_params[key] = self._convert_param_type(raw_value, param_type)
+                            else:
+                                # Old format: direct value (string)
+                                fixed_params[key] = value_obj
                         # Properties define the schema for LLM arguments
                         # The actual values come from 'arguments'
                     elif 'properties' in parsed:
@@ -776,7 +839,18 @@ class MCPHandler:
                 try:
                     parsed = json.loads(body_params)
                     if 'properties' in parsed and '_fixed' in parsed:
-                        fixed_params = parsed.get('_fixed', {})
+                        fixed_params_raw = parsed.get('_fixed', {})
+                        # Convert fixed params according to their type
+                        fixed_params = {}
+                        for key, value_obj in fixed_params_raw.items():
+                            if isinstance(value_obj, dict) and 'value' in value_obj:
+                                # New format with type info
+                                raw_value = value_obj.get('value', '')
+                                param_type = value_obj.get('type', 'string')
+                                fixed_params[key] = self._convert_param_type(raw_value, param_type)
+                            else:
+                                # Old format
+                                fixed_params[key] = value_obj
                         fixed_params = VariableReplacer.replace_in_dict(fixed_params)
                     elif 'properties' in parsed:
                         pass  # Schema only

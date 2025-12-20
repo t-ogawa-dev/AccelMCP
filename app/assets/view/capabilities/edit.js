@@ -376,8 +376,8 @@ function generateGetRequestSample(baseUrl) {
         const key = inputs[0].value.trim();
         const value = inputs[1].value.trim();
         if (key) {
-            const displayValue = value.startsWith('{{') ? value : `"${value}"`;
-            fixedParams.push(`${key}=${displayValue}`);
+            // Query parameters don't need quotes - they're all strings by nature
+            fixedParams.push(`${key}=${value}`);
         }
     });
     
@@ -391,7 +391,7 @@ function generateGetRequestSample(baseUrl) {
             let sampleValue;
             if (type === 'enum') {
                 const enumValues = row.querySelector('.llm-param-enum').value.trim();
-                sampleValue = enumValues ? `"${enumValues.split(',')[0].trim()}"` : '<string>';
+                sampleValue = enumValues ? enumValues.split(',')[0].trim() : '<string>';
             } else if (type === 'string') {
                 sampleValue = '<string>';
             } else if (type === 'number' || type === 'integer') {
@@ -503,25 +503,10 @@ function generateSampleValue(node) {
 
 // Fixed Parameters for POST
 let fixedParamPostIndex = 0;
-function addFixedParamPostRow(key = '', value = '', isReadOnly = false) {
-    const container = document.getElementById('fixed-params-post-container');
-    const index = fixedParamPostIndex++;
-    
-    const readOnlyStyle = isReadOnly ? 'background-color: #f5f5f5; cursor: not-allowed;' : '';
-    const readOnlyAttr = isReadOnly ? 'readonly disabled' : '';
-    
-    const row = document.createElement('div');
-    row.className = 'key-value-row';
-    row.setAttribute('data-index', index);
-    row.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px; align-items: center;';
-    row.innerHTML = `
-        <input type="text" class="fixed-param-post-key" placeholder="key" value="${key}" ${readOnlyAttr}
-               style="flex: 1; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; ${readOnlyStyle}">
-        <input type="text" class="fixed-param-post-value" placeholder="value or {{VARIABLE_NAME}}" value="${value}" ${readOnlyAttr}
-               style="flex: 1; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; ${readOnlyStyle}">
-        ${!isReadOnly ? `<button type="button" onclick="this.closest('.key-value-row').remove()" class="btn btn-sm btn-danger">削除</button>` : ''}
-    `;
-    container.appendChild(row);
+// 固定パラメータ(POST用・階層対応)
+function addFixedParamPostRow(containerOrParent = null, depth = 0, paramData = null, isReadOnly = false) {
+    // 階層エディタを使用
+    return addLlmParamTreeRow(containerOrParent || document.getElementById('fixed-params-post-container'), depth, paramData, isReadOnly);
 }
 
 // Tree-based hierarchical editor for LLM Parameters (POST)
@@ -538,7 +523,7 @@ function addLlmParamTreeRow(containerOrParent = null, depth = 0, paramData = nul
     } else if (containerOrParent.classList && (containerOrParent.classList.contains('tree-children') || containerOrParent.classList.contains('tree-array-item-properties'))) {
         // 既にコンテナ要素が渡されている場合
         container = containerOrParent;
-    } else if (containerOrParent.id === 'llm-params-tree-container') {
+    } else if (containerOrParent.id === 'llm-params-tree-container' || containerOrParent.id === 'fixed-params-post-container') {
         // ルートコンテナが直接渡されている場合
         container = containerOrParent;
     } else if (containerOrParent.classList && containerOrParent.classList.contains('tree-node')) {
@@ -553,6 +538,10 @@ function addLlmParamTreeRow(containerOrParent = null, depth = 0, paramData = nul
         console.error('Container not found for:', containerOrParent);
         return null;
     }
+    
+    // Check if this is for fixed parameters (not LLM parameters)
+    const isFixedParam = container.id === 'fixed-params-post-container' || 
+                         container.closest('#fixed-params-post-container') !== null;
     
     const data = paramData || {
         name: '',
@@ -583,7 +572,7 @@ function addLlmParamTreeRow(containerOrParent = null, depth = 0, paramData = nul
             </button>
             <div style="flex: 1; display: grid; grid-template-columns: 1fr 1fr 2fr auto; gap: 8px; align-items: start;">
                 <div>
-                    <input type="text" class="tree-param-name" value="${data.name}" placeholder="param_name"
+                    <input type="text" class="tree-param-name" placeholder="param_name"
                            style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem;">
                 </div>
                 <div>
@@ -593,13 +582,13 @@ function addLlmParamTreeRow(containerOrParent = null, depth = 0, paramData = nul
                         <option value="number" ${data.type === 'number' ? 'selected' : ''}>number</option>
                         <option value="integer" ${data.type === 'integer' ? 'selected' : ''}>integer</option>
                         <option value="boolean" ${data.type === 'boolean' ? 'selected' : ''}>boolean</option>
-                        <option value="enum" ${data.type === 'enum' ? 'selected' : ''}>enum</option>
+                        ${!isFixedParam ? `<option value="enum" ${data.type === 'enum' ? 'selected' : ''}>enum</option>` : ''}
                         <option value="object" ${data.type === 'object' ? 'selected' : ''}>object</option>
                         <option value="array" ${data.type === 'array' ? 'selected' : ''}>array</option>
                     </select>
                 </div>
-                <div>
-                    <input type="text" class="tree-param-description" value="${data.description}" placeholder="説明"
+                <div style="display: ${isFixedParam ? 'none' : 'block'};">
+                    <input type="text" class="tree-param-description" placeholder="説明"
                            style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem;">
                 </div>
                 <div style="display: flex; gap: 6px; align-items: center;">
@@ -614,14 +603,15 @@ function addLlmParamTreeRow(containerOrParent = null, depth = 0, paramData = nul
         
         <!-- Enum values field (shown when type is enum) -->
         <div class="tree-enum-field" style="display: ${data.type === 'enum' ? 'block' : 'none'}; margin-bottom: 8px; margin-left: 34px;">
-            <input type="text" class="tree-param-enum" value="${data.enum}" placeholder="option1,option2,option3"
+            <input type="text" class="tree-param-enum" placeholder="option1,option2,option3"
                    style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem;">
             <small style="display: block; color: #6c757d; font-size: 0.75rem; margin-top: 2px;">カンマ区切りで選択肢を入力</small>
         </div>
         
         <!-- Default value field -->
-        <div class="tree-default-field" style="margin-bottom: 8px; margin-left: 34px;">
-            <input type="text" class="tree-param-default" value="${data.default}" placeholder="デフォルト値"
+        <div class="tree-default-field" style="display: ${data.type === 'object' || data.type === 'array' ? 'none' : 'block'}; margin-bottom: 8px; margin-left: 34px;">
+            <label style="font-size: 0.85rem; font-weight: 600; color: #333; display: block; margin-bottom: 4px;" class="tree-default-label">${isFixedParam ? '値:' : 'デフォルト値:'}</label>
+            <input type="text" class="tree-param-default" placeholder="${isFixedParam ? '値' : 'デフォルト値'}"
                    style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem;">
         </div>
         
@@ -658,6 +648,17 @@ function addLlmParamTreeRow(containerOrParent = null, depth = 0, paramData = nul
     `;
     
     container.appendChild(node);
+    
+    // Set input values after DOM insertion to avoid template literal issues
+    const nameInput = node.querySelector('.tree-param-name');
+    const descInput = node.querySelector('.tree-param-description');
+    const enumInput = node.querySelector('.tree-param-enum');
+    const defaultInput = node.querySelector('.tree-param-default');
+    
+    if (nameInput) nameInput.value = data.name || '';
+    if (descInput) descInput.value = data.description || '';
+    if (enumInput) enumInput.value = data.enum || '';
+    if (defaultInput) defaultInput.value = data.default || '';
     
     // Recursively add children if any
     if (data.children && data.children.length > 0) {
@@ -706,12 +707,18 @@ function handleTreeTypeChange(nodeId) {
     const addArrayItemPropertyBtn = node.querySelector('.tree-add-array-item-property');
     const expandBtn = node.querySelector('.expand-btn');
     const childrenContainer = node.querySelector('.tree-children');
+    const defaultField = node.querySelector('.tree-default-field');
     
     // Show/hide fields based on type
     enumField.style.display = selectedType === 'enum' ? 'block' : 'none';
     arrayItemsField.style.display = selectedType === 'array' ? 'block' : 'none';
     addChildBtn.style.display = selectedType === 'object' ? 'block' : 'none';
     expandBtn.style.display = selectedType === 'object' ? 'block' : 'none';
+    
+    // デフォルト値/値フィールド表示制御 (object/arrayの場合は非表示)
+    if (defaultField) {
+        defaultField.style.display = (selectedType === 'object' || selectedType === 'array') ? 'none' : 'block';
+    }
     
     // Array items object control
     if (selectedType === 'array') {
@@ -945,12 +952,21 @@ function toggleBodyEditorMode() {
     if (useAdvancedMode) {
         // Switching to JSON mode: build JSON from tree and populate textarea
         const fixedParams = {};
-        const fixedRows = document.querySelectorAll('#fixed-params-post-container .key-value-row');
-        fixedRows.forEach(row => {
-            const key = row.querySelector('.fixed-param-post-key').value.trim();
-            const value = row.querySelector('.fixed-param-post-value').value.trim();
-            if (key) {
-                fixedParams[key] = value;
+        const fixedContainer = document.getElementById('fixed-params-post-container');
+        const fixedNodes = Array.from(fixedContainer.children).filter(child => child.classList.contains('tree-node'));
+        
+        fixedNodes.forEach(node => {
+            const prop = buildPropertyFromNode(node);
+            if (prop && prop.name) {
+                // 固定パラメータは値と型情報を保存
+                const defaultValue = node.querySelector('.tree-param-default').value.trim();
+                if (defaultValue) {
+                    fixedParams[prop.name] = {
+                        value: defaultValue,
+                        type: prop.schema.type,
+                        schema: prop.schema  // 階層構造の場合のため
+                    };
+                }
             }
         });
         
@@ -965,10 +981,78 @@ function toggleBodyEditorMode() {
         visualEditor.style.display = 'none';
         jsonEditor.style.display = 'block';
     } else {
-        // Switching to visual mode: parse JSON and rebuild tree (optional: could show warning)
-        // For now, just switch the display
+        // Switching to visual mode: parse JSON and rebuild tree
+        try {
+            const jsonText = bodyJsonTextarea.value.trim();
+            if (jsonText) {
+                const schema = JSON.parse(jsonText);
+                loadSchemaToTree(schema);
+            }
+        } catch (e) {
+            alert('JSONの解析エラー: ' + e.message);
+            document.getElementById('use-advanced-mode').checked = true;
+            return;
+        }
         visualEditor.style.display = 'block';
         jsonEditor.style.display = 'none';
+    }
+}
+
+// JSONスキーマをツリー構造に読み込む
+function loadSchemaToTree(schema) {
+    // 固定パラメータの処理
+    const fixedContainer = document.getElementById('fixed-params-post-container');
+    
+    // _fixedフィールドがある場合のみクリア&再構築
+    if (schema._fixed !== undefined) {
+        fixedContainer.innerHTML = '';
+        if (schema._fixed && typeof schema._fixed === 'object') {
+            Object.entries(schema._fixed).forEach(([key, valueOrObj]) => {
+                let paramData;
+                if (typeof valueOrObj === 'object' && valueOrObj.schema) {
+                    // 新形式: 階層構造あり
+                    paramData = buildParamDataFromProperty(key, valueOrObj.schema, []);
+                    paramData.default = valueOrObj.value || '';
+                } else if (typeof valueOrObj === 'object' && valueOrObj.value !== undefined) {
+                    // 中間形式: {value: "...", type: "string"}
+                    paramData = {
+                        name: key,
+                        type: valueOrObj.type || 'string',
+                        default: valueOrObj.value,
+                        description: '',
+                        required: false,
+                        enum: '',
+                        children: [],
+                        itemsType: 'string'
+                    };
+                } else {
+                    // 旧形式互換: 直接値
+                    paramData = {
+                        name: key,
+                        type: 'string',
+                        default: valueOrObj,
+                        description: '',
+                        required: false,
+                        enum: '',
+                        children: [],
+                        itemsType: 'string'
+                    };
+                }
+                addFixedParamPostRow(null, 0, paramData);
+            });
+        }
+    }
+    // _fixedがない場合は現在の固定パラメータを保持
+    
+    // LLMパラメータツリーをクリア&再構築
+    const treeContainer = document.getElementById('llm-params-tree-container');
+    treeContainer.innerHTML = '';
+    if (schema.properties) {
+        const required = schema.required || [];
+        Object.entries(schema.properties).forEach(([name, propDef]) => {
+            const paramData = buildParamDataFromProperty(name, propDef, required);
+            addLlmParamTreeRow(null, 0, paramData);
+        });
     }
 }
 
@@ -1073,7 +1157,11 @@ async function loadCapability() {
             if (Object.keys(fixedParams).length === 0 && !isMcpType) {
                 addFixedParamRow('', '', isMcpType);
             } else {
-                Object.entries(fixedParams).forEach(([key, value]) => {
+                Object.entries(fixedParams).forEach(([key, valueOrObj]) => {
+                    // 新形式: {value: "...", type: "..."} または旧形式: 直接値
+                    const value = (typeof valueOrObj === 'object' && valueOrObj.value !== undefined) 
+                        ? valueOrObj.value 
+                        : valueOrObj;
                     addFixedParamRow(key, value, isMcpType);
                 });
             }
@@ -1127,10 +1215,40 @@ async function loadCapability() {
             
             // Load fixed parameters
             if (Object.keys(fixedParams).length === 0 && !isMcpType) {
-                addFixedParamPostRow('', '', isMcpType);
+                // Empty fixed params - add placeholder if needed
             } else {
-                Object.entries(fixedParams).forEach(([key, value]) => {
-                    addFixedParamPostRow(key, value, isMcpType);
+                Object.entries(fixedParams).forEach(([key, valueOrObj]) => {
+                    let paramData;
+                    if (typeof valueOrObj === 'object' && valueOrObj.schema) {
+                        // 新形式: 階層構造あり
+                        paramData = buildParamDataFromProperty(key, valueOrObj.schema, []);
+                        paramData.default = valueOrObj.value || '';
+                    } else if (typeof valueOrObj === 'object' && valueOrObj.value !== undefined) {
+                        // 中間形式: {value: "...", type: "string"}
+                        paramData = {
+                            name: key,
+                            type: valueOrObj.type || 'string',
+                            default: valueOrObj.value,
+                            description: '',
+                            required: false,
+                            enum: '',
+                            children: [],
+                            itemsType: 'string'
+                        };
+                    } else {
+                        // 旧形式互換: 直接値
+                        paramData = {
+                            name: key,
+                            type: 'string',
+                            default: valueOrObj,
+                            description: '',
+                            required: false,
+                            enum: '',
+                            children: [],
+                            itemsType: 'string'
+                        };
+                    }
+                    addFixedParamPostRow(null, 0, paramData, isMcpType);
                 });
             }
             
@@ -1431,3 +1549,4 @@ async function loadCapability() {
         window.location.href = `/capabilities/${capabilityId}`;
     });
 })();
+// Cache bust: 2025-12-05T00:00:00

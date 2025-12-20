@@ -12,6 +12,8 @@ HTTP/stdio 対応の MCP サーバー。API/MCP 中継機能とユーザー別�
 
 ## 起動方法
 
+### 開発環境（デフォルト）
+
 ```bash
 # Docker Composeで起動
 docker compose up -d
@@ -22,6 +24,23 @@ docker compose logs -f
 # 停止
 docker compose down
 ```
+
+開発環境では Flask 開発サーバーが起動し、コード変更時に自動リロードされます。
+
+### 本番環境
+
+```bash
+# Gunicornで起動
+FLASK_ENV=production docker compose up -d
+```
+
+または `.env` ファイルで設定：
+
+```
+FLASK_ENV=production
+```
+
+本番環境では Gunicorn が起動し、マルチプロセスで安定した動作を提供します。
 
 ### ログレベルの設定
 

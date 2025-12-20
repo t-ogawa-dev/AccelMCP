@@ -37,6 +37,8 @@ def login():
         # Check against environment variables
         if (username == current_app.config['ADMIN_USERNAME'] and 
             password == current_app.config['ADMIN_PASSWORD']):
+            session.clear()  # Clear any existing session data
+            session.permanent = True  # Enable permanent session (uses PERMANENT_SESSION_LIFETIME)
             session['admin_logged_in'] = True
             session['admin_username'] = username
             if request.is_json:

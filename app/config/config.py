@@ -2,6 +2,7 @@
 Configuration settings for MCP Server
 """
 import os
+from datetime import timedelta
 
 
 class Config:
@@ -13,6 +14,12 @@ class Config:
     # Flask settings
     DEBUG = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
     TESTING = False
+    
+    # Session settings
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=int(os.getenv('SESSION_LIFETIME_HOURS', '12')))
+    SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False').lower() == 'true'
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
 
 
 class DevelopmentConfig(Config):
