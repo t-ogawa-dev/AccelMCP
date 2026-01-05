@@ -24,9 +24,11 @@ function toggleServiceType() {
         // API type
         mcpUrlSection.style.display = 'block';
         mcpUrlInput.removeAttribute('required');
-        mcpUrlLabel.textContent = 'API ベースURL';
+        mcpUrlLabel.setAttribute('data-i18n', 'app_api_base_url_label');
+        mcpUrlLabel.textContent = t('app_api_base_url_label');
         mcpUrlRequired.textContent = '';
-        mcpUrlHint.textContent = 'APIの共通ベースURL（任意）例: https://api.example.com/v1/';
+        mcpUrlHint.setAttribute('data-i18n', 'app_api_base_url_hint');
+        mcpUrlHint.textContent = t('app_api_base_url_hint');
         mcpUrlInput.placeholder = 'https://api.example.com/v1/';
         testConnectionBtn.style.display = 'none';
     }
@@ -183,13 +185,13 @@ async function testConnection() {
                 const infoDiv = document.createElement('div');
                 infoDiv.style.cssText = 'margin-bottom: 20px; padding: 12px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; color: #0369a1;';
                 infoDiv.innerHTML = `
-                    📚 テンプレートから作成中: ${templateData.name}<br>
-                    <a href="${templateData.official_url}" target="_blank" style="color: #0369a1; text-decoration: underline;">公式ドキュメント</a>
+                    📚 ${t('app_template_creating')}: ${templateData.name}<br>
+                    <a href="${templateData.official_url}" target="_blank" style="color: #0369a1; text-decoration: underline;">${t('app_template_official_docs')}</a>
                 `;
                 
                 // If API template with capabilities, show capability count
                 if (templateData.service_type === 'api' && templateCapabilities && templateCapabilities.length > 0) {
-                    infoDiv.innerHTML += `<br>📌 ${templateCapabilities.length}個のCapabilityが自動登録されます`;
+                    infoDiv.innerHTML += `<br>📌 ${templateCapabilities.length}${t('app_template_capabilities_auto_register')}`;
                 }
                 
                 document.querySelector('form').insertBefore(infoDiv, document.querySelector('form').firstChild);

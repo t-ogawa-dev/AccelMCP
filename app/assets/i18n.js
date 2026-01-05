@@ -270,6 +270,7 @@ const translations = {
         app_new_title: 'アプリ新規登録',
         app_new_desc: '新しいMCPアプリを登録します',
         app_name_label: 'アプリ名',
+        app_name_allowed_chars: '使用可能文字: a-z A-Z 0-9 _ . : + -',
         app_subdomain_input: 'サブドメイン',
         app_subdomain_hint: '小文字英数字とハイフンのみ使用可能',
         app_subdomain_pattern_hint: '小文字英数字とハイフンのみ使用可能',
@@ -301,6 +302,11 @@ const translations = {
         app_disabled_accounts: '未設定アカウント',
         app_register_failed: '登録に失敗しました',
         app_update_failed: '更新に失敗しました',
+        app_template_creating: 'テンプレートから作成中',
+        app_template_official_docs: '公式ドキュメント',
+        app_template_capabilities_auto_register: '個のCapabilityが自動登録されます',
+        app_api_base_url_label: 'API ベースURL',
+        app_api_base_url_hint: 'APIの共通ベースURL（任意）例: https://api.example.com/v1/',
         
         // アプリ編集
         app_edit_title: 'アプリ編集',
@@ -730,6 +736,7 @@ const translations = {
         app_new_title: 'New App',
         app_new_desc: 'Register a new MCP app',
         app_name_label: 'App Name',
+        app_name_allowed_chars: 'Allowed characters: a-z A-Z 0-9 _ . : + -',
         app_subdomain_input: 'Subdomain',
         app_subdomain_hint: 'Only lowercase alphanumeric characters and hyphens allowed',
         app_subdomain_pattern_hint: 'Only lowercase alphanumeric characters and hyphens allowed',
@@ -761,6 +768,11 @@ const translations = {
         app_disabled_accounts: 'Unassigned Accounts',
         app_register_failed: 'Registration failed',
         app_update_failed: 'Update failed',
+        app_template_creating: 'Creating from template',
+        app_template_official_docs: 'Official Documentation',
+        app_template_capabilities_auto_register: ' capabilities will be automatically registered',
+        app_api_base_url_label: 'API Base URL',
+        app_api_base_url_hint: 'Common API base URL (optional), e.g., https://api.example.com/v1/',
         
         // App Edit
         app_edit_title: 'Edit App',
