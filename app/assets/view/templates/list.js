@@ -219,8 +219,8 @@ async function applyTemplate(templateId, mcpServiceId) {
             // Store template data in sessionStorage for the form to use
             sessionStorage.setItem('app_template_data', JSON.stringify(result.template_data));
             
-            // Redirect to app creation form
-            window.location.href = result.redirect_url;
+            // Redirect to app creation form with template flag
+            window.location.href = result.redirect_url + '?from=template';
         } else {
             // Handle non-OK response
             let errorMessage = 'Unknown error';

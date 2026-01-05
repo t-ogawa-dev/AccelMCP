@@ -138,6 +138,15 @@ async function testConnection() {
         return;
     }
     
+    // Check if this is a template-based registration
+    const urlParams = new URLSearchParams(window.location.search);
+    const isFromTemplate = urlParams.has('from') && urlParams.get('from') === 'template';
+    
+    // If not from template, clear any existing template data
+    if (!isFromTemplate) {
+        sessionStorage.removeItem('app_template_data');
+    }
+    
     // Check for template data in sessionStorage
     const templateDataStr = sessionStorage.getItem('app_template_data');
     let templateCapabilities = null;
@@ -197,10 +206,11 @@ async function testConnection() {
                 document.querySelector('form').insertBefore(infoDiv, document.querySelector('form').firstChild);
             }
             
-            // Clear template data from sessionStorage
-            sessionStorage.removeItem('app_template_data');
+            // Don't clear template data yet - keep it until form submission succeeds
+            // sessionStorage will be cleared after successful form submission
         } catch (e) {
             console.error('Failed to parse template data:', e);
+            sessionStorage.removeItem('app_template_data');
         }
     } else {
         // Add initial header row if no template data
@@ -311,6 +321,9 @@ async function testConnection() {
                 
                 console.log('All capabilities registered');
             }
+            
+            // Clear template data from sessionStorage after successful registration
+            sessionStorage.removeItem('app_template_data');
             
             window.location.href = `/mcp-services/${mcpServiceId}/apps`;
         } else {
