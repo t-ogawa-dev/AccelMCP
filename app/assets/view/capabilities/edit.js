@@ -1396,6 +1396,12 @@ async function loadCapability() {
     const response = await fetch(`/api/capabilities/${capabilityId}`);
     const cap = await response.json();
     
+    console.log('=== Capability Data ===');
+    console.log('Full capability:', cap);
+    console.log('Headers:', cap.headers);
+    console.log('Body params:', cap.body_params);
+    console.log('=====================');
+    
     // Get parent app information to check if it's MCP type and get base URL
     const appResponse = await fetch(`/api/apps/${cap.service_id}`);
     const app = await appResponse.json();
@@ -1541,13 +1547,28 @@ async function loadCapability() {
         }
     } else {
         // POST method: load into hierarchical tree editor
-        const hasSchema = cap.body_params && cap.body_params.properties;
+        
+        // body_paramsが文字列の場合はパース
+        let bodyParamsObj = cap.body_params;
+        if (typeof bodyParamsObj === 'string') {
+            try {
+                bodyParamsObj = JSON.parse(bodyParamsObj);
+            } catch (e) {
+                console.error('Failed to parse body_params:', e);
+                bodyParamsObj = {};
+            }
+        }
+        
+        const hasSchema = bodyParamsObj && bodyParamsObj.properties;
+        
+        console.log('POST method loading - bodyParamsObj:', bodyParamsObj);
+        console.log('hasSchema:', hasSchema);
         
         if (hasSchema) {
             // New format: JSON Schema with hierarchical structure
-            const fixedParams = cap.body_params._fixed || {};
-            const properties = cap.body_params.properties || {};
-            const required = cap.body_params.required || [];
+            const fixedParams = bodyParamsObj._fixed || {};
+            const properties = bodyParamsObj.properties || {};
+            const required = bodyParamsObj.required || [];
             
             // Load fixed parameters
             if (Object.keys(fixedParams).length === 0 && !isMcpType) {
@@ -1598,25 +1619,42 @@ async function loadCapability() {
                 });
             }
         } else {
-            // Old format or no schema: show in JSON editor (advanced mode)
-            document.getElementById('use-advanced-mode').checked = true;
-            toggleBodyEditorMode();
-        }
-        
-        // Also populate JSON textarea for advanced mode
-        const bodyJsonTextarea = document.getElementById('body_json');
-        bodyJsonTextarea.value = JSON.stringify(cap.body_params, null, 2);
-        
-        if (isMcpType) {
-            bodyJsonTextarea.readOnly = true;
-            bodyJsonTextarea.style.backgroundColor = '#f5f5f5';
-            bodyJsonTextarea.style.cursor = 'not-allowed';
-            
-            // Hide validation and format buttons
-            const validateBtn = document.querySelector('button[onclick="validateJson()"]');
-            const formatBtn = document.querySelector('button[onclick="formatJson()"]');
-            if (validateBtn) validateBtn.style.display = 'none';
-            if (formatBtn) formatBtn.style.display = 'none';
+            // Old format: convert to tree structure
+            // This is the old format where each parameter has {type, description, required}
+            if (bodyParamsObj && Object.keys(bodyParamsObj).length > 0) {
+                Object.entries(bodyParamsObj).forEach(([key, paramDef]) => {
+                    // Check if it's the old format with type/description/required
+                    if (paramDef && typeof paramDef === 'object' && paramDef.type) {
+                        const paramData = {
+                            name: key,
+                            type: paramDef.type || 'string',
+                            description: paramDef.description || '',
+                            required: paramDef.required || false,
+                            enum: '',
+                            default: '',
+                            children: [],
+                            itemsType: 'string'
+                        };
+                        addLlmParamTreeRow(null, 0, paramData);
+                    } else {
+                        // Even older format: just key-value pairs
+                        const paramData = {
+                            name: key,
+                            type: typeof paramDef === 'number' ? 'number' : typeof paramDef === 'boolean' ? 'boolean' : 'string',
+                            default: paramDef,
+                            description: '',
+                            required: false,
+                            enum: '',
+                            children: [],
+                            itemsType: 'string'
+                        };
+                        addFixedParamPostRow(null, 0, paramData, isMcpType);
+                    }
+                });
+            } else if (!isMcpType) {
+                // No params - add empty row
+                addLlmParamTreeRow(null, 0);
+            }
         }
     }
     

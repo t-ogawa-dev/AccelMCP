@@ -61,8 +61,8 @@ async function loadMcpServices() {
                     <input type="checkbox" ${service.is_enabled ? 'checked' : ''} onchange="toggleMcpService(${service.id})">
                     <span class="toggle-slider"></span>
                 </label>
-                <a href="/mcp-services/${service.id}/apps" class="btn btn-sm">${t('mcp_service_apps_button')}</a>
-                <a href="/mcp-services/${service.id}/edit" class="btn btn-sm">${t('button_edit')}</a>
+                <a href="/mcp-services/${service.id}/apps" class="btn btn-sm btn-primary">${t('mcp_service_apps_button')}</a>
+                <a href="/mcp-services/${service.id}/edit" class="btn btn-sm btn-secondary">${t('button_edit')}</a>
                 <button onclick="deleteMcpService(${service.id})" class="btn btn-sm btn-danger">${t('button_delete')}</button>
             </div>
         </div>

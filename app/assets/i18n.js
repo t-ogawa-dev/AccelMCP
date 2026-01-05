@@ -258,7 +258,7 @@ const translations = {
         // アプリ詳細
         app_detail_title: 'アプリ詳細',
         app_detail_desc: 'アプリの詳細情報',
-        app_capabilities_manage: 'Capabilities管理',
+        app_capabilities_manage: 'Capabilities一覧',
         app_basic_info: '基本情報',
         app_subdomain_label: 'サブドメイン',
         app_mcp_endpoint: 'MCPエンドポイント',
@@ -718,7 +718,7 @@ const translations = {
         // App Detail
         app_detail_title: 'App Detail',
         app_detail_desc: 'App information',
-        app_capabilities_manage: 'Manage Capabilities',
+        app_capabilities_manage: 'Capabilities List',
         app_basic_info: 'Basic Information',
         app_subdomain_label: 'Subdomain',
         app_mcp_endpoint: 'MCP Endpoint',

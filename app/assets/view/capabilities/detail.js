@@ -39,6 +39,10 @@ async function loadCapability() {
         urlDisplay = `<span style="color: #666;">${baseUrl}</span>${separator}<span style="font-weight: 600;">${cap.url}</span>`;
     }
     
+    // Filter out internal headers (X-HTTP-Method)
+    const displayHeaders = { ...cap.headers };
+    delete displayHeaders['X-HTTP-Method'];
+    
     const container = document.getElementById('capability-detail');
     container.innerHTML = `
         <div class="detail-section">
@@ -81,7 +85,7 @@ async function loadCapability() {
         
         <div class="detail-section">
             <h3>${t("capability_headers_params")}</h3>
-            <pre class="code-block">${JSON.stringify(cap.headers, null, 2)}</pre>
+            <pre class="code-block">${Object.keys(displayHeaders).length > 0 ? JSON.stringify(displayHeaders, null, 2) : t('capability_no_headers')}</pre>
         </div>
         
         <div class="detail-section">

@@ -42,7 +42,7 @@ async function loadCapabilities() {
                     <input type="checkbox" ${cap.is_enabled ? 'checked' : ''} onchange="toggleCapability(${cap.id})">
                     <span class="toggle-slider"></span>
                 </label>
-                <a href="/capabilities/${cap.id}/edit" class="btn btn-sm">${t('button_edit')}</a>
+                <a href="/capabilities/${cap.id}/edit" class="btn btn-sm btn-secondary">${t('button_edit')}</a>
                 ${!isMcpType ? `<button onclick="deleteCapability(${cap.id})" class="btn btn-sm btn-danger">${t('button_delete')}</button>` : ''}
             </div>
         </div>
