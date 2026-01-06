@@ -1462,6 +1462,18 @@ async function loadCapability() {
             elem.style.backgroundColor = '#f5f5f5';
             elem.style.cursor = 'not-allowed';
         });
+        
+        // Update request sample titles for MCP type
+        const getSampleTitle = document.getElementById('request-sample-get-title');
+        const postSampleTitle = document.getElementById('request-sample-post-title');
+        if (getSampleTitle) {
+            getSampleTitle.setAttribute('data-i18n', 'capability_request_to_mcp');
+            getSampleTitle.textContent = t('capability_request_to_mcp');
+        }
+        if (postSampleTitle) {
+            postSampleTitle.setAttribute('data-i18n', 'capability_request_body_to_mcp');
+            postSampleTitle.textContent = t('capability_request_body_to_mcp');
+        }
     }
     
     // Load headers (excluding X-HTTP-Method)
