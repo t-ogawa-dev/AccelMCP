@@ -11,6 +11,10 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///mcp.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
+    # Admin authentication (Built by Accel Universe branding)
+    ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'accel')
+    ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'universe')
+    
     # Flask settings
     DEBUG = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
     TESTING = False

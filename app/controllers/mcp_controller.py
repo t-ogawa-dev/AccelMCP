@@ -34,11 +34,28 @@ def get_subdomain_from_request():
     return subdomain
 
 
-def authenticate_bearer_token():
-    """Authenticate connection account from Bearer token"""
+def authenticate_bearer_token(log_context=None):
+    """
+    Authenticate connection account from Bearer token
+    
+    Args:
+        log_context: Optional LogContext to log authentication failures
+    """
     auth_header = request.headers.get('Authorization', '')
     if not auth_header.startswith('Bearer '):
         logger.warning("Missing or invalid Authorization header")
+        
+        # Log authentication failure
+        if log_context:
+            log_mcp_request(
+                current_app._get_current_object(),
+                log_context,
+                response_body=json.dumps({'error': 'Missing or invalid Authorization header'}),
+                status_code=401,
+                is_success=False,
+                error_message='Missing or invalid Authorization header'
+            )
+        
         return None, {'error': 'Missing or invalid Authorization header'}, 401
     
     bearer_token = auth_header[7:]  # Remove 'Bearer ' prefix
@@ -46,6 +63,18 @@ def authenticate_bearer_token():
     
     if not account:
         logger.warning(f"Invalid bearer token: {bearer_token[:10]}...")
+        
+        # Log authentication failure
+        if log_context:
+            log_mcp_request(
+                current_app._get_current_object(),
+                log_context,
+                response_body=json.dumps({'error': 'Invalid bearer token'}),
+                status_code=401,
+                is_success=False,
+                error_message='Invalid bearer token'
+            )
+        
         return None, {'error': 'Invalid bearer token'}, 401
     
     logger.debug(f"Authenticated account: {account.name}")
@@ -143,7 +172,7 @@ def mcp_subdomain_endpoint():
     # Authenticate account - only required if access_control is 'restricted'
     account = None
     if mcp_service.access_control == 'restricted':
-        account, error, status = authenticate_bearer_token()
+        account, error, status = authenticate_bearer_token(log_context)
         if error:
             logger.error(f"Authentication failed for subdomain {subdomain}")
             error_response = {
@@ -154,15 +183,7 @@ def mcp_subdomain_endpoint():
                     'message': error['error']
                 }
             }
-            log_mcp_request(
-                current_app._get_current_object(),
-                log_context,
-                response_body=json.dumps(error_response, ensure_ascii=False),
-                status_code=status,
-                is_success=False,
-                error_code=-32000,
-                error_message=error['error']
-            )
+            # Log already recorded by authenticate_bearer_token
             return jsonify(error_response), status
         
         # Set account info in log context
@@ -326,7 +347,7 @@ def mcp_path_endpoint(path_identifier):
     # Authenticate account - only required if access_control is 'restricted'
     account = None
     if mcp_service.access_control == 'restricted':
-        account, error, status = authenticate_bearer_token()
+        account, error, status = authenticate_bearer_token(log_context)
         if error:
             logger.error(f"Authentication failed for path {path_identifier}")
             error_response = {
@@ -337,15 +358,7 @@ def mcp_path_endpoint(path_identifier):
                     'message': error['error']
                 }
             }
-            log_mcp_request(
-                current_app._get_current_object(),
-                log_context,
-                response_body=json.dumps(error_response, ensure_ascii=False),
-                status_code=status,
-                is_success=False,
-                error_code=-32000,
-                error_message=error['error']
-            )
+            # Log already recorded by authenticate_bearer_token
             return jsonify(error_response), status
         
         # Set account info in log context

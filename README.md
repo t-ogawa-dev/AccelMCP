@@ -75,7 +75,58 @@ LOG_LEVEL=DEBUG
   - ID: `accel`
   - パスワード: `universe`
 
+**⚠️ セキュリティ警告**
+
+- **本番環境では必ず認証情報を変更してください**
+- 環境変数 `ADMIN_USERNAME` と `ADMIN_PASSWORD` で上書き可能です
+- デフォルト認証情報はデモ・検証用です（Oracle の scott/tiger のような位置づけ）
+
+**環境変数での認証情報変更：**
+
+```bash
+# docker-compose.yml または .env
+environment:
+  ADMIN_USERNAME: your_secure_username
+  ADMIN_PASSWORD: your_secure_password
+```
+
 **注意**: `admin` サブドメインは管理画面専用です。各サービスのサブドメインとは別に扱われます。
+
+## セキュリティ機能
+
+### ブルートフォース攻撃対策
+
+管理画面ログインは IP アドレスベースのレート制限機能を備えています：
+
+- **デフォルト設定**: 5 回の失敗で 30 分間ロック
+- **ログ記録**: 全ログイン試行（成功/失敗）を記録
+- **手動ロック解除**: 管理画面から IP アドレスのロックを解除可能
+
+### 監査ログ機能
+
+すべての管理者操作が自動的に記録されます：
+
+- **ログイン履歴**: ユーザー名、IP アドレス、成功/失敗、タイムスタンプ
+- **CRUD 操作履歴**: MCP サービス、アプリ、Capability、アカウント、権限の作成・更新・削除
+- **変更差分**: 操作前後の値を JSON 形式で記録
+- **CSV エクスポート**: 監査レポート用に CSV 出力可能
+
+**監査ログ API:**
+
+- `GET /api/admin/login-logs` - ログイン履歴取得
+- `GET /api/admin/login-logs/export` - ログイン履歴 CSV 出力
+- `GET /api/admin/action-logs` - 操作履歴取得
+- `GET /api/admin/action-logs/export` - 操作履歴 CSV 出力
+- `POST /api/admin/unlock-account` - IP ロック解除
+- `GET /api/admin/locked-ips` - ロック中 IP 一覧
+
+### セキュリティ設定
+
+AdminSettings で以下の設定をカスタマイズ可能：
+
+- `login_max_attempts`: ログイン試行上限（デフォルト: 5）
+- `login_lock_duration_minutes`: ロック時間（デフォルト: 30 分）
+- `audit_log_retention_days`: 監査ログ保持期間（デフォルト: 365 日）
 
 ## 管理画面構成
 
@@ -248,6 +299,119 @@ curl -X POST \
 - **services**: 登録サービス (サブドメイン、共通ヘッダー)
 - **capabilities**: Tool 定義 (API/MCP、URL、ヘッダー、ボディ)
 - **user_permissions**: ユーザー ×Capability の権限マッピング
+- **mcp_connection_logs**: MCP 接続ログ（監査用）
+
+## 接続ログ
+
+### 標準出力への JSON 構造化ログ
+
+AccelMCP は、すべての MCP 接続ログを標準出力（stdout）に JSON 形式で出力します。これにより、任意のコンテナログ収集システムで自動的にログを集約できます。
+
+**対応プラットフォーム：**
+
+- **AWS ECS/Fargate** → CloudWatch Logs
+- **Google Cloud Run** → Cloud Logging
+- **Azure Container Apps** → Azure Monitor
+- **Kubernetes** → kubelet → Fluentd/Fluent Bit → 任意のバックエンド
+- **Heroku** → Logplex
+- その他、Docker コンテナをサポートするすべてのプラットフォーム
+
+**ログ形式例：**
+
+```json
+{
+  "timestamp": "2026-01-08T12:34:56.789Z",
+  "log_type": "mcp_connection",
+  "level": "INFO",
+  "mcp_method": "tools/call",
+  "mcp_service_id": 7,
+  "mcp_service_name": "OpenAI Service",
+  "app_id": 43,
+  "app_name": "ChatGPT API",
+  "capability_id": 215,
+  "capability_name": "generate_text",
+  "tool_name": "generate_text",
+  "account_id": null,
+  "account_name": null,
+  "status_code": 200,
+  "is_success": true,
+  "duration_ms": 1234,
+  "ip_address": "192.168.1.1",
+  "user_agent": "Claude/1.0",
+  "access_control": "public",
+  "request_id": "abc123",
+  "error_code": null,
+  "error_message": null,
+  "request_body": "{\"prompt\":\"Hello\"}",
+  "response_body": "{\"text\":\"Hi there!\"}"
+}
+```
+
+### 環境変数設定
+
+```bash
+# 標準出力ログの有効/無効（デフォルト: true）
+MCP_LOG_STDOUT=true
+```
+
+### ログ無効化
+
+開発環境でログ出力を無効にする場合：
+
+```bash
+MCP_LOG_STDOUT=false docker compose up
+```
+
+### クラウドプラットフォームでの活用
+
+**AWS ECS/Fargate:**
+
+```json
+{
+  "logConfiguration": {
+    "logDriver": "awslogs",
+    "options": {
+      "awslogs-group": "/ecs/accel-mcp",
+      "awslogs-region": "ap-northeast-1",
+      "awslogs-stream-prefix": "mcp"
+    }
+  }
+}
+```
+
+CloudWatch Insights で検索：
+
+```
+fields @timestamp, mcp_method, tool_name, duration_ms, is_success
+| filter log_type = "mcp_connection"
+| filter is_success = false
+| sort @timestamp desc
+```
+
+**Google Cloud Run:**
+
+自動的に Cloud Logging に送信され、`jsonPayload`フィールドでフィルタリング可能：
+
+```
+jsonPayload.log_type="mcp_connection"
+jsonPayload.is_success=false
+```
+
+**Kubernetes (Fluent Bit):**
+
+```yaml
+[FILTER]
+    Name parser
+    Match *
+    Key_Name log
+    Parser json
+
+[FILTER]
+    Name modify
+    Match *
+    Condition Key_value_matches log_type mcp_connection
+    Add k8s_label_app accel-mcp
+```
 
 ## 開発
 

@@ -30,7 +30,58 @@ docker-compose down
   - ID: `accel`
   - Password: `universe`
 
+**⚠️ Security Warning**
+
+- **MUST change credentials in production environments**
+- Can be overridden with environment variables `ADMIN_USERNAME` and `ADMIN_PASSWORD`
+- Default credentials are for demo/testing purposes (like Oracle's scott/tiger)
+
+**Override credentials via environment variables:**
+
+```bash
+# docker-compose.yml or .env
+environment:
+  ADMIN_USERNAME: your_secure_username
+  ADMIN_PASSWORD: your_secure_password
+```
+
 **Note**: The `admin` subdomain is dedicated to the admin interface and is handled separately from service subdomains.
+
+## Security Features
+
+### Brute-Force Attack Protection
+
+Admin login includes IP-based rate limiting:
+
+- **Default Settings**: 5 failed attempts lock for 30 minutes
+- **Logging**: All login attempts (success/failure) are recorded
+- **Manual Unlock**: Unlock IP addresses from admin interface
+
+### Audit Logging
+
+All admin operations are automatically logged:
+
+- **Login History**: Username, IP address, success/failure, timestamp
+- **CRUD Operation History**: Create, update, delete operations for MCP Services, Apps, Capabilities, Accounts, Permissions
+- **Change Tracking**: Before/after values stored in JSON format
+- **CSV Export**: Export audit reports as CSV
+
+**Audit Log APIs:**
+
+- `GET /api/admin/login-logs` - Retrieve login history
+- `GET /api/admin/login-logs/export` - Export login history as CSV
+- `GET /api/admin/action-logs` - Retrieve operation history
+- `GET /api/admin/action-logs/export` - Export operation history as CSV
+- `POST /api/admin/unlock-account` - Unlock IP address
+- `GET /api/admin/locked-ips` - List locked IP addresses
+
+### Security Settings
+
+Customizable via AdminSettings:
+
+- `login_max_attempts`: Login attempt limit (default: 5)
+- `login_lock_duration_minutes`: Lock duration (default: 30 minutes)
+- `audit_log_retention_days`: Audit log retention period (default: 365 days)
 
 ## Admin Interface Structure
 
@@ -203,6 +254,119 @@ curl -X POST \
 - **services**: Registered services (subdomain, common headers)
 - **capabilities**: Tool definitions (API/MCP, URL, headers, body)
 - **user_permissions**: User × Capability permission mapping
+- **mcp_connection_logs**: MCP connection logs (audit trail)
+
+## Connection Logs
+
+### Structured JSON Logs to stdout
+
+AccelMCP outputs all MCP connection logs as structured JSON to stdout. This enables automatic log aggregation by any container log collection system.
+
+**Supported Platforms:**
+
+- **AWS ECS/Fargate** → CloudWatch Logs
+- **Google Cloud Run** → Cloud Logging
+- **Azure Container Apps** → Azure Monitor
+- **Kubernetes** → kubelet → Fluentd/Fluent Bit → any backend
+- **Heroku** → Logplex
+- Any platform that supports Docker containers
+
+**Log Format Example:**
+
+```json
+{
+  "timestamp": "2026-01-08T12:34:56.789Z",
+  "log_type": "mcp_connection",
+  "level": "INFO",
+  "mcp_method": "tools/call",
+  "mcp_service_id": 7,
+  "mcp_service_name": "OpenAI Service",
+  "app_id": 43,
+  "app_name": "ChatGPT API",
+  "capability_id": 215,
+  "capability_name": "generate_text",
+  "tool_name": "generate_text",
+  "account_id": null,
+  "account_name": null,
+  "status_code": 200,
+  "is_success": true,
+  "duration_ms": 1234,
+  "ip_address": "192.168.1.1",
+  "user_agent": "Claude/1.0",
+  "access_control": "public",
+  "request_id": "abc123",
+  "error_code": null,
+  "error_message": null,
+  "request_body": "{\"prompt\":\"Hello\"}",
+  "response_body": "{\"text\":\"Hi there!\"}"
+}
+```
+
+### Environment Variables
+
+```bash
+# Enable/disable stdout logging (default: true)
+MCP_LOG_STDOUT=true
+```
+
+### Disable Logging
+
+To disable log output in development:
+
+```bash
+MCP_LOG_STDOUT=false docker compose up
+```
+
+### Cloud Platform Integration
+
+**AWS ECS/Fargate:**
+
+```json
+{
+  "logConfiguration": {
+    "logDriver": "awslogs",
+    "options": {
+      "awslogs-group": "/ecs/accel-mcp",
+      "awslogs-region": "ap-northeast-1",
+      "awslogs-stream-prefix": "mcp"
+    }
+  }
+}
+```
+
+Query with CloudWatch Insights:
+
+```
+fields @timestamp, mcp_method, tool_name, duration_ms, is_success
+| filter log_type = "mcp_connection"
+| filter is_success = false
+| sort @timestamp desc
+```
+
+**Google Cloud Run:**
+
+Automatically sent to Cloud Logging with `jsonPayload` filtering:
+
+```
+jsonPayload.log_type="mcp_connection"
+jsonPayload.is_success=false
+```
+
+**Kubernetes (Fluent Bit):**
+
+```yaml
+[FILTER]
+    Name parser
+    Match *
+    Key_Name log
+    Parser json
+
+[FILTER]
+    Name modify
+    Match *
+    Condition Key_value_matches log_type mcp_connection
+    Add k8s_label_app accel-mcp
+```
 
 ## Development
 

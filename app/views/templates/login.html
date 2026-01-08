@@ -11,6 +11,9 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
     
+    <!-- Material Icons -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    
     <style>
         * {
             margin: 0;
@@ -63,6 +66,33 @@
         .form-group {
             margin-bottom: 20px;
         }
+        .password-wrapper {
+            position: relative;
+        }
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+            color: #999;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.3s;
+        }
+        .password-toggle:hover {
+            color: #667eea;
+        }
+        .password-toggle .material-symbols-outlined {
+            font-size: 20px;
+        }
         label {
             display: block;
             margin-bottom: 8px;
@@ -110,6 +140,20 @@
             margin-bottom: 20px;
             font-size: 14px;
         }
+        .login-footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #999;
+            font-size: 0.85rem;
+        }
+        .login-footer a {
+            color: #999;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        .login-footer a:hover {
+            color: #667eea;
+        }
     </style>
 </head>
 <body>
@@ -134,10 +178,21 @@
             </div>
             <div class="form-group">
                 <label for="password" id="label-password">Password</label>
-                <input type="password" id="password" name="password" required>
+                <div class="password-wrapper">
+                    <input type="password" id="password" name="password" required>
+                    <button type="button" class="password-toggle" onclick="togglePassword()" aria-label="Toggle password visibility">
+                        <span class="material-symbols-outlined" id="password-toggle-icon">visibility_off</span>
+                    </button>
+                </div>
             </div>
             <button type="submit" class="btn" id="btn-login">Login</button>
         </form>
+        
+        <div class="login-footer">
+            Built by <a href="https://www.acceluniverse.com/" target="_blank" rel="noopener">Accel Universe</a>
+            ·
+            <a href="https://github.com/t-ogawa-dev/AccelMCP" target="_blank" rel="noopener">GitHub</a>
+        </div>
     </div>
     
     <script>
@@ -157,6 +212,20 @@
                 error_invalid: 'Invalid username or password'
             }
         };
+        
+        // パスワードの表示/非表示を切り替え
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.getElementById('password-toggle-icon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.textContent = 'visibility';
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.textContent = 'visibility_off';
+            }
+        }
         
         // ブラウザの言語設定を取得
         function detectBrowserLanguage() {

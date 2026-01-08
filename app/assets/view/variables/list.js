@@ -38,7 +38,7 @@ async function loadVariables() {
                 ${variable.description ? `<p class="text-muted">${variable.description}</p>` : ''}
             </div>
             <div class="list-item-actions">
-                <a href="/variables/${variable.id}/edit" class="btn btn-sm">${t('button_edit')}</a>
+                <a href="/variables/${variable.id}/edit" class="btn btn-sm btn-secondary">${t('button_edit')}</a>
                 <button onclick="deleteVariable(${variable.id})" class="btn btn-sm btn-danger">${t('button_delete')}</button>
             </div>
         </div>

@@ -6,6 +6,7 @@ import json
 import secrets
 from flask import Blueprint, request, jsonify
 from app.controllers.auth_controller import login_required
+from app.services.audit_logger import audit_log
 
 from app.models.models import db, ConnectionAccount, McpService, Service, Capability, AccountPermission, AdminSettings, Variable, McpServiceTemplate, McpCapabilityTemplate
 
@@ -18,6 +19,7 @@ api_bp = Blueprint('api', __name__)
 
 @api_bp.route('/mcp-services', methods=['GET', 'POST'])
 @login_required
+@audit_log('mcp_service', action_type='create')
 def mcp_services():
     """Get all MCP services or create new MCP service"""
     if request.method == 'GET':
@@ -39,6 +41,7 @@ def mcp_services():
 
 @api_bp.route('/mcp-services/<int:mcp_service_id>', methods=['GET', 'PUT', 'DELETE'])
 @login_required
+@audit_log('mcp_service')
 def mcp_service_detail(mcp_service_id):
     """Get, update, or delete a specific MCP service"""
     mcp_service = McpService.query.get_or_404(mcp_service_id)
@@ -66,6 +69,7 @@ def mcp_service_detail(mcp_service_id):
 
 @api_bp.route('/mcp-services/<int:mcp_service_id>/toggle', methods=['POST'])
 @login_required
+@audit_log('mcp_service', action_type='update')
 def toggle_mcp_service(mcp_service_id):
     """Toggle MCP service enabled/disabled status"""
     mcp_service = McpService.query.get_or_404(mcp_service_id)
@@ -374,6 +378,7 @@ def mcp_service_apps(mcp_service_id):
 
 @api_bp.route('/apps', methods=['GET', 'POST'])
 @login_required
+@audit_log('app', action_type='create')
 def apps():
     """Get all apps or create new app (legacy endpoint)"""
     if request.method == 'GET':
@@ -411,6 +416,7 @@ def apps():
 
 @api_bp.route('/apps/<int:service_id>', methods=['GET', 'PUT', 'DELETE'])
 @login_required
+@audit_log('app')
 def app_detail(service_id):
     """Get, update, or delete a specific app"""
     service = Service.query.get_or_404(service_id)
@@ -445,6 +451,7 @@ def app_detail(service_id):
 
 @api_bp.route('/apps/<int:service_id>/toggle', methods=['POST'])
 @login_required
+@audit_log('app', action_type='update')
 def toggle_app(service_id):
     """Toggle app enabled/disabled status"""
     service = Service.query.get_or_404(service_id)
@@ -504,6 +511,7 @@ def capabilities(service_id):
 
 @api_bp.route('/capabilities/<int:capability_id>', methods=['GET', 'PUT', 'DELETE'])
 @login_required
+@audit_log('capability')
 def capability_detail(capability_id):
     """Get, update, or delete a specific capability"""
     capability = Capability.query.get_or_404(capability_id)
@@ -555,6 +563,7 @@ def capability_detail(capability_id):
 
 @api_bp.route('/capabilities/<int:capability_id>/toggle', methods=['POST'])
 @login_required
+@audit_log('capability', action_type='update')
 def toggle_capability(capability_id):
     """Toggle capability enabled/disabled status"""
     capability = Capability.query.get_or_404(capability_id)
@@ -567,6 +576,7 @@ def toggle_capability(capability_id):
 
 @api_bp.route('/accounts', methods=['GET', 'POST'])
 @login_required
+@audit_log('account', action_type='create', get_resource_name=lambda d: d.get('name'))
 def accounts():
     """Get all connection accounts or create new account"""
     if request.method == 'GET':
@@ -588,6 +598,7 @@ def accounts():
 
 @api_bp.route('/accounts/<int:account_id>', methods=['GET', 'PUT', 'DELETE'])
 @login_required
+@audit_log('account', get_resource_name=lambda d: d.get('name'))
 def account_detail(account_id):
     """Get, update, or delete a specific connection account"""
     account = ConnectionAccount.query.get_or_404(account_id)
@@ -1581,4 +1592,211 @@ def connection_logs_stats():
         'last_24h': last_24h_count,
         'by_method': {method: count for method, count in method_stats}
     })
+
+
+# ============= Admin Login Logs API =============
+
+@api_bp.route('/admin/login-logs', methods=['GET'])
+@login_required
+def admin_login_logs():
+    """Get admin login logs with filtering"""
+    from app.models.models import AdminLoginLog
+    
+    # Pagination
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 50, type=int)
+    
+    # Filters
+    query = AdminLoginLog.query
+    
+    username = request.args.get('username')
+    if username:
+        query = query.filter(AdminLoginLog.username == username)
+    
+    ip_address = request.args.get('ip_address')
+    if ip_address:
+        query = query.filter(AdminLoginLog.ip_address == ip_address)
+    
+    is_success = request.args.get('is_success')
+    if is_success is not None:
+        query = query.filter(AdminLoginLog.is_success == (is_success.lower() == 'true'))
+    
+    date_from = request.args.get('date_from')
+    if date_from:
+        try:
+            date_from_obj = datetime.fromisoformat(date_from.replace('Z', '+00:00'))
+            query = query.filter(AdminLoginLog.created_at >= date_from_obj)
+        except ValueError:
+            pass
+    
+    date_to = request.args.get('date_to')
+    if date_to:
+        try:
+            date_to_obj = datetime.fromisoformat(date_to.replace('Z', '+00:00'))
+            query = query.filter(AdminLoginLog.created_at <= date_to_obj)
+        except ValueError:
+            pass
+    
+    # Order by created_at desc
+    query = query.order_by(AdminLoginLog.created_at.desc())
+    
+    # Paginate
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    return jsonify({
+        'logs': [log.to_dict() for log in pagination.items],
+        'total': pagination.total,
+        'pages': pagination.pages,
+        'current_page': page,
+        'per_page': per_page
+    })
+
+
+@api_bp.route('/admin/login-logs/export', methods=['GET'])
+@login_required
+def export_admin_login_logs():
+    """Export admin login logs as CSV"""
+    from app.models.models import AdminLoginLog
+    
+    query = AdminLoginLog.query.order_by(AdminLoginLog.created_at.desc()).limit(10000)
+    logs = query.all()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(AdminLoginLog.csv_headers())
+    for log in logs:
+        writer.writerow(log.to_csv_row())
+    
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={
+            'Content-Disposition': f'attachment; filename=admin_login_logs_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+        }
+    )
+
+
+# ============= Admin Action Logs API =============
+
+@api_bp.route('/admin/action-logs', methods=['GET'])
+@login_required
+def admin_action_logs():
+    """Get admin action logs with filtering"""
+    from app.models.models import AdminActionLog
+    
+    # Pagination
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 50, type=int)
+    
+    # Filters
+    query = AdminActionLog.query
+    
+    admin_username = request.args.get('admin_username')
+    if admin_username:
+        query = query.filter(AdminActionLog.admin_username == admin_username)
+    
+    action_type = request.args.get('action_type')
+    if action_type:
+        query = query.filter(AdminActionLog.action_type == action_type)
+    
+    resource_type = request.args.get('resource_type')
+    if resource_type:
+        query = query.filter(AdminActionLog.resource_type == resource_type)
+    
+    date_from = request.args.get('date_from')
+    if date_from:
+        try:
+            date_from_obj = datetime.fromisoformat(date_from.replace('Z', '+00:00'))
+            query = query.filter(AdminActionLog.created_at >= date_from_obj)
+        except ValueError:
+            pass
+    
+    date_to = request.args.get('date_to')
+    if date_to:
+        try:
+            date_to_obj = datetime.fromisoformat(date_to.replace('Z', '+00:00'))
+            query = query.filter(AdminActionLog.created_at <= date_to_obj)
+        except ValueError:
+            pass
+    
+    # Order by created_at desc
+    query = query.order_by(AdminActionLog.created_at.desc())
+    
+    # Paginate
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    return jsonify({
+        'logs': [log.to_dict() for log in pagination.items],
+        'total': pagination.total,
+        'pages': pagination.pages,
+        'current_page': page,
+        'per_page': per_page
+    })
+
+
+@api_bp.route('/admin/action-logs/export', methods=['GET'])
+@login_required
+def export_admin_action_logs():
+    """Export admin action logs as CSV"""
+    from app.models.models import AdminActionLog
+    
+    query = AdminActionLog.query.order_by(AdminActionLog.created_at.desc()).limit(10000)
+    logs = query.all()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(AdminActionLog.csv_headers())
+    for log in logs:
+        writer.writerow(log.to_csv_row())
+    
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={
+            'Content-Disposition': f'attachment; filename=admin_action_logs_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+        }
+    )
+
+
+@api_bp.route('/admin/unlock-account', methods=['POST'])
+@login_required
+def unlock_account():
+    """Manually unlock a locked IP address"""
+    from app.models.models import LoginLockStatus
+    
+    data = request.get_json()
+    ip_address = data.get('ip_address')
+    
+    if not ip_address:
+        return jsonify({'error': 'IP address is required'}), 400
+    
+    lock_status = LoginLockStatus.query.filter_by(ip_address=ip_address).first()
+    if not lock_status:
+        return jsonify({'error': 'No lock status found for this IP'}), 404
+    
+    # Reset lock
+    lock_status.failed_attempts = 0
+    lock_status.locked_until = None
+    lock_status.updated_at = datetime.utcnow()
+    db.session.commit()
+    
+    return jsonify({'message': f'IP {ip_address} has been unlocked', 'lock_status': lock_status.to_dict()})
+
+
+@api_bp.route('/admin/locked-ips', methods=['GET'])
+@login_required
+def get_locked_ips():
+    """Get list of currently locked IP addresses"""
+    from app.models.models import LoginLockStatus
+    
+    # Get all locked IPs (where locked_until is in the future)
+    locked = LoginLockStatus.query.filter(LoginLockStatus.locked_until > datetime.utcnow()).all()
+    
+    return jsonify({
+        'locked_ips': [lock.to_dict() for lock in locked],
+        'total': len(locked)
+    })
+
 

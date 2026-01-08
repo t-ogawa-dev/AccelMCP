@@ -1,11 +1,14 @@
 """
 MCP Connection Logger Service
 Handles async logging of MCP requests with sensitive data masking.
+Outputs structured JSON logs to stdout for container log aggregation.
 """
 import json
 import re
 import logging
 import time
+import sys
+import os
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Dict, Any
@@ -16,6 +19,9 @@ logger = logging.getLogger(__name__)
 
 # Thread pool for async log writing (3 workers)
 _executor = ThreadPoolExecutor(max_workers=3)
+
+# Stdout logging configuration
+STDOUT_LOGGING_ENABLED = os.getenv('MCP_LOG_STDOUT', 'true').lower() == 'true'
 
 
 # Default masking patterns
@@ -185,6 +191,63 @@ def _write_log_entry(app: Flask, log_data: Dict[str, Any]):
         logger.error(f"Failed to write MCP connection log: {e}")
 
 
+def _log_to_stdout(log_data: Dict[str, Any]):
+    """
+    Output structured JSON log to stdout for container log aggregation.
+    
+    This enables automatic log collection by:
+    - AWS ECS/Fargate → CloudWatch Logs
+    - Google Cloud Run → Cloud Logging
+    - Azure Container Apps → Azure Monitor
+    - Kubernetes → kubelet → logging backend
+    - Any Docker-based platform
+    
+    Args:
+        log_data: Log data dictionary (already masked and truncated)
+    """
+    try:
+        # Build structured log entry
+        log_entry = {
+            'timestamp': log_data.get('created_at').isoformat() + 'Z' if log_data.get('created_at') else datetime.utcnow().isoformat() + 'Z',
+            'log_type': 'mcp_connection',
+            'level': 'ERROR' if not log_data.get('is_success', True) else 'INFO',
+            'mcp_method': log_data.get('mcp_method'),
+            'mcp_service_id': log_data.get('mcp_service_id'),
+            'mcp_service_name': log_data.get('mcp_service_name'),
+            'app_id': log_data.get('app_id'),
+            'app_name': log_data.get('app_name'),
+            'capability_id': log_data.get('capability_id'),
+            'capability_name': log_data.get('capability_name'),
+            'tool_name': log_data.get('tool_name'),
+            'account_id': log_data.get('account_id'),
+            'account_name': log_data.get('account_name'),
+            'status_code': log_data.get('status_code'),
+            'is_success': log_data.get('is_success', True),
+            'duration_ms': log_data.get('duration_ms'),
+            'ip_address': log_data.get('ip_address'),
+            'user_agent': log_data.get('user_agent'),
+            'access_control': log_data.get('access_control'),
+            'request_id': log_data.get('request_id'),
+            'error_code': log_data.get('error_code'),
+            'error_message': log_data.get('error_message'),
+            'request_body': log_data.get('request_body'),
+            'response_body': log_data.get('response_body')
+        }
+        
+        # Output as single-line JSON (required for proper log aggregation)
+        print(json.dumps(log_entry, ensure_ascii=False), file=sys.stdout, flush=True)
+        
+    except Exception as e:
+        # Errors in stdout logging should not affect application
+        print(json.dumps({
+            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'log_type': 'mcp_logger_error',
+            'level': 'ERROR',
+            'error': str(e),
+            'message': 'Failed to output structured log to stdout'
+        }, ensure_ascii=False), file=sys.stderr, flush=True)
+
+
 def log_mcp_request(
     app: Flask,
     context: LogContext,
@@ -254,7 +317,11 @@ def log_mcp_request(
             'access_control': context.access_control
         }
         
-        # Submit to thread pool for async writing
+        # Output to stdout (synchronous, immediate)
+        if STDOUT_LOGGING_ENABLED:
+            _log_to_stdout(log_data)
+        
+        # Submit to thread pool for async DB writing
         _executor.submit(_write_log_entry, app, log_data)
         
     except Exception as e:

@@ -525,3 +525,140 @@ class McpConnectionLog(db.Model):
             'Status', 'Error Message', 'IP Address', 'Access Control'
         ]
 
+
+class AdminLoginLog(db.Model):
+    """管理者ログイン履歴 - セキュリティ監査用"""
+    __tablename__ = 'admin_login_logs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    username = db.Column(db.String(100), nullable=False, index=True)
+    ip_address = db.Column(db.String(45), nullable=False, index=True)  # IPv6 compatible
+    user_agent = db.Column(db.String(500))
+    is_success = db.Column(db.Boolean, nullable=False)
+    failure_reason = db.Column(db.String(255))  # 'invalid_username', 'invalid_password', 'account_locked'
+    session_id = db.Column(db.String(255))  # Flask session ID (success only)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'username': self.username,
+            'ip_address': self.ip_address,
+            'user_agent': self.user_agent,
+            'is_success': self.is_success,
+            'failure_reason': self.failure_reason,
+            'session_id': self.session_id
+        }
+    
+    def to_csv_row(self):
+        """CSV出力用の行を返す"""
+        return [
+            self.id,
+            self.created_at.isoformat() if self.created_at else '',
+            self.username,
+            self.ip_address,
+            'Success' if self.is_success else 'Failure',
+            self.failure_reason or '',
+            self.user_agent or ''
+        ]
+    
+    @staticmethod
+    def csv_headers():
+        """CSVヘッダー行を返す"""
+        return [
+            'ID', 'Created At', 'Username', 'IP Address', 
+            'Status', 'Failure Reason', 'User Agent'
+        ]
+
+
+class AdminActionLog(db.Model):
+    """管理者操作履歴 - 全CRUD操作の監査証跡"""
+    __tablename__ = 'admin_action_logs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    admin_username = db.Column(db.String(100), nullable=False, index=True)
+    action_type = db.Column(db.String(50), nullable=False, index=True)  # 'create', 'update', 'delete'
+    resource_type = db.Column(db.String(50), nullable=False, index=True)  # 'mcp_service', 'app', 'capability', etc.
+    resource_id = db.Column(db.Integer)
+    resource_name = db.Column(db.String(255))  # Snapshot
+    changes = db.Column(db.Text)  # JSON: {'field': {'old': 'x', 'new': 'y'}}
+    ip_address = db.Column(db.String(45))
+    user_agent = db.Column(db.String(500))
+    
+    def to_dict(self):
+        result = {
+            'id': self.id,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'admin_username': self.admin_username,
+            'action_type': self.action_type,
+            'resource_type': self.resource_type,
+            'resource_id': self.resource_id,
+            'resource_name': self.resource_name,
+            'ip_address': self.ip_address,
+            'user_agent': self.user_agent
+        }
+        # Parse JSON changes if present
+        if self.changes:
+            try:
+                result['changes'] = json.loads(self.changes)
+            except:
+                result['changes'] = self.changes
+        else:
+            result['changes'] = {}
+        return result
+    
+    def to_csv_row(self):
+        """CSV出力用の行を返す"""
+        return [
+            self.id,
+            self.created_at.isoformat() if self.created_at else '',
+            self.admin_username,
+            self.action_type,
+            self.resource_type,
+            self.resource_id or '',
+            self.resource_name or '',
+            self.ip_address or ''
+        ]
+    
+    @staticmethod
+    def csv_headers():
+        """CSVヘッダー行を返す"""
+        return [
+            'ID', 'Created At', 'Admin', 'Action', 
+            'Resource Type', 'Resource ID', 'Resource Name', 'IP Address'
+        ]
+
+
+class LoginLockStatus(db.Model):
+    """ログインロック状態管理 - ブルートフォース攻撃対策"""
+    __tablename__ = 'login_lock_status'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    ip_address = db.Column(db.String(45), nullable=False, unique=True, index=True)
+    failed_attempts = db.Column(db.Integer, nullable=False, default=0)
+    locked_until = db.Column(db.DateTime, nullable=True, index=True)
+    last_attempt_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    def is_locked(self):
+        """現在ロック中かどうか"""
+        if self.locked_until is None:
+            return False
+        return datetime.utcnow() < self.locked_until
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'ip_address': self.ip_address,
+            'failed_attempts': self.failed_attempts,
+            'locked_until': self.locked_until.isoformat() if self.locked_until else None,
+            'is_locked': self.is_locked(),
+            'last_attempt_at': self.last_attempt_at.isoformat() if self.last_attempt_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
