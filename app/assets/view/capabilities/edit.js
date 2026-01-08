@@ -1408,14 +1408,25 @@ async function loadCapability() {
     const isMcpType = app.service_type === 'mcp';
     baseUrl = app.mcp_url || '';
     
-    // Update breadcrumb links
-    // Set breadcrumb links
+    // Get MCP service information for breadcrumb
     const mcpServiceId = cap.mcp_service_id || 1; // APIから取得するか、デフォルト値
+    const mcpServiceResponse = await fetch(`/api/mcp-services/${mcpServiceId}`);
+    const mcpService = await mcpServiceResponse.json();
+    
+    // Update breadcrumb links with specific names
     document.getElementById('mcp-service-link').href = `/mcp-services/${mcpServiceId}`;
+    document.getElementById('mcp-service-link').textContent = mcpService.name;
+    
     document.getElementById('apps-link').href = `/mcp-services/${mcpServiceId}/apps`;
+    
     document.getElementById('service-link').href = `/mcp-services/${mcpServiceId}/apps/${cap.service_id}`;
+    document.getElementById('service-link').textContent = app.name;
+    
     document.getElementById('capabilities-link').href = `/mcp-services/${mcpServiceId}/apps/${cap.service_id}/capabilities`;
+    
     document.getElementById('detail-link').href = `/capabilities/${capabilityId}`;
+    document.getElementById('detail-link').textContent = cap.name;
+    
     document.getElementById('cancel-link').href = `/capabilities/${capabilityId}`;
     
     document.getElementById('name').value = cap.name;

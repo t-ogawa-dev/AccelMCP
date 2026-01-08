@@ -9,6 +9,21 @@ async function loadService() {
     
     const isMcpType = service.service_type === 'mcp';
     
+    // Update breadcrumb with MCP service name and app name
+    try {
+        const mcpServiceResponse = await fetch(`/api/mcp-services/${mcpServiceId}`);
+        const mcpService = await mcpServiceResponse.json();
+        document.getElementById('mcp-service-link').textContent = mcpService.name;
+    } catch (e) {
+        console.error('Failed to fetch MCP service info:', e);
+    }
+    
+    // Update current breadcrumb with app name
+    const breadcrumbCurrent = document.querySelector('.breadcrumb-current');
+    if (breadcrumbCurrent && service.name) {
+        breadcrumbCurrent.textContent = service.name;
+    }
+    
     // Build endpoint URL row (show for both MCP and API types)
     let endpointRow = '';
     if (service.mcp_url) {

@@ -205,3 +205,33 @@ def template_capability_detail(template_id, capability_id):
 def template_capability_edit(template_id, capability_id):
     """Edit capability page"""
     return render_template('mcp_templates/capability_edit.html', template_id=template_id, capability_id=capability_id)
+
+
+# ============= Connection Logs Management Routes =============
+
+@admin_bp.route('/connection-logs')
+@login_required
+def connection_logs_index():
+    """Connection logs index page - shows MCP services with log counts"""
+    return render_template('connection_logs/index.html')
+
+
+@admin_bp.route('/connection-logs/list')
+@login_required
+def connection_logs_list():
+    """Connection logs list page for a specific MCP service"""
+    return render_template('connection_logs/list.html')
+
+
+@admin_bp.route('/connection-logs/<int:log_id>')
+@login_required
+def connection_log_detail(log_id):
+    """Connection log detail page"""
+    return render_template('connection_logs/detail.html', log_id=log_id)
+
+
+@admin_bp.route('/connection-logs/settings')
+@login_required
+def connection_logs_settings():
+    """Connection logs settings page"""
+    return render_template('connection_logs/settings.html')

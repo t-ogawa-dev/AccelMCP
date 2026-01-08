@@ -81,6 +81,12 @@ async function loadMcpService() {
     const response = await fetch(`/api/mcp-services/${mcpServiceId}`);
     const service = await response.json();
     
+    // Update breadcrumb with service name
+    const breadcrumbCurrent = document.querySelector('.breadcrumb-current');
+    if (breadcrumbCurrent && service.name) {
+        breadcrumbCurrent.textContent = service.name;
+    }
+    
     // Basic info
     document.getElementById('service-name').textContent = service.name;
     document.getElementById('name').textContent = service.name;

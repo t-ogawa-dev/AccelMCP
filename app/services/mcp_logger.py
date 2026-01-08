@@ -1,0 +1,281 @@
+"""
+MCP Connection Logger Service
+Handles async logging of MCP requests with sensitive data masking.
+"""
+import json
+import re
+import logging
+import time
+from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
+from typing import Optional, Dict, Any
+
+from flask import Flask
+
+logger = logging.getLogger(__name__)
+
+# Thread pool for async log writing (3 workers)
+_executor = ThreadPoolExecutor(max_workers=3)
+
+
+# Default masking patterns
+MASK_PATTERNS = {
+    'credit_card': r'\b(?:\d{4}[-\s]?){3}\d{4}\b',  # 16-digit card numbers
+    'email': r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
+    'phone': r'\b(?:\+?1[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}\b',
+}
+
+MASK_REPLACEMENT = '[MASKED]'
+
+
+class LogContext:
+    """Context object to track request timing and metadata"""
+    
+    def __init__(self):
+        self.start_time: Optional[float] = None
+        self.mcp_service_id: Optional[int] = None
+        self.mcp_service_name: Optional[str] = None
+        self.app_id: Optional[int] = None
+        self.app_name: Optional[str] = None
+        self.capability_id: Optional[int] = None
+        self.capability_name: Optional[str] = None
+        self.account_id: Optional[int] = None
+        self.account_name: Optional[str] = None
+        self.mcp_method: Optional[str] = None
+        self.tool_name: Optional[str] = None
+        self.request_id: Optional[str] = None
+        self.ip_address: Optional[str] = None
+        self.user_agent: Optional[str] = None
+        self.access_control: Optional[str] = None
+        self.request_body: Optional[str] = None
+    
+    def start(self):
+        """Start timing the request"""
+        self.start_time = time.time()
+        return self
+    
+    def get_duration_ms(self) -> Optional[int]:
+        """Get duration in milliseconds"""
+        if self.start_time is None:
+            return None
+        return int((time.time() - self.start_time) * 1000)
+
+
+def get_log_settings(app: Flask) -> Dict[str, Any]:
+    """Get log settings from AdminSettings table"""
+    with app.app_context():
+        from app.models.models import AdminSettings
+        
+        settings = {}
+        keys = [
+            'mcp_log_enabled',
+            'mcp_log_retention_days',
+            'mcp_log_max_body_size',
+            'mcp_log_mask_credit_card',
+            'mcp_log_mask_email',
+            'mcp_log_mask_phone',
+            'mcp_log_mask_custom_patterns'
+        ]
+        
+        for key in keys:
+            setting = AdminSettings.query.filter_by(setting_key=key).first()
+            if setting:
+                # Parse boolean and numeric values
+                value = setting.setting_value
+                if value.lower() in ('true', 'false'):
+                    settings[key] = value.lower() == 'true'
+                elif value.isdigit():
+                    settings[key] = int(value)
+                else:
+                    settings[key] = value
+            else:
+                # Defaults
+                defaults = {
+                    'mcp_log_enabled': True,
+                    'mcp_log_retention_days': 90,
+                    'mcp_log_max_body_size': 10240,
+                    'mcp_log_mask_credit_card': True,
+                    'mcp_log_mask_email': True,
+                    'mcp_log_mask_phone': True,
+                    'mcp_log_mask_custom_patterns': ''
+                }
+                settings[key] = defaults.get(key)
+        
+        return settings
+
+
+def mask_sensitive_data(text: str, settings: Dict[str, Any]) -> str:
+    """Apply masking patterns to sensitive data in text"""
+    if not text:
+        return text
+    
+    masked = text
+    
+    # Apply preset masks
+    if settings.get('mcp_log_mask_credit_card', True):
+        masked = re.sub(MASK_PATTERNS['credit_card'], MASK_REPLACEMENT, masked)
+    
+    if settings.get('mcp_log_mask_email', True):
+        masked = re.sub(MASK_PATTERNS['email'], MASK_REPLACEMENT, masked, flags=re.IGNORECASE)
+    
+    if settings.get('mcp_log_mask_phone', True):
+        masked = re.sub(MASK_PATTERNS['phone'], MASK_REPLACEMENT, masked)
+    
+    # Apply custom patterns (one pattern per line)
+    custom_patterns = settings.get('mcp_log_mask_custom_patterns', '')
+    if custom_patterns:
+        for pattern in custom_patterns.strip().split('\n'):
+            pattern = pattern.strip()
+            if pattern:
+                try:
+                    masked = re.sub(pattern, MASK_REPLACEMENT, masked)
+                except re.error as e:
+                    logger.warning(f"Invalid custom masking pattern '{pattern}': {e}")
+    
+    return masked
+
+
+def truncate_body(text: str, max_size: int) -> str:
+    """Truncate body if it exceeds max size"""
+    if not text:
+        return text
+    
+    if len(text) > max_size:
+        return text[:max_size] + '\n[TRUNCATED]'
+    
+    return text
+
+
+def _write_log_entry(app: Flask, log_data: Dict[str, Any]):
+    """Write log entry to database (runs in background thread)"""
+    try:
+        with app.app_context():
+            from app.models.models import db, McpConnectionLog
+            
+            log_entry = McpConnectionLog(
+                created_at=log_data.get('created_at', datetime.utcnow()),
+                duration_ms=log_data.get('duration_ms'),
+                account_id=log_data.get('account_id'),
+                account_name=log_data.get('account_name'),
+                mcp_service_id=log_data.get('mcp_service_id'),
+                mcp_service_name=log_data.get('mcp_service_name'),
+                app_id=log_data.get('app_id'),
+                app_name=log_data.get('app_name'),
+                capability_id=log_data.get('capability_id'),
+                capability_name=log_data.get('capability_name'),
+                mcp_method=log_data.get('mcp_method', 'unknown'),
+                tool_name=log_data.get('tool_name'),
+                request_id=log_data.get('request_id'),
+                request_body=log_data.get('request_body'),
+                response_body=log_data.get('response_body'),
+                status_code=log_data.get('status_code'),
+                is_success=log_data.get('is_success', True),
+                error_code=log_data.get('error_code'),
+                error_message=log_data.get('error_message'),
+                ip_address=log_data.get('ip_address'),
+                user_agent=log_data.get('user_agent'),
+                access_control=log_data.get('access_control')
+            )
+            
+            db.session.add(log_entry)
+            db.session.commit()
+            logger.debug(f"MCP connection log written: {log_data.get('mcp_method')} from {log_data.get('ip_address')}")
+            
+    except Exception as e:
+        logger.error(f"Failed to write MCP connection log: {e}")
+
+
+def log_mcp_request(
+    app: Flask,
+    context: LogContext,
+    response_body: Optional[str] = None,
+    status_code: int = 200,
+    is_success: bool = True,
+    error_code: Optional[int] = None,
+    error_message: Optional[str] = None
+):
+    """
+    Log an MCP request asynchronously.
+    
+    Args:
+        app: Flask application instance
+        context: LogContext with request metadata
+        response_body: Response body (will be masked and truncated)
+        status_code: HTTP-like status code
+        is_success: Whether the request was successful
+        error_code: JSON-RPC error code if any
+        error_message: Error message if any
+    """
+    try:
+        # Get settings
+        settings = get_log_settings(app)
+        
+        # Check if logging is enabled
+        if not settings.get('mcp_log_enabled', True):
+            return
+        
+        max_body_size = settings.get('mcp_log_max_body_size', 10240)
+        
+        # Prepare request body (mask and truncate)
+        masked_request = None
+        if context.request_body:
+            masked_request = mask_sensitive_data(context.request_body, settings)
+            masked_request = truncate_body(masked_request, max_body_size)
+        
+        # Prepare response body (mask and truncate)
+        masked_response = None
+        if response_body:
+            masked_response = mask_sensitive_data(response_body, settings)
+            masked_response = truncate_body(masked_response, max_body_size)
+        
+        # Build log data
+        log_data = {
+            'created_at': datetime.utcnow(),
+            'duration_ms': context.get_duration_ms(),
+            'account_id': context.account_id,
+            'account_name': context.account_name,
+            'mcp_service_id': context.mcp_service_id,
+            'mcp_service_name': context.mcp_service_name,
+            'app_id': context.app_id,
+            'app_name': context.app_name,
+            'capability_id': context.capability_id,
+            'capability_name': context.capability_name,
+            'mcp_method': context.mcp_method,
+            'tool_name': context.tool_name,
+            'request_id': context.request_id,
+            'request_body': masked_request,
+            'response_body': masked_response,
+            'status_code': status_code,
+            'is_success': is_success,
+            'error_code': error_code,
+            'error_message': error_message,
+            'ip_address': context.ip_address,
+            'user_agent': context.user_agent,
+            'access_control': context.access_control
+        }
+        
+        # Submit to thread pool for async writing
+        _executor.submit(_write_log_entry, app, log_data)
+        
+    except Exception as e:
+        logger.error(f"Failed to queue MCP connection log: {e}")
+
+
+def create_log_context_from_request(request) -> LogContext:
+    """Create a LogContext from a Flask request object"""
+    context = LogContext()
+    context.start()
+    
+    # Extract client info
+    context.ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+    if context.ip_address and ',' in context.ip_address:
+        context.ip_address = context.ip_address.split(',')[0].strip()
+    
+    context.user_agent = request.headers.get('User-Agent', '')[:500]  # Limit length
+    
+    return context
+
+
+def shutdown_logger():
+    """Shutdown the thread pool executor gracefully"""
+    _executor.shutdown(wait=True)

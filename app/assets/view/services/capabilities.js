@@ -85,6 +85,18 @@ async function deleteCapability(id) {
         isMcpType = app.service_type === 'mcp';
         baseUrl = app.mcp_url || '';
         
+        // Update breadcrumb with MCP service name and app name
+        const mcpServiceResponse = await fetch(`/api/mcp-services/${mcpServiceId}`);
+        const mcpService = await mcpServiceResponse.json();
+        document.getElementById('mcp-service-link').textContent = mcpService.name;
+        
+        // Update app detail link with app name (by href since it has data-i18n)
+        const breadcrumb = document.querySelector('.breadcrumb');
+        const appDetailLink = breadcrumb.querySelector(`a[href="/mcp-services/${mcpServiceId}/apps/${serviceId}"]`);
+        if (appDetailLink) {
+            appDetailLink.textContent = app.name;
+        }
+        
         // Hide "New Capability" button for MCP type
         if (isMcpType) {
             const newCapabilityBtn = document.querySelector('a[href*="/capabilities/new"]');

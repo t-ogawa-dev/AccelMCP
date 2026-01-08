@@ -1271,3 +1271,314 @@ def account_permissions_by_level(account_id):
     
     return jsonify(result)
 
+
+# ============= Connection Logs API =============
+
+from app.models.models import McpConnectionLog
+from datetime import datetime, timedelta
+import csv
+import io
+
+
+@api_bp.route('/connection-logs', methods=['GET'])
+@login_required
+def connection_logs():
+    """Get connection logs with filtering and pagination"""
+    # Pagination
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 50, type=int)
+    per_page = min(per_page, 100)  # Max 100 per page
+    
+    # Build query
+    query = McpConnectionLog.query
+    
+    # Filter by mcp_service_id
+    mcp_service_id = request.args.get('mcp_service_id', type=int)
+    if mcp_service_id:
+        query = query.filter(McpConnectionLog.mcp_service_id == mcp_service_id)
+    
+    # Filter by account_id
+    account_id = request.args.get('account_id', type=int)
+    if account_id:
+        query = query.filter(McpConnectionLog.account_id == account_id)
+    
+    # Filter by mcp_method
+    mcp_method = request.args.get('mcp_method')
+    if mcp_method:
+        query = query.filter(McpConnectionLog.mcp_method == mcp_method)
+    
+    # Filter by is_success
+    is_success = request.args.get('is_success')
+    if is_success is not None:
+        query = query.filter(McpConnectionLog.is_success == (is_success.lower() == 'true'))
+    
+    # Filter by date range
+    date_from = request.args.get('date_from')
+    if date_from:
+        try:
+            date_from = datetime.fromisoformat(date_from.replace('Z', '+00:00'))
+            query = query.filter(McpConnectionLog.created_at >= date_from)
+        except ValueError:
+            pass
+    
+    date_to = request.args.get('date_to')
+    if date_to:
+        try:
+            date_to = datetime.fromisoformat(date_to.replace('Z', '+00:00'))
+            query = query.filter(McpConnectionLog.created_at <= date_to)
+        except ValueError:
+            pass
+    
+    # Order by created_at descending
+    query = query.order_by(McpConnectionLog.created_at.desc())
+    
+    # Paginate
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    return jsonify({
+        'items': [log.to_dict() for log in pagination.items],
+        'total': pagination.total,
+        'page': pagination.page,
+        'per_page': pagination.per_page,
+        'pages': pagination.pages,
+        'has_next': pagination.has_next,
+        'has_prev': pagination.has_prev
+    })
+
+
+@api_bp.route('/connection-logs/by-service', methods=['GET'])
+@login_required
+def connection_logs_by_service():
+    """Get log counts grouped by MCP service"""
+    from sqlalchemy import func
+    
+    # Get all MCP services with log counts
+    mcp_services = McpService.query.all()
+    
+    result = []
+    for service in mcp_services:
+        log_count = McpConnectionLog.query.filter_by(mcp_service_id=service.id).count()
+        
+        # Get last log time
+        last_log = McpConnectionLog.query.filter_by(mcp_service_id=service.id)\
+            .order_by(McpConnectionLog.created_at.desc()).first()
+        
+        result.append({
+            'mcp_service': service.to_dict(),
+            'log_count': log_count,
+            'last_log_at': last_log.created_at.isoformat() if last_log else None
+        })
+    
+    # Also include logs without mcp_service (orphaned)
+    orphan_count = McpConnectionLog.query.filter_by(mcp_service_id=None).count()
+    if orphan_count > 0:
+        last_orphan = McpConnectionLog.query.filter_by(mcp_service_id=None)\
+            .order_by(McpConnectionLog.created_at.desc()).first()
+        result.append({
+            'mcp_service': None,
+            'mcp_service_name': 'その他（サービス削除済み）',
+            'log_count': orphan_count,
+            'last_log_at': last_orphan.created_at.isoformat() if last_orphan else None
+        })
+    
+    return jsonify(result)
+
+
+@api_bp.route('/connection-logs/<int:log_id>', methods=['GET'])
+@login_required
+def connection_log_detail(log_id):
+    """Get a specific connection log with full details"""
+    log = McpConnectionLog.query.get_or_404(log_id)
+    return jsonify(log.to_dict(include_bodies=True))
+
+
+@api_bp.route('/connection-logs/export', methods=['GET'])
+@login_required
+def connection_logs_export():
+    """Export connection logs as CSV"""
+    from flask import Response
+    
+    # Build query with same filters as list endpoint
+    query = McpConnectionLog.query
+    
+    mcp_service_id = request.args.get('mcp_service_id', type=int)
+    if mcp_service_id:
+        query = query.filter(McpConnectionLog.mcp_service_id == mcp_service_id)
+    
+    account_id = request.args.get('account_id', type=int)
+    if account_id:
+        query = query.filter(McpConnectionLog.account_id == account_id)
+    
+    mcp_method = request.args.get('mcp_method')
+    if mcp_method:
+        query = query.filter(McpConnectionLog.mcp_method == mcp_method)
+    
+    is_success = request.args.get('is_success')
+    if is_success is not None:
+        query = query.filter(McpConnectionLog.is_success == (is_success.lower() == 'true'))
+    
+    date_from = request.args.get('date_from')
+    if date_from:
+        try:
+            date_from = datetime.fromisoformat(date_from.replace('Z', '+00:00'))
+            query = query.filter(McpConnectionLog.created_at >= date_from)
+        except ValueError:
+            pass
+    
+    date_to = request.args.get('date_to')
+    if date_to:
+        try:
+            date_to = datetime.fromisoformat(date_to.replace('Z', '+00:00'))
+            query = query.filter(McpConnectionLog.created_at <= date_to)
+        except ValueError:
+            pass
+    
+    query = query.order_by(McpConnectionLog.created_at.desc())
+    
+    # Limit to 10000 rows for export
+    logs = query.limit(10000).all()
+    
+    # Generate CSV
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(McpConnectionLog.csv_headers())
+    for log in logs:
+        writer.writerow(log.to_csv_row())
+    
+    # Return as downloadable CSV
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={
+            'Content-Disposition': f'attachment; filename=connection_logs_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+        }
+    )
+
+
+@api_bp.route('/connection-logs/cleanup', methods=['DELETE'])
+@login_required
+def connection_logs_cleanup():
+    """Delete logs older than specified days"""
+    days = request.args.get('days', 90, type=int)
+    
+    if days < 1:
+        return jsonify({'error': 'Days must be at least 1'}), 400
+    
+    cutoff_date = datetime.utcnow() - timedelta(days=days)
+    
+    # Count and delete
+    count = McpConnectionLog.query.filter(McpConnectionLog.created_at < cutoff_date).count()
+    McpConnectionLog.query.filter(McpConnectionLog.created_at < cutoff_date).delete()
+    db.session.commit()
+    
+    return jsonify({
+        'deleted_count': count,
+        'cutoff_date': cutoff_date.isoformat()
+    })
+
+
+@api_bp.route('/admin/log-settings', methods=['GET', 'PUT'])
+@login_required
+def log_settings():
+    """Get or update log settings"""
+    setting_keys = [
+        'mcp_log_enabled',
+        'mcp_log_retention_days',
+        'mcp_log_max_body_size',
+        'mcp_log_mask_credit_card',
+        'mcp_log_mask_email',
+        'mcp_log_mask_phone',
+        'mcp_log_mask_custom_patterns'
+    ]
+    
+    if request.method == 'GET':
+        result = {}
+        for key in setting_keys:
+            setting = AdminSettings.query.filter_by(setting_key=key).first()
+            if setting:
+                value = setting.setting_value
+                # Parse boolean and numeric values
+                if value.lower() in ('true', 'false'):
+                    result[key] = value.lower() == 'true'
+                elif value.isdigit():
+                    result[key] = int(value)
+                else:
+                    result[key] = value
+            else:
+                # Defaults
+                defaults = {
+                    'mcp_log_enabled': True,
+                    'mcp_log_retention_days': 90,
+                    'mcp_log_max_body_size': 10240,
+                    'mcp_log_mask_credit_card': True,
+                    'mcp_log_mask_email': True,
+                    'mcp_log_mask_phone': True,
+                    'mcp_log_mask_custom_patterns': ''
+                }
+                result[key] = defaults.get(key)
+        
+        return jsonify(result)
+    
+    elif request.method == 'PUT':
+        data = request.get_json()
+        
+        for key in setting_keys:
+            if key in data:
+                value = data[key]
+                # Convert to string for storage
+                if isinstance(value, bool):
+                    value = 'true' if value else 'false'
+                else:
+                    value = str(value)
+                
+                setting = AdminSettings.query.filter_by(setting_key=key).first()
+                if setting:
+                    setting.setting_value = value
+                else:
+                    setting = AdminSettings(setting_key=key, setting_value=value)
+                    db.session.add(setting)
+        
+        db.session.commit()
+        
+        return jsonify({'message': 'Settings updated successfully'})
+
+
+@api_bp.route('/connection-logs/stats', methods=['GET'])
+@login_required
+def connection_logs_stats():
+    """Get connection log statistics"""
+    from sqlalchemy import func
+    
+    mcp_service_id = request.args.get('mcp_service_id', type=int)
+    
+    # Base query
+    query = McpConnectionLog.query
+    if mcp_service_id:
+        query = query.filter(McpConnectionLog.mcp_service_id == mcp_service_id)
+    
+    # Total count
+    total_count = query.count()
+    
+    # Success/Error counts
+    success_count = query.filter(McpConnectionLog.is_success == True).count()
+    error_count = query.filter(McpConnectionLog.is_success == False).count()
+    
+    # Method distribution
+    method_stats = db.session.query(
+        McpConnectionLog.mcp_method,
+        func.count(McpConnectionLog.id)
+    ).group_by(McpConnectionLog.mcp_method).all()
+    
+    # Last 24 hours count
+    last_24h = datetime.utcnow() - timedelta(hours=24)
+    last_24h_count = query.filter(McpConnectionLog.created_at >= last_24h).count()
+    
+    return jsonify({
+        'total': total_count,
+        'success': success_count,
+        'error': error_count,
+        'last_24h': last_24h_count,
+        'by_method': {method: count for method, count in method_stats}
+    })
+

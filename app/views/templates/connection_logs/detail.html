@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}ログ詳細 - Accel MCP{% endblock %}
+
+{% block breadcrumb %}
+<nav class="breadcrumb">
+    <a href="/dashboard" data-i18n="breadcrumb_home">ホーム</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="/connection-logs" data-i18n="connection_logs_title">接続ログ管理</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="#" id="breadcrumb-list">ログ一覧</a>
+    <span class="breadcrumb-separator">›</span>
+    <span class="breadcrumb-current" data-i18n="log_detail_title">ログ詳細</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h2 data-i18n="log_detail_title">ログ詳細</h2>
+            <p id="log-subtitle"></p>
+        </div>
+        <a href="#" id="back-btn" class="btn btn-secondary" data-i18n="btn_back">戻る</a>
+    </div>
+</div>
+
+<div id="log-detail">
+    <div class="loading" data-i18n="loading">読み込み中...</div>
+</div>
+
+<style>
+.detail-section {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.detail-section-header {
+    background: #f8f9fa;
+    padding: 12px 20px;
+    border-bottom: 1px solid #e0e0e0;
+    font-weight: 600;
+    color: #333;
+}
+
+.detail-section-body {
+    padding: 20px;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.detail-label {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.detail-value {
+    font-weight: 500;
+    color: #333;
+}
+
+.detail-value.error {
+    color: #c62828;
+}
+
+.detail-value.success {
+    color: #2e7d32;
+}
+
+.json-viewer {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 16px;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.json-viewer .string { color: #ce9178; }
+.json-viewer .number { color: #b5cea8; }
+.json-viewer .boolean { color: #569cd6; }
+.json-viewer .null { color: #569cd6; }
+.json-viewer .key { color: #9cdcfe; }
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.status-badge.success {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.status-badge.error {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.method-badge {
+    background: #e3f2fd;
+    color: #1565c0;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.9rem;
+}
+
+.masked-indicator {
+    color: #ff9800;
+    font-size: 0.8rem;
+    margin-left: 8px;
+}
+
+.empty-body {
+    color: #999;
+    font-style: italic;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const logId = {{ log_id }};
+</script>
+<script src="/assets/view/connection_logs/detail.js"></script>
+{% endblock %}

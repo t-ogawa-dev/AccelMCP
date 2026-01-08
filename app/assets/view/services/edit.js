@@ -136,6 +136,21 @@ async function loadService() {
     const response = await fetch(`/api/apps/${serviceId}`);
     const service = await response.json();
     
+    // Update breadcrumb with MCP service name and app name
+    try {
+        const mcpServiceResponse = await fetch(`/api/mcp-services/${mcpServiceId}`);
+        const mcpService = await mcpServiceResponse.json();
+        document.getElementById('mcp-service-link').textContent = mcpService.name;
+        
+        // Update app detail link with app name
+        const appDetailLink = document.querySelector('a[href*="/apps/' + serviceId + '"]:not([data-i18n])');
+        if (appDetailLink) {
+            appDetailLink.textContent = service.name;
+        }
+    } catch (e) {
+        console.error('Failed to fetch MCP service info:', e);
+    }
+    
     document.getElementById('name').value = service.name;
     document.getElementById('description').value = service.description || '';
     

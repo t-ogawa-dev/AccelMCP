@@ -23,6 +23,9 @@
             <a href="/mcp-services/{{ mcp_service_id }}/apps" class="btn btn-primary">
                 <span data-i18n="app_list_title">アプリ一覧</span>
             </a>
+            <a href="/connection-logs/list?mcp_service_id={{ mcp_service_id }}" class="btn btn-secondary">
+                <span data-i18n="connection_log_button">📋 ログ</span>
+            </a>
             <button onclick="exportMcpService()" class="btn btn-secondary" data-i18n="mcp_service_export_button">エクスポート</button>
             <a href="/mcp-services/{{ mcp_service_id }}/edit" class="btn btn-secondary" data-i18n="button_edit">編集</a>
         </div>

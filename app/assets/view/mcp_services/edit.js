@@ -59,6 +59,12 @@ async function loadMcpService() {
     const response = await fetch(`/api/mcp-services/${mcpServiceId}`);
     const service = await response.json();
     
+    // Update breadcrumb with service name
+    const detailLink = document.querySelector('a[href="/mcp-services/' + mcpServiceId + '"]');
+    if (detailLink && service.name) {
+        detailLink.textContent = service.name;
+    }
+    
     document.getElementById('name').value = service.name;
     document.getElementById('identifier').value = service.identifier;
     document.getElementById('routing_type').value = service.routing_type || 'subdomain';

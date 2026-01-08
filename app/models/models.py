@@ -419,3 +419,109 @@ class Variable(db.Model):
             result['value'] = self.get_value()
         return result
 
+
+class McpConnectionLog(db.Model):
+    """MCP接続ログ - 監査用ログ"""
+    __tablename__ = 'mcp_connection_logs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    duration_ms = db.Column(db.Integer, nullable=True)
+    
+    # Account info (nullable for public access)
+    account_id = db.Column(db.Integer, db.ForeignKey('connection_accounts.id', ondelete='SET NULL'), nullable=True, index=True)
+    account_name = db.Column(db.String(100), nullable=True)  # Snapshot for audit trail
+    
+    # Resource hierarchy
+    mcp_service_id = db.Column(db.Integer, db.ForeignKey('mcp_services.id', ondelete='SET NULL'), nullable=True, index=True)
+    mcp_service_name = db.Column(db.String(100), nullable=True)  # Snapshot
+    app_id = db.Column(db.Integer, db.ForeignKey('apps.id', ondelete='SET NULL'), nullable=True)
+    app_name = db.Column(db.String(100), nullable=True)  # Snapshot
+    capability_id = db.Column(db.Integer, db.ForeignKey('capabilities.id', ondelete='SET NULL'), nullable=True)
+    capability_name = db.Column(db.String(100), nullable=True)  # Snapshot
+    
+    # Request info
+    mcp_method = db.Column(db.String(50), nullable=False, index=True)  # initialize, tools/list, tools/call, etc.
+    tool_name = db.Column(db.String(100), nullable=True)  # Tool name for tools/call
+    request_id = db.Column(db.String(100), nullable=True)  # JSON-RPC id
+    
+    # Request/Response bodies (size-limited, masked)
+    request_body = db.Column(db.Text, nullable=True)
+    response_body = db.Column(db.Text, nullable=True)
+    
+    # Status
+    status_code = db.Column(db.Integer, nullable=True)  # HTTP-like status
+    is_success = db.Column(db.Boolean, nullable=False, default=True)
+    error_code = db.Column(db.Integer, nullable=True)  # JSON-RPC error code
+    error_message = db.Column(db.Text, nullable=True)
+    
+    # Client info
+    ip_address = db.Column(db.String(45), nullable=True)  # IPv6 compatible
+    user_agent = db.Column(db.String(500), nullable=True)
+    
+    # Access control
+    access_control = db.Column(db.String(20), nullable=True)  # 'public' or 'restricted'
+    
+    # Relationships (optional, for eager loading)
+    account = db.relationship('ConnectionAccount', foreign_keys=[account_id])
+    mcp_service = db.relationship('McpService', foreign_keys=[mcp_service_id])
+    app = db.relationship('Service', foreign_keys=[app_id])
+    capability = db.relationship('Capability', foreign_keys=[capability_id])
+    
+    def to_dict(self, include_bodies=False):
+        """辞書形式で返す"""
+        result = {
+            'id': self.id,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'duration_ms': self.duration_ms,
+            'account_id': self.account_id,
+            'account_name': self.account_name or '-',  # Public access shows '-'
+            'mcp_service_id': self.mcp_service_id,
+            'mcp_service_name': self.mcp_service_name,
+            'app_id': self.app_id,
+            'app_name': self.app_name,
+            'capability_id': self.capability_id,
+            'capability_name': self.capability_name,
+            'mcp_method': self.mcp_method,
+            'tool_name': self.tool_name,
+            'request_id': self.request_id,
+            'status_code': self.status_code,
+            'is_success': self.is_success,
+            'error_code': self.error_code,
+            'error_message': self.error_message,
+            'ip_address': self.ip_address,
+            'user_agent': self.user_agent,
+            'access_control': self.access_control
+        }
+        if include_bodies:
+            result['request_body'] = self.request_body
+            result['response_body'] = self.response_body
+        return result
+    
+    def to_csv_row(self):
+        """CSV出力用の行を返す"""
+        return [
+            self.id,
+            self.created_at.isoformat() if self.created_at else '',
+            self.duration_ms or '',
+            self.account_name or '-',
+            self.mcp_service_name or '',
+            self.app_name or '',
+            self.capability_name or '',
+            self.mcp_method,
+            self.tool_name or '',
+            'Success' if self.is_success else 'Error',
+            self.error_message or '',
+            self.ip_address or '',
+            self.access_control or ''
+        ]
+    
+    @staticmethod
+    def csv_headers():
+        """CSVヘッダー行を返す"""
+        return [
+            'ID', 'Created At', 'Duration (ms)', 'Account', 
+            'MCP Service', 'App', 'Capability', 'Method', 'Tool Name',
+            'Status', 'Error Message', 'IP Address', 'Access Control'
+        ]
+
