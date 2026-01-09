@@ -53,6 +53,20 @@ def _get_lock_settings():
     }
 
 
+def _check_lock_status(ip_address):
+    """Check if IP is currently locked (without incrementing counter)"""
+    from app.models.models import LoginLockStatus
+    
+    settings = _get_lock_settings()
+    lock_status = LoginLockStatus.query.filter_by(ip_address=ip_address).first()
+    
+    if lock_status and lock_status.is_locked():
+        remaining_minutes = int((lock_status.locked_until - datetime.utcnow()).total_seconds() / 60)
+        return True, f'アカウントがロックされています。残り約{remaining_minutes}分後に解除されます。'
+    
+    return False, None
+
+
 def _check_and_update_lock_status(ip_address, is_success=False):
     """Check if IP is locked and update lock status"""
     from app.models.models import db, LoginLockStatus
@@ -65,6 +79,11 @@ def _check_and_update_lock_status(ip_address, is_success=False):
         if lock_status.is_locked():
             remaining_minutes = int((lock_status.locked_until - datetime.utcnow()).total_seconds() / 60)
             return True, f'アカウントがロックされています。残り約{remaining_minutes}分後に解除されます。'
+        
+        # If lock period has expired, reset the counter
+        if lock_status.locked_until and lock_status.locked_until < datetime.utcnow():
+            lock_status.failed_attempts = 0
+            lock_status.locked_until = None
         
         if is_success:
             # Reset on successful login
@@ -135,8 +154,8 @@ def login():
         ip_address = _get_client_ip()
         user_agent = request.headers.get('User-Agent', '')[:500]
         
-        # Check if IP is locked
-        is_locked, lock_message = _check_and_update_lock_status(ip_address, is_success=False)
+        # Check if IP is locked (without incrementing counter)
+        is_locked, lock_message = _check_lock_status(ip_address)
         if is_locked:
             _log_login_attempt(username, ip_address, user_agent, False, 'account_locked')
             if request.is_json:

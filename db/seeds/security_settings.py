@@ -18,7 +18,7 @@ def seed_security_settings(app):
             },
             {
                 'setting_key': 'login_lock_duration_minutes',
-                'setting_value': '30',
+                'setting_value': '5',
             },
             {
                 'setting_key': 'audit_log_retention_days',
