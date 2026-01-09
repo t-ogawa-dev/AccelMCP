@@ -346,6 +346,7 @@ def test_service_connection():
 
 @api_bp.route('/mcp-services/<int:mcp_service_id>/apps', methods=['GET', 'POST'])
 @login_required
+@audit_log('app', action_type='create')
 def mcp_service_apps(mcp_service_id):
     """Get all apps for an MCP service or create new app under MCP service"""
     mcp_service = McpService.query.get_or_404(mcp_service_id)
@@ -746,6 +747,57 @@ def capability_permissions(capability_id):
 
 
 # ============= Settings API =============
+
+@api_bp.route('/settings', methods=['GET', 'POST'])
+@login_required
+def settings():
+    """Get all settings or create/update a setting"""
+    if request.method == 'GET':
+        all_settings = AdminSettings.query.all()
+        return jsonify([s.to_dict() for s in all_settings])
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        setting_key = data.get('setting_key')
+        setting_value = data.get('setting_value')
+        
+        if not setting_key:
+            return jsonify({'error': 'setting_key is required'}), 400
+        
+        # Update or create
+        setting = AdminSettings.query.filter_by(setting_key=setting_key).first()
+        if setting:
+            setting.setting_value = setting_value
+            db.session.commit()
+            return jsonify(setting.to_dict()), 200
+        else:
+            setting = AdminSettings(
+                setting_key=setting_key,
+                setting_value=setting_value
+            )
+            db.session.add(setting)
+            db.session.commit()
+            return jsonify(setting.to_dict()), 201
+
+
+@api_bp.route('/settings/<string:setting_key>', methods=['GET', 'DELETE'])
+@login_required
+def setting_detail(setting_key):
+    """Get or delete a specific setting"""
+    setting = AdminSettings.query.filter_by(setting_key=setting_key).first()
+    
+    if request.method == 'GET':
+        if not setting:
+            return jsonify({'error': 'Setting not found'}), 404
+        return jsonify(setting.to_dict())
+    
+    elif request.method == 'DELETE':
+        if not setting:
+            return jsonify({'error': 'Setting not found'}), 404
+        db.session.delete(setting)
+        db.session.commit()
+        return '', 204
+
 
 @api_bp.route('/settings/language', methods=['GET', 'POST'])
 @login_required

@@ -244,7 +244,6 @@ class TestVariableAPI:
 class TestVariableReplacement:
     """Test variable replacement in capabilities"""
     
-    @pytest.mark.skip(reason="Variable replacement feature not implemented")
     def test_replace_in_url(self, db):
         """Test variable replacement in capability URL"""
         from app.services.variable_replacer import replace_variables
@@ -252,11 +251,11 @@ class TestVariableReplacement:
         # Create variable
         variable = Variable(
             name='API_ENDPOINT',
-            value='https://api.example.com',
             source_type='manual',
             value_type='string',
             is_secret=False
         )
+        variable.set_value('https://api.example.com')
         db.session.add(variable)
         db.session.commit()
         
@@ -265,18 +264,17 @@ class TestVariableReplacement:
         
         assert result == 'https://api.example.com/users'
     
-    @pytest.mark.skip(reason="Variable replacement feature not implemented")
     def test_replace_in_headers(self, db):
         """Test variable replacement in headers"""
         from app.services.variable_replacer import replace_variables
         
         variable = Variable(
             name='AUTH_TOKEN',
-            value='Bearer abc123',
             source_type='manual',
             value_type='string',
             is_secret=True
         )
+        variable.set_value('Bearer abc123')
         db.session.add(variable)
         db.session.commit()
         
@@ -285,13 +283,14 @@ class TestVariableReplacement:
         
         assert 'Bearer abc123' in result
     
-    @pytest.mark.skip(reason="Variable replacement feature not implemented")
     def test_replace_multiple_variables(self, db):
         """Test replacing multiple variables in same string"""
         from app.services.variable_replacer import replace_variables
         
-        var1 = Variable(name='HOST', value='example.com', source_type='manual', value_type='string', is_secret=False)
-        var2 = Variable(name='PORT', value='8080', source_type='manual', value_type='number', is_secret=False)
+        var1 = Variable(name='HOST', source_type='manual', value_type='string', is_secret=False)
+        var1.set_value('example.com')
+        var2 = Variable(name='PORT', source_type='manual', value_type='number', is_secret=False)
+        var2.set_value('8080')
         db.session.add_all([var1, var2])
         db.session.commit()
         
@@ -300,7 +299,6 @@ class TestVariableReplacement:
         
         assert result == 'https://example.com:8080/api'
     
-    @pytest.mark.skip(reason="Variable replacement feature not implemented")
     def test_missing_variable(self, db):
         """Test behavior when variable is not found"""
         from app.services.variable_replacer import replace_variables
@@ -311,7 +309,6 @@ class TestVariableReplacement:
         # Should keep placeholder if variable not found
         assert '{{MISSING_VAR}}' in result or result == 'Value: '
     
-    @pytest.mark.skip(reason="Variable replacement feature not implemented")
     def test_no_variables(self, db):
         """Test string with no variables returns unchanged"""
         from app.services.variable_replacer import replace_variables

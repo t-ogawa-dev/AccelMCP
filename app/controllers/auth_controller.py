@@ -117,14 +117,16 @@ def _check_and_update_lock_status(ip_address, is_success=False):
 
 
 def _log_login_attempt(username, ip_address, user_agent, is_success, failure_reason=None, session_id=None):
-    """Log login attempt asynchronously"""
+    """Log login attempt asynchronously (or synchronously in test mode)"""
+    import os
+    
     def _write_log():
         try:
             from app.models.models import db, AdminLoginLog
-            from app import create_app
+            from flask import current_app
             
-            app = create_app()
-            with app.app_context():
+            # In test mode, use current app context (synchronous)
+            if os.environ.get('TESTING') or current_app.config.get('TESTING'):
                 log_entry = AdminLoginLog(
                     created_at=datetime.utcnow(),
                     username=username,
@@ -137,10 +139,31 @@ def _log_login_attempt(username, ip_address, user_agent, is_success, failure_rea
                 db.session.add(log_entry)
                 db.session.commit()
                 logger.debug(f"Login attempt logged: {username} from {ip_address} - {'Success' if is_success else 'Failure'}")
+            else:
+                # Production mode: create new app context (asynchronous)
+                from app import create_app
+                app = create_app()
+                with app.app_context():
+                    log_entry = AdminLoginLog(
+                        created_at=datetime.utcnow(),
+                        username=username,
+                        ip_address=ip_address,
+                        user_agent=user_agent,
+                        is_success=is_success,
+                        failure_reason=failure_reason,
+                        session_id=session_id
+                    )
+                    db.session.add(log_entry)
+                    db.session.commit()
+                    logger.debug(f"Login attempt logged: {username} from {ip_address} - {'Success' if is_success else 'Failure'}")
         except Exception as e:
             logger.error(f"Failed to log login attempt: {e}")
     
-    _executor.submit(_write_log)
+    # In test mode, execute synchronously
+    if os.environ.get('TESTING'):
+        _write_log()
+    else:
+        _executor.submit(_write_log)
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])

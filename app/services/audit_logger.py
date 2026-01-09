@@ -24,14 +24,16 @@ def _get_client_ip():
 
 def _log_admin_action(admin_username, action_type, resource_type, resource_id=None, 
                       resource_name=None, changes=None, ip_address=None, user_agent=None):
-    """Log admin action asynchronously"""
+    """Log admin action asynchronously (or synchronously in test mode)"""
+    import os
+    
     def _write_log():
         try:
             from app.models.models import db, AdminActionLog
-            from app import create_app
+            from flask import current_app
             
-            app = create_app()
-            with app.app_context():
+            # In test mode, use current app context (synchronous)
+            if os.environ.get('TESTING') or current_app.config.get('TESTING'):
                 log_entry = AdminActionLog(
                     created_at=datetime.utcnow(),
                     admin_username=admin_username,
@@ -46,10 +48,33 @@ def _log_admin_action(admin_username, action_type, resource_type, resource_id=No
                 db.session.add(log_entry)
                 db.session.commit()
                 logger.debug(f"Admin action logged: {admin_username} {action_type} {resource_type} #{resource_id}")
+            else:
+                # Production mode: create new app context (asynchronous)
+                from app import create_app
+                app = create_app()
+                with app.app_context():
+                    log_entry = AdminActionLog(
+                        created_at=datetime.utcnow(),
+                        admin_username=admin_username,
+                        action_type=action_type,
+                        resource_type=resource_type,
+                        resource_id=resource_id,
+                        resource_name=resource_name,
+                        changes=json.dumps(changes, ensure_ascii=False) if changes else None,
+                        ip_address=ip_address,
+                        user_agent=user_agent
+                    )
+                    db.session.add(log_entry)
+                    db.session.commit()
+                    logger.debug(f"Admin action logged: {admin_username} {action_type} {resource_type} #{resource_id}")
         except Exception as e:
             logger.error(f"Failed to log admin action: {e}")
     
-    _executor.submit(_write_log)
+    # In test mode, execute synchronously
+    if os.environ.get('TESTING'):
+        _write_log()
+    else:
+        _executor.submit(_write_log)
 
 
 def audit_log(resource_type, action_type=None, get_resource_name=None):

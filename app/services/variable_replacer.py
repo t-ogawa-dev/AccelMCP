@@ -157,3 +157,17 @@ class VariableReplacer:
             return VariableReplacer.replace_in_dict(body_params)
         else:
             return body_params
+
+
+# Convenience function for simple string replacement
+def replace_variables(text: str) -> str:
+    """
+    文字列内の {{VARIABLE}} を変数値に置換する便利関数
+    
+    Args:
+        text: 置換対象の文字列
+    
+    Returns:
+        置換後の文字列
+    """
+    return VariableReplacer.replace_in_string(text)

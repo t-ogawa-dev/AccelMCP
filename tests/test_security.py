@@ -125,9 +125,8 @@ class TestBruteForceProtection:
 
 
 class TestLoginLogs:
-    """Test admin login logging"""
+    """Test login attempt logging"""
     
-    @pytest.mark.skip(reason="Login logging is async - tested via integration tests instead")
     def test_successful_login_logged(self, client, db):
         """Test successful login is logged"""
         before_count = AdminLoginLog.query.count()
@@ -149,7 +148,6 @@ class TestLoginLogs:
         assert log.is_success is True
         assert log.ip_address == '127.0.0.1'
     
-    @pytest.mark.skip(reason="Login logging is async - tested via integration tests instead")
     def test_failed_login_logged(self, client, db):
         """Test failed login is logged"""
         before_count = AdminLoginLog.query.count()
@@ -159,7 +157,8 @@ class TestLoginLogs:
             'password': 'wrong'
         }, follow_redirects=False)
         
-        assert response.status_code in [401, 302]  # Unauthorized or redirect
+        # Login page returns 200 with error message in HTML
+        assert response.status_code == 200
         
         # Check log created
         after_count = AdminLoginLog.query.count()
@@ -171,7 +170,6 @@ class TestLoginLogs:
         assert log.is_success is False
         assert 'password' in log.failure_reason.lower()
     
-    @pytest.mark.skip(reason="Login logging is async - tested via integration tests instead")
     def test_locked_login_logged(self, client, db):
         """Test locked account login attempt is logged"""
         # Create locked status
@@ -191,7 +189,8 @@ class TestLoginLogs:
             'password': 'universe'
         }, follow_redirects=False)
         
-        assert response.status_code in [429, 403, 302]  # Too Many Requests or Forbidden
+        # Login page returns 200 with error message in HTML
+        assert response.status_code == 200
         
         # Check log created
         after_count = AdminLoginLog.query.count()
@@ -204,19 +203,17 @@ class TestLoginLogs:
 class TestAuditLogs:
     """Test admin action audit logging"""
     
-    @pytest.mark.skip(reason="Auto audit logging not implemented - manual logging only")
-    def test_create_service_logged(self, auth_client, db):
+    def test_create_service_logged(self, auth_client, db, sample_mcp_service):
         """Test creating a service is logged in audit trail"""
         before_count = AdminActionLog.query.count()
         
         payload = {
-            'subdomain': 'audit-test',
             'name': 'Audit Test Service',
             'service_type': 'api',
             'description': 'Test',
             'common_headers': '{}'
         }
-        response = auth_client.post('/api/services',
+        response = auth_client.post(f'/api/mcp-services/{sample_mcp_service.id}/apps',
                                    data=json.dumps(payload),
                                    content_type='application/json')
         
@@ -229,18 +226,17 @@ class TestAuditLogs:
         # Find the log for this action
         logs = AdminActionLog.query.filter_by(
             action_type='create',
-            resource_type='service'
+            resource_type='app'
         ).all()
         assert len(logs) > 0
     
-    @pytest.mark.skip(reason="Auto audit logging not implemented - manual logging only")
     def test_update_account_logged(self, auth_client, db, sample_account):
         """Test updating an account is logged in audit trail"""
         before_count = AdminActionLog.query.count()
         
         payload = {
             'name': 'Updated Account Name',
-            'description': 'Updated description'
+            'notes': 'Updated description'
         }
         response = auth_client.put(f'/api/accounts/{sample_account.id}',
                                   data=json.dumps(payload),
@@ -260,7 +256,6 @@ class TestAuditLogs:
         ).all()
         assert len(logs) > 0
     
-    @pytest.mark.skip(reason="Auto audit logging not implemented - manual logging only")
     def test_delete_capability_logged(self, auth_client, db, sample_capability):
         """Test deleting a capability is logged in audit trail"""
         capability_id = sample_capability.id

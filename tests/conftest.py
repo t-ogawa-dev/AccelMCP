@@ -19,12 +19,17 @@ class TestConfig(Config):
 @pytest.fixture(scope='session')
 def app():
     """Create application for testing"""
+    os.environ['TESTING'] = '1'
+    
     _app = create_app(TestConfig)
     
     with _app.app_context():
         _db.create_all()
         yield _app
         _db.drop_all()
+    
+    # Cleanup
+    os.environ.pop('TESTING', None)
 
 
 @pytest.fixture(scope='function')
