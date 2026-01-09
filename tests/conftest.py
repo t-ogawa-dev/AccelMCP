@@ -59,11 +59,27 @@ def auth_client(client, app):
 
 
 @pytest.fixture
-def sample_service(db):
-    """Create sample service for testing"""
+def sample_mcp_service(db):
+    """Create sample MCP service for testing"""
+    from app.models.models import McpService
+    mcp_service = McpService(
+        identifier='test-mcp-service',
+        name='Test MCP Service',
+        routing_type='subdomain',
+        subdomain='testmcp',
+        access_control='public'
+    )
+    db.session.add(mcp_service)
+    db.session.commit()
+    return mcp_service
+
+
+@pytest.fixture
+def sample_service(db, sample_mcp_service):
+    """Create sample service (app) for testing"""
     from app.models.models import Service
     service = Service(
-        subdomain='test-service',
+        mcp_service_id=sample_mcp_service.id,
         name='Test Service',
         service_type='api',
         description='Test service description',
@@ -79,7 +95,7 @@ def sample_capability(db, sample_service):
     """Create sample capability for testing"""
     from app.models.models import Capability
     capability = Capability(
-        service_id=sample_service.id,
+        app_id=sample_service.id,
         name='test_capability',
         capability_type='tool',
         url='https://api.example.com/test',
