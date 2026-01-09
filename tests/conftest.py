@@ -66,7 +66,6 @@ def sample_mcp_service(db):
         identifier='test-mcp-service',
         name='Test MCP Service',
         routing_type='subdomain',
-        subdomain='testmcp',
         access_control='public'
     )
     db.session.add(mcp_service)

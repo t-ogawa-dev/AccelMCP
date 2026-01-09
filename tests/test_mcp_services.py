@@ -210,14 +210,17 @@ class TestMcpServiceAPI:
     
     def test_duplicate_identifier(self, auth_client, db):
         """Test creating MCP service with duplicate identifier fails"""
-        mcp_service = McpService(
-            name='Original',
-            identifier='duplicate',
-            routing_type='subdomain'
-        )
-        db.session.add(mcp_service)
-        db.session.commit()
+        # Create first service via API
+        payload1 = {
+            'name': 'Original',
+            'identifier': 'duplicate',
+            'routing_type': 'subdomain'
+        }
+        auth_client.post('/api/mcp-services',
+                        data=json.dumps(payload1),
+                        content_type='application/json')
         
+        # Try to create duplicate
         payload = {
             'name': 'Duplicate',
             'identifier': 'duplicate',
@@ -245,7 +248,6 @@ class TestMcpServiceAppsAPI:
         
         # Create apps
         app1 = Service(
-            subdomain='app1',
             name='App 1',
             service_type='api',
             common_headers='{}',
@@ -259,7 +261,7 @@ class TestMcpServiceAppsAPI:
         assert response.status_code == 200
         data = json.loads(response.data)
         assert len(data) >= 1
-        assert any(app['subdomain'] == 'app1' for app in data)
+        assert any(app['name'] == 'App 1' for app in data)
     
     def test_create_app_for_mcp_service(self, auth_client, db):
         """Test POST /api/mcp-services/<id>/apps"""
@@ -272,7 +274,6 @@ class TestMcpServiceAppsAPI:
         db.session.commit()
         
         payload = {
-            'subdomain': 'new-app',
             'name': 'New App',
             'service_type': 'api',
             'common_headers': '{}'
@@ -283,7 +284,7 @@ class TestMcpServiceAppsAPI:
         
         assert response.status_code == 201
         data = json.loads(response.data)
-        assert data['subdomain'] == 'new-app'
+        assert data['name'] == 'New App'
         assert data['mcp_service_id'] == mcp_service.id
 
 

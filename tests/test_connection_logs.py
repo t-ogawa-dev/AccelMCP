@@ -141,11 +141,11 @@ class TestConnectionLogAPI:
             db.session.add(log)
         db.session.commit()
         
-        response = auth_client.get('/api/admin/connection-logs')
+        response = auth_client.get('/api/connection-logs')
         assert response.status_code == 200
         data = response.get_json()
-        assert 'logs' in data
-        assert len(data['logs']) >= 3
+        assert 'items' in data
+        assert len(data['items']) >= 3
     
     def test_get_connection_logs_filtered_by_account(self, auth_client, db, sample_account):
         """アカウント別フィルタリング"""
@@ -177,10 +177,10 @@ class TestConnectionLogAPI:
         db.session.add_all([log1, log2])
         db.session.commit()
         
-        response = auth_client.get(f'/api/admin/connection-logs?account_id={sample_account.id}')
+        response = auth_client.get(f'/api/connection-logs?account_id={sample_account.id}')
         assert response.status_code == 200
         data = response.get_json()
-        logs = data['logs']
+        logs = data['items']
         assert all(log['account_id'] == sample_account.id for log in logs if log.get('account_id'))
     
     def test_get_connection_logs_filtered_by_success(self, auth_client, db):
@@ -202,16 +202,16 @@ class TestConnectionLogAPI:
         db.session.commit()
         
         # Filter by success
-        response = auth_client.get('/api/admin/connection-logs?is_success=true')
+        response = auth_client.get('/api/connection-logs?is_success=true')
         assert response.status_code == 200
         data = response.get_json()
-        assert all(log['is_success'] for log in data['logs'])
+        assert all(log['is_success'] for log in data['items'])
         
         # Filter by failure
-        response = auth_client.get('/api/admin/connection-logs?is_success=false')
+        response = auth_client.get('/api/connection-logs?is_success=false')
         assert response.status_code == 200
         data = response.get_json()
-        assert all(not log['is_success'] for log in data['logs'])
+        assert all(not log['is_success'] for log in data['items'])
     
     def test_get_connection_log_detail(self, auth_client, db, sample_account):
         """接続ログ詳細取得"""
@@ -230,7 +230,7 @@ class TestConnectionLogAPI:
         db.session.add(log)
         db.session.commit()
         
-        response = auth_client.get(f'/api/admin/connection-logs/{log.id}')
+        response = auth_client.get(f'/api/connection-logs/{log.id}')
         assert response.status_code == 200
         data = response.get_json()
         assert data['id'] == log.id
@@ -277,15 +277,17 @@ class TestConnectionLogStatistics:
         
         db.session.commit()
         
-        response = auth_client.get('/api/admin/connection-logs/statistics')
+        response = auth_client.get('/api/connection-logs/stats')
         assert response.status_code == 200
         data = response.get_json()
-        assert 'total_requests' in data
-        assert 'success_count' in data
-        assert 'failure_count' in data
-        assert data['total_requests'] >= 7
-        assert data['success_count'] >= 5
-        assert data['failure_count'] >= 2
+        assert 'total' in data
+        assert 'success' in data
+        assert 'error' in data
+        assert 'last_24h' in data
+        assert 'by_method' in data
+        assert data['total'] >= 7
+        assert data['success'] >= 5
+        assert data['error'] >= 2
 
 
 class TestConnectionLogRetention:
@@ -320,7 +322,7 @@ class TestConnectionLogRetention:
         recent_log_id = recent_log.id
         
         # Cleanup old logs (retention: 90 days)
-        response = auth_client.post('/api/admin/connection-logs/cleanup', json={
+        response = auth_client.delete('/api/connection-logs/cleanup', json={
             'retention_days': 90
         })
         assert response.status_code == 200

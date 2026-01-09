@@ -44,7 +44,7 @@ class TestAccountPermissionAPI:
         assert permission is not None
     
     def test_grant_app_permission(self, auth_client, db, sample_account, sample_service):
-        """App (Service) レベルの権限付与"""
+        """実装部分 (Service) レベルの権限付与"""
         response = auth_client.post(
             f'/api/accounts/{sample_account.id}/permissions',
             json={'app_id': sample_service.id}
@@ -53,7 +53,8 @@ class TestAccountPermissionAPI:
         data = response.get_json()
         assert data['account_id'] == sample_account.id
         assert data['app_id'] == sample_service.id
-        assert data['capability_id'] is None
+        # capability_idは該当レベルでないのでto_dict()に含まれない
+        assert 'capability_id' not in data
     
     def test_grant_mcp_service_permission(self, auth_client, db, sample_account):
         """MCP Service レベルの権限付与"""
@@ -74,8 +75,9 @@ class TestAccountPermissionAPI:
         data = response.get_json()
         assert data['account_id'] == sample_account.id
         assert data['mcp_service_id'] == mcp_service.id
-        assert data['app_id'] is None
-        assert data['capability_id'] is None
+        # app_idとcapability_idは該当レベルでないのでto_dict()に含まれない
+        assert 'app_id' not in data
+        assert 'capability_id' not in data
     
     def test_grant_permission_invalid_multiple_levels(self, auth_client, db, sample_account, sample_service, sample_capability):
         """複数レベル同時指定はエラー"""
@@ -236,8 +238,10 @@ class TestMcpServicePermissionsAPI:
         response = auth_client.get(f'/api/mcp-services/{mcp_service.id}/permissions')
         assert response.status_code == 200
         data = response.get_json()
-        assert isinstance(data, list)
-        assert len(data) >= 1
+        assert 'enabled' in data
+        assert 'disabled' in data
+        assert isinstance(data['enabled'], list)
+        assert len(data['enabled']) >= 1
     
     def test_grant_mcp_service_permission_via_service_endpoint(self, auth_client, db, sample_account):
         """MCP Service endpoint経由での権限付与"""
@@ -252,9 +256,9 @@ class TestMcpServicePermissionsAPI:
         
         response = auth_client.post(
             f'/api/mcp-services/{mcp_service.id}/permissions',
-            json={'account_id': sample_account.id}
+            json={'account_ids': [sample_account.id]}
         )
-        assert response.status_code == 201
+        assert response.status_code == 200
         
         # Verify
         permission = AccountPermission.query.filter_by(
@@ -279,16 +283,18 @@ class TestAppPermissionsAPI:
         response = auth_client.get(f'/api/apps/{sample_service.id}/permissions')
         assert response.status_code == 200
         data = response.get_json()
-        assert isinstance(data, list)
-        assert len(data) >= 1
+        assert 'enabled' in data
+        assert 'disabled' in data
+        assert isinstance(data['enabled'], list)
+        assert len(data['enabled']) >= 1
     
     def test_grant_app_permission_via_app_endpoint(self, auth_client, db, sample_service, sample_account):
         """App endpoint経由での権限付与"""
         response = auth_client.post(
             f'/api/apps/{sample_service.id}/permissions',
-            json={'account_id': sample_account.id}
+            json={'account_ids': [sample_account.id]}
         )
-        assert response.status_code == 201
+        assert response.status_code == 200
         
         permission = AccountPermission.query.filter_by(
             account_id=sample_account.id,
@@ -329,12 +335,12 @@ class TestHierarchicalPermissions:
         response = auth_client.get(f'/api/accounts/{sample_account.id}/permissions/by-level')
         assert response.status_code == 200
         data = response.get_json()
-        assert 'mcp_services' in data
-        assert 'apps' in data
-        assert 'capabilities' in data
-        assert len(data['mcp_services']) >= 1
-        assert len(data['apps']) >= 1
-        assert len(data['capabilities']) >= 1
+        assert 'mcp_service' in data
+        assert 'app' in data
+        assert 'capability' in data
+        assert len(data['mcp_service']) >= 1
+        assert len(data['app']) >= 1
+        assert len(data['capability']) >= 1
     
     def test_permission_inheritance(self, auth_client, db, sample_account, sample_service, sample_capability):
         """権限継承のテスト（App権限があればCapabilityアクセス可能）"""
@@ -357,4 +363,4 @@ class TestHierarchicalPermissions:
         assert permissions[0].app_id == sample_service.id
         
         # Capability should be accessible via app permission (tested in mcp_controller)
-        assert sample_capability.service_id == sample_service.id
+        assert sample_capability.app_id == sample_service.id

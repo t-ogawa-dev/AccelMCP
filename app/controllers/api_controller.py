@@ -28,6 +28,11 @@ def mcp_services():
     
     elif request.method == 'POST':
         data = request.get_json()
+        
+        # Check for duplicate identifier
+        if McpService.query.filter_by(identifier=data['identifier']).first():
+            return jsonify({'error': '同じidentifierのMCPサービスが既に存在します'}), 409
+        
         mcp_service = McpService(
             name=data['name'],
             identifier=data['identifier'],
