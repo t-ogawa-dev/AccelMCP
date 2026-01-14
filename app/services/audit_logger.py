@@ -4,7 +4,7 @@ Handles logging of admin CRUD operations for security audit trails
 """
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, UTC
 from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
 from flask import request, session, g
@@ -35,7 +35,7 @@ def _log_admin_action(admin_username, action_type, resource_type, resource_id=No
             # In test mode, use current app context (synchronous)
             if os.environ.get('TESTING') or current_app.config.get('TESTING'):
                 log_entry = AdminActionLog(
-                    created_at=datetime.utcnow(),
+                    created_at=datetime.now(UTC).replace(tzinfo=None),
                     admin_username=admin_username,
                     action_type=action_type,
                     resource_type=resource_type,
@@ -54,7 +54,7 @@ def _log_admin_action(admin_username, action_type, resource_type, resource_id=No
                 app = create_app()
                 with app.app_context():
                     log_entry = AdminActionLog(
-                        created_at=datetime.utcnow(),
+                        created_at=datetime.now(UTC).replace(tzinfo=None),
                         admin_username=admin_username,
                         action_type=action_type,
                         resource_type=resource_type,
@@ -117,7 +117,7 @@ def audit_log(resource_type, action_type=None, get_resource_name=None):
             if inferred_action in ['update', 'delete'] and resource_id:
                 # Store before state in g for comparison
                 try:
-                    from app.models.models import McpService, Service, Capability, ConnectionAccount, AccountPermission
+                    from app.models.models import db, McpService, Service, Capability, ConnectionAccount, AccountPermission
                     
                     model_map = {
                         'mcp_service': McpService,
@@ -129,7 +129,7 @@ def audit_log(resource_type, action_type=None, get_resource_name=None):
                     
                     model = model_map.get(resource_type)
                     if model:
-                        obj = model.query.get(resource_id)
+                        obj = db.session.get(model, resource_id)
                         if obj:
                             before_data = obj.to_dict()
                 except Exception as e:

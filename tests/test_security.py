@@ -3,7 +3,7 @@ Tests for Security features (brute-force protection, audit logs)
 """
 import json
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from app.models.models import LoginLockStatus, AdminLoginLog, AdminActionLog, AdminSettings
 
 
@@ -83,7 +83,7 @@ class TestBruteForceProtection:
         lock_status = LoginLockStatus(
             ip_address='127.0.0.1',
             failed_attempts=3,
-            last_attempt_at=datetime.utcnow()
+            last_attempt_at=datetime.now(UTC).replace(tzinfo=None)
         )
         db.session.add(lock_status)
         db.session.commit()
@@ -105,8 +105,8 @@ class TestBruteForceProtection:
         lock_status = LoginLockStatus(
             ip_address='127.0.0.1',
             failed_attempts=5,
-            locked_until=datetime.utcnow() - timedelta(minutes=1),  # Expired
-            last_attempt_at=datetime.utcnow() - timedelta(minutes=10)
+            locked_until=datetime.now(UTC).replace(tzinfo=None) - timedelta(minutes=1),  # Expired
+            last_attempt_at=datetime.now(UTC).replace(tzinfo=None) - timedelta(minutes=10)
         )
         db.session.add(lock_status)
         db.session.commit()
@@ -176,8 +176,8 @@ class TestLoginLogs:
         lock_status = LoginLockStatus(
             ip_address='127.0.0.1',
             failed_attempts=5,
-            locked_until=datetime.utcnow() + timedelta(minutes=5),
-            last_attempt_at=datetime.utcnow()
+            locked_until=datetime.now(UTC).replace(tzinfo=None) + timedelta(minutes=5),
+            last_attempt_at=datetime.now(UTC).replace(tzinfo=None)
         )
         db.session.add(lock_status)
         db.session.commit()
@@ -281,7 +281,7 @@ class TestSecurityAPIEndpoints:
             ip_address='127.0.0.1',
             user_agent='test',
             is_success=True,
-            created_at=datetime.utcnow()
+            created_at=datetime.now(UTC).replace(tzinfo=None)
         )
         log2 = AdminLoginLog(
             username='accel',
@@ -289,7 +289,7 @@ class TestSecurityAPIEndpoints:
             user_agent='test',
             is_success=False,
             failure_reason='invalid_password',
-            created_at=datetime.utcnow()
+            created_at=datetime.now(UTC).replace(tzinfo=None)
         )
         db.session.add_all([log1, log2])
         db.session.commit()
@@ -315,8 +315,8 @@ class TestSecurityAPIEndpoints:
         lock_status = LoginLockStatus(
             ip_address='192.168.1.1',
             failed_attempts=5,
-            locked_until=datetime.utcnow() + timedelta(minutes=5),
-            last_attempt_at=datetime.utcnow()
+            locked_until=datetime.now(UTC).replace(tzinfo=None) + timedelta(minutes=5),
+            last_attempt_at=datetime.now(UTC).replace(tzinfo=None)
         )
         db.session.add(lock_status)
         db.session.commit()
@@ -341,8 +341,8 @@ class TestSecurityAPIEndpoints:
         lock_status = LoginLockStatus(
             ip_address='10.0.0.1',
             failed_attempts=5,
-            locked_until=datetime.utcnow() + timedelta(minutes=5),
-            last_attempt_at=datetime.utcnow()
+            locked_until=datetime.now(UTC).replace(tzinfo=None) + timedelta(minutes=5),
+            last_attempt_at=datetime.now(UTC).replace(tzinfo=None)
         )
         db.session.add(lock_status)
         db.session.commit()

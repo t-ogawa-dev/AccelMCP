@@ -9,7 +9,7 @@ import logging
 import time
 import sys
 import os
-from datetime import datetime
+from datetime import datetime, UTC
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Dict, Any
 
@@ -159,7 +159,7 @@ def _write_log_entry(app: Flask, log_data: Dict[str, Any]):
             from app.models.models import db, McpConnectionLog
             
             log_entry = McpConnectionLog(
-                created_at=log_data.get('created_at', datetime.utcnow()),
+                created_at=log_data.get('created_at', datetime.now(UTC).replace(tzinfo=None)),
                 duration_ms=log_data.get('duration_ms'),
                 account_id=log_data.get('account_id'),
                 account_name=log_data.get('account_name'),
@@ -208,7 +208,7 @@ def _log_to_stdout(log_data: Dict[str, Any]):
     try:
         # Build structured log entry
         log_entry = {
-            'timestamp': log_data.get('created_at').isoformat() + 'Z' if log_data.get('created_at') else datetime.utcnow().isoformat() + 'Z',
+            'timestamp': log_data.get('created_at').isoformat() + 'Z' if log_data.get('created_at') else datetime.now(UTC).isoformat() + 'Z',
             'log_type': 'mcp_connection',
             'level': 'ERROR' if not log_data.get('is_success', True) else 'INFO',
             'mcp_method': log_data.get('mcp_method'),
@@ -240,7 +240,7 @@ def _log_to_stdout(log_data: Dict[str, Any]):
     except Exception as e:
         # Errors in stdout logging should not affect application
         print(json.dumps({
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'timestamp': datetime.now(UTC).isoformat() + 'Z',
             'log_type': 'mcp_logger_error',
             'level': 'ERROR',
             'error': str(e),
@@ -293,7 +293,7 @@ def log_mcp_request(
         
         # Build log data
         log_data = {
-            'created_at': datetime.utcnow(),
+            'created_at': datetime.now(UTC).replace(tzinfo=None),
             'duration_ms': context.get_duration_ms(),
             'account_id': context.account_id,
             'account_name': context.account_name,

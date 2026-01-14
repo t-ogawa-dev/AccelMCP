@@ -8,7 +8,7 @@ import json
 import logging
 import requests
 import yaml
-from datetime import datetime
+from datetime import datetime, UTC
 from packaging import version as version_parser
 from flask import current_app
 from app import __version__ as ACCEL_MCP_VERSION
@@ -195,7 +195,7 @@ class TemplateSyncService:
         setting = AdminSettings.query.filter_by(setting_key='builtin_templates_version').first()
         if setting:
             setting.setting_value = template_version
-            setting.updated_at = datetime.utcnow()
+            setting.updated_at = datetime.now(UTC).replace(tzinfo=None)
         else:
             setting = AdminSettings(
                 setting_key='builtin_templates_version',
@@ -206,12 +206,12 @@ class TemplateSyncService:
         # 最終更新日時も保存
         last_check = AdminSettings.query.filter_by(setting_key='last_template_sync').first()
         if last_check:
-            last_check.setting_value = datetime.utcnow().isoformat()
-            last_check.updated_at = datetime.utcnow()
+            last_check.setting_value = datetime.now(UTC).replace(tzinfo=None).isoformat()
+            last_check.updated_at = datetime.now(UTC).replace(tzinfo=None)
         else:
             last_check = AdminSettings(
                 setting_key='last_template_sync',
-                setting_value=datetime.utcnow().isoformat()
+                setting_value=datetime.now(UTC).replace(tzinfo=None).isoformat()
             )
             db.session.add(last_check)
         

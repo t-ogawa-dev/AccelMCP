@@ -368,7 +368,7 @@ def discover_mcp_capabilities(service_id, mcp_url):
     """
     try:
         # サービス情報を取得
-        service = Service.query.get(service_id)
+        service = db.session.get(Service, service_id)
         if not service:
             raise Exception(f"Service with id {service_id} not found")
         
@@ -487,7 +487,7 @@ def discover_stdio_mcp_capabilities(service_id: int, command: str, args: list, e
     """
     try:
         # サービス情報を取得
-        service = Service.query.get(service_id)
+        service = db.session.get(Service, service_id)
         if not service:
             raise Exception(f"Service with id {service_id} not found")
         

@@ -8,7 +8,7 @@ from flask import Blueprint, request, jsonify
 from app.controllers.auth_controller import login_required
 from app.services.audit_logger import audit_log
 
-from app.models.models import db, ConnectionAccount, McpService, Service, Capability, AccountPermission, AdminSettings, Variable, McpServiceTemplate, McpCapabilityTemplate
+from app.models.models import db, ConnectionAccount, McpService, Service, Capability, AccountPermission, AdminSettings, Variable, McpServiceTemplate, McpCapabilityTemplate, get_or_404
 
 # Service is now mapped to 'apps' table, but keep the class name for compatibility
 
@@ -49,7 +49,7 @@ def mcp_services():
 @audit_log('mcp_service')
 def mcp_service_detail(mcp_service_id):
     """Get, update, or delete a specific MCP service"""
-    mcp_service = McpService.query.get_or_404(mcp_service_id)
+    mcp_service = get_or_404(McpService, mcp_service_id)
     
     if request.method == 'GET':
         result = mcp_service.to_dict()
@@ -77,7 +77,7 @@ def mcp_service_detail(mcp_service_id):
 @audit_log('mcp_service', action_type='update')
 def toggle_mcp_service(mcp_service_id):
     """Toggle MCP service enabled/disabled status"""
-    mcp_service = McpService.query.get_or_404(mcp_service_id)
+    mcp_service = get_or_404(McpService, mcp_service_id)
     mcp_service.is_enabled = not mcp_service.is_enabled
     db.session.commit()
     return jsonify(mcp_service.to_dict())
@@ -87,7 +87,7 @@ def toggle_mcp_service(mcp_service_id):
 @login_required
 def export_mcp_service(mcp_service_id):
     """Export MCP service with all apps and capabilities"""
-    mcp_service = McpService.query.get_or_404(mcp_service_id)
+    mcp_service = get_or_404(McpService, mcp_service_id)
     
     # Build nested structure: service -> apps -> capabilities
     export_data = {
@@ -424,7 +424,7 @@ def test_stdio_connection():
 @audit_log('app', action_type='create')
 def mcp_service_apps(mcp_service_id):
     """Get all apps for an MCP service or create new app under MCP service"""
-    mcp_service = McpService.query.get_or_404(mcp_service_id)
+    mcp_service = get_or_404(McpService, mcp_service_id)
     
     if request.method == 'GET':
         return jsonify([app.to_dict() for app in mcp_service.apps])
@@ -536,7 +536,7 @@ def apps():
 @audit_log('app')
 def app_detail(service_id):
     """Get, update, or delete a specific app"""
-    service = Service.query.get_or_404(service_id)
+    service = get_or_404(Service, service_id)
     
     if request.method == 'GET':
         return jsonify(service.to_dict())
@@ -571,7 +571,7 @@ def app_detail(service_id):
 @audit_log('app', action_type='update')
 def toggle_app(service_id):
     """Toggle app enabled/disabled status"""
-    service = Service.query.get_or_404(service_id)
+    service = get_or_404(Service, service_id)
     service.is_enabled = not service.is_enabled
     db.session.commit()
     return jsonify(service.to_dict())
@@ -583,7 +583,7 @@ def toggle_app(service_id):
 @login_required
 def capabilities(service_id):
     """Get all capabilities for a service or create new capability"""
-    service = Service.query.get_or_404(service_id)
+    service = get_or_404(Service, service_id)
     
     if request.method == 'GET':
         capabilities = Capability.query.filter_by(app_id=service_id).all()
@@ -631,7 +631,7 @@ def capabilities(service_id):
 @audit_log('capability')
 def capability_detail(capability_id):
     """Get, update, or delete a specific capability"""
-    capability = Capability.query.get_or_404(capability_id)
+    capability = get_or_404(Capability, capability_id)
     
     if request.method == 'GET':
         return jsonify(capability.to_dict())
@@ -683,7 +683,7 @@ def capability_detail(capability_id):
 @audit_log('capability', action_type='update')
 def toggle_capability(capability_id):
     """Toggle capability enabled/disabled status"""
-    capability = Capability.query.get_or_404(capability_id)
+    capability = get_or_404(Capability, capability_id)
     capability.is_enabled = not capability.is_enabled
     db.session.commit()
     return jsonify(capability.to_dict())
@@ -718,7 +718,7 @@ def accounts():
 @audit_log('account', get_resource_name=lambda d: d.get('name'))
 def account_detail(account_id):
     """Get, update, or delete a specific connection account"""
-    account = ConnectionAccount.query.get_or_404(account_id)
+    account = get_or_404(ConnectionAccount, account_id)
     
     if request.method == 'GET':
         return jsonify(account.to_dict())
@@ -741,7 +741,7 @@ def account_detail(account_id):
 @login_required
 def regenerate_token(account_id):
     """Regenerate account's bearer token"""
-    account = ConnectionAccount.query.get_or_404(account_id)
+    account = get_or_404(ConnectionAccount, account_id)
     account.bearer_token = secrets.token_urlsafe(32)
     db.session.commit()
     return jsonify(account.to_dict())
@@ -753,7 +753,7 @@ def regenerate_token(account_id):
 @login_required
 def account_permissions(account_id):
     """Get account permissions or add new permission (supports 3-tier)"""
-    account = ConnectionAccount.query.get_or_404(account_id)
+    account = get_or_404(ConnectionAccount, account_id)
     
     if request.method == 'GET':
         permissions = AccountPermission.query.filter_by(account_id=account_id).all()
@@ -785,11 +785,11 @@ def account_permissions(account_id):
         
         # Verify the resource exists
         if mcp_service_id:
-            McpService.query.get_or_404(mcp_service_id)
+            get_or_404(McpService, mcp_service_id)
         elif app_id:
-            Service.query.get_or_404(app_id)
+            get_or_404(Service, app_id)
         elif capability_id:
-            Capability.query.get_or_404(capability_id)
+            get_or_404(Capability, capability_id)
         
         permission = AccountPermission(
             account_id=account_id,
@@ -806,7 +806,7 @@ def account_permissions(account_id):
 @login_required
 def permission_delete(permission_id):
     """Delete a permission"""
-    permission = AccountPermission.query.get_or_404(permission_id)
+    permission = get_or_404(AccountPermission, permission_id)
     db.session.delete(permission)
     db.session.commit()
     return '', 204
@@ -816,7 +816,7 @@ def permission_delete(permission_id):
 @login_required
 def capability_permissions(capability_id):
     """Get or update permissions for a capability"""
-    capability = Capability.query.get_or_404(capability_id)
+    capability = get_or_404(Capability, capability_id)
     
     if request.method == 'GET':
         # Get all accounts with permissions for this capability
@@ -842,8 +842,8 @@ def capability_permissions(capability_id):
         data = request.get_json()
         account_ids = data.get('account_ids', [])
         
-        # Delete all existing permissions for this capability
-        AccountPermission.query.filter_by(capability_id=capability_id).delete()
+        # Delete all existing permissions for this capability (use 'fetch' to sync session)
+        AccountPermission.query.filter_by(capability_id=capability_id).delete(synchronize_session='fetch')
         
         # Add new permissions
         for account_id in account_ids:
@@ -970,7 +970,7 @@ def templates():
 def template_detail(template_id):
     """Get, update, or delete a specific template"""
     
-    template = McpServiceTemplate.query.get_or_404(template_id)
+    template = get_or_404(McpServiceTemplate, template_id)
     
     if request.method == 'GET':
         result = template.to_dict()
@@ -1036,7 +1036,7 @@ def export_template(template_id):
     """Export template as JSON"""
     from app.models.models import McpServiceTemplate
     
-    template = McpServiceTemplate.query.get_or_404(template_id)
+    template = get_or_404(McpServiceTemplate, template_id)
     return jsonify(template.to_export_dict())
 
 
@@ -1070,7 +1070,7 @@ def import_template():
 def prepare_app_from_template(template_id):
     """Prepare app creation from template - returns URL to app creation form with pre-filled data"""
     
-    template = McpServiceTemplate.query.get_or_404(template_id)
+    template = get_or_404(McpServiceTemplate, template_id)
     data = request.get_json()
     
     mcp_service_id = data.get('mcp_service_id')
@@ -1078,7 +1078,7 @@ def prepare_app_from_template(template_id):
         return jsonify({'error': 'MCP service ID is required'}), 400
     
     # Check if MCP service exists
-    mcp_service = McpService.query.get_or_404(mcp_service_id)
+    mcp_service = get_or_404(McpService, mcp_service_id)
     
     template_data = {
         'name': template.name,
@@ -1106,7 +1106,7 @@ def prepare_app_from_template(template_id):
 @login_required
 def template_capabilities(template_id):
     """Get all capabilities for a template or create new capability"""
-    template = McpServiceTemplate.query.get_or_404(template_id)
+    template = get_or_404(McpServiceTemplate, template_id)
     
     # Only API templates have capabilities
     if template.service_type != 'api':
@@ -1142,7 +1142,7 @@ def template_capabilities(template_id):
 @login_required
 def template_capability_detail(capability_id):
     """Get, update, or delete a specific template capability"""
-    capability = McpCapabilityTemplate.query.get_or_404(capability_id)
+    capability = get_or_404(McpCapabilityTemplate, capability_id)
     template = capability.service_template
     
     if request.method == 'GET':
@@ -1235,7 +1235,7 @@ def check_env_variable():
 @login_required
 def variable_detail(variable_id):
     """Get, update, or delete a specific variable"""
-    variable = Variable.query.get_or_404(variable_id)
+    variable = get_or_404(Variable, variable_id)
     
     if request.method == 'GET':
         # include_value=True to show actual value for editing
@@ -1279,7 +1279,7 @@ def variable_detail(variable_id):
 @login_required
 def mcp_service_access_control(mcp_service_id):
     """Toggle MCP service access control (public/restricted)"""
-    mcp_service = McpService.query.get_or_404(mcp_service_id)
+    mcp_service = get_or_404(McpService, mcp_service_id)
     
     data = request.get_json()
     access_control = data.get('access_control')
@@ -1297,7 +1297,7 @@ def mcp_service_access_control(mcp_service_id):
 @login_required
 def app_access_control(app_id):
     """Toggle app access control (public/restricted)"""
-    app = Service.query.get_or_404(app_id)
+    app = get_or_404(Service, app_id)
     
     data = request.get_json()
     access_control = data.get('access_control')
@@ -1315,7 +1315,7 @@ def app_access_control(app_id):
 @login_required
 def capability_access_control(capability_id):
     """Toggle capability access control (public/restricted)"""
-    capability = Capability.query.get_or_404(capability_id)
+    capability = get_or_404(Capability, capability_id)
     
     data = request.get_json()
     access_control = data.get('access_control')
@@ -1333,7 +1333,7 @@ def capability_access_control(capability_id):
 @login_required
 def mcp_service_permissions(mcp_service_id):
     """Get or add MCP service level permissions"""
-    mcp_service = McpService.query.get_or_404(mcp_service_id)
+    mcp_service = get_or_404(McpService, mcp_service_id)
     
     if request.method == 'GET':
         # Get all accounts with permissions for this MCP service
@@ -1385,7 +1385,7 @@ def mcp_service_permissions(mcp_service_id):
 @login_required
 def app_permissions(app_id):
     """Get or add app level permissions"""
-    app = Service.query.get_or_404(app_id)
+    app = get_or_404(Service, app_id)
     
     if request.method == 'GET':
         # Get all accounts with permissions for this app
@@ -1433,7 +1433,7 @@ def app_permissions(app_id):
 @login_required
 def account_permissions_by_level(account_id):
     """Get account permissions grouped by level (mcp_service, app, capability)"""
-    account = ConnectionAccount.query.get_or_404(account_id)
+    account = get_or_404(ConnectionAccount, account_id)
     
     permissions = AccountPermission.query.filter_by(account_id=account_id).all()
     
@@ -1453,8 +1453,8 @@ def account_permissions_by_level(account_id):
 
 # ============= Connection Logs API =============
 
-from app.models.models import McpConnectionLog
-from datetime import datetime, timedelta
+from app.models.models import McpConnectionLog, get_or_404 as get_or_404_helper
+from datetime import datetime, timedelta, UTC
 import csv
 import io
 
@@ -1567,7 +1567,7 @@ def connection_logs_by_service():
 @login_required
 def connection_log_detail(log_id):
     """Get a specific connection log with full details"""
-    log = McpConnectionLog.query.get_or_404(log_id)
+    log = get_or_404_helper(McpConnectionLog, log_id)
     return jsonify(log.to_dict(include_bodies=True))
 
 
@@ -1644,7 +1644,7 @@ def connection_logs_cleanup():
     if days < 1:
         return jsonify({'error': 'Days must be at least 1'}), 400
     
-    cutoff_date = datetime.utcnow() - timedelta(days=days)
+    cutoff_date = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=days)
     
     # Count and delete
     count = McpConnectionLog.query.filter(McpConnectionLog.created_at < cutoff_date).count()
@@ -1750,7 +1750,7 @@ def connection_logs_stats():
     ).group_by(McpConnectionLog.mcp_method).all()
     
     # Last 24 hours count
-    last_24h = datetime.utcnow() - timedelta(hours=24)
+    last_24h = datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=24)
     last_24h_count = query.filter(McpConnectionLog.created_at >= last_24h).count()
     
     return jsonify({
@@ -1947,7 +1947,7 @@ def unlock_account():
     # Reset lock
     lock_status.failed_attempts = 0
     lock_status.locked_until = None
-    lock_status.updated_at = datetime.utcnow()
+    lock_status.updated_at = datetime.now(UTC).replace(tzinfo=None)
     db.session.commit()
     
     return jsonify({'message': f'IP {ip_address} has been unlocked', 'lock_status': lock_status.to_dict()})
@@ -1960,7 +1960,7 @@ def get_locked_ips():
     from app.models.models import LoginLockStatus
     
     # Get all locked IPs (where locked_until is in the future)
-    locked = LoginLockStatus.query.filter(LoginLockStatus.locked_until > datetime.utcnow()).all()
+    locked = LoginLockStatus.query.filter(LoginLockStatus.locked_until > datetime.now(UTC).replace(tzinfo=None)).all()
     
     return jsonify({
         'locked_ips': [lock.to_dict() for lock in locked],

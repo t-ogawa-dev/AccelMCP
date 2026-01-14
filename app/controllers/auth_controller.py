@@ -4,7 +4,7 @@ Handles admin login, logout, and authentication with brute-force protection
 """
 from flask import Blueprint, request, jsonify, render_template, redirect, url_for, session, current_app
 from functools import wraps
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from concurrent.futures import ThreadPoolExecutor
 import logging
 
@@ -61,7 +61,7 @@ def _check_lock_status(ip_address):
     lock_status = LoginLockStatus.query.filter_by(ip_address=ip_address).first()
     
     if lock_status and lock_status.is_locked():
-        remaining_minutes = int((lock_status.locked_until - datetime.utcnow()).total_seconds() / 60)
+        remaining_minutes = int((lock_status.locked_until - datetime.now(UTC).replace(tzinfo=None)).total_seconds() / 60)
         return True, f'アカウントがロックされています。残り約{remaining_minutes}分後に解除されます。'
     
     return False, None
@@ -77,11 +77,11 @@ def _check_and_update_lock_status(ip_address, is_success=False):
     if lock_status:
         # Check if currently locked
         if lock_status.is_locked():
-            remaining_minutes = int((lock_status.locked_until - datetime.utcnow()).total_seconds() / 60)
+            remaining_minutes = int((lock_status.locked_until - datetime.now(UTC).replace(tzinfo=None)).total_seconds() / 60)
             return True, f'アカウントがロックされています。残り約{remaining_minutes}分後に解除されます。'
         
         # If lock period has expired, reset the counter
-        if lock_status.locked_until and lock_status.locked_until < datetime.utcnow():
+        if lock_status.locked_until and lock_status.locked_until < datetime.now(UTC).replace(tzinfo=None):
             lock_status.failed_attempts = 0
             lock_status.locked_until = None
         
@@ -92,15 +92,15 @@ def _check_and_update_lock_status(ip_address, is_success=False):
         else:
             # Increment failed attempts
             lock_status.failed_attempts += 1
-            lock_status.last_attempt_at = datetime.utcnow()
+            lock_status.last_attempt_at = datetime.now(UTC).replace(tzinfo=None)
             
             # Lock if threshold exceeded
             if lock_status.failed_attempts >= settings['max_attempts']:
-                lock_status.locked_until = datetime.utcnow() + timedelta(minutes=settings['lock_duration_minutes'])
+                lock_status.locked_until = datetime.now(UTC).replace(tzinfo=None) + timedelta(minutes=settings['lock_duration_minutes'])
                 db.session.commit()
                 return True, f'ログイン試行回数が上限に達しました。{settings["lock_duration_minutes"]}分間ロックされます。'
         
-        lock_status.updated_at = datetime.utcnow()
+        lock_status.updated_at = datetime.now(UTC).replace(tzinfo=None)
         db.session.commit()
     else:
         # Create new lock status record
@@ -108,7 +108,7 @@ def _check_and_update_lock_status(ip_address, is_success=False):
             lock_status = LoginLockStatus(
                 ip_address=ip_address,
                 failed_attempts=1,
-                last_attempt_at=datetime.utcnow()
+                last_attempt_at=datetime.now(UTC).replace(tzinfo=None)
             )
             db.session.add(lock_status)
             db.session.commit()
@@ -128,7 +128,7 @@ def _log_login_attempt(username, ip_address, user_agent, is_success, failure_rea
             # In test mode, use current app context (synchronous)
             if os.environ.get('TESTING') or current_app.config.get('TESTING'):
                 log_entry = AdminLoginLog(
-                    created_at=datetime.utcnow(),
+                    created_at=datetime.now(UTC).replace(tzinfo=None),
                     username=username,
                     ip_address=ip_address,
                     user_agent=user_agent,
@@ -145,7 +145,7 @@ def _log_login_attempt(username, ip_address, user_agent, is_success, failure_rea
                 app = create_app()
                 with app.app_context():
                     log_entry = AdminLoginLog(
-                        created_at=datetime.utcnow(),
+                        created_at=datetime.now(UTC).replace(tzinfo=None),
                         username=username,
                         ip_address=ip_address,
                         user_agent=user_agent,

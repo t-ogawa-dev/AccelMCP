@@ -3,7 +3,7 @@ Tests for MCP Connection Logs
 接続ログの記録・取得・分析機能のテスト
 """
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from app.models.models import McpConnectionLog, McpService, Service, Capability, ConnectionAccount
 
 
@@ -247,7 +247,7 @@ class TestConnectionLogStatistics:
     def test_connection_log_statistics(self, auth_client, db, sample_account):
         """接続ログ統計の取得"""
         # Create test data
-        now = datetime.utcnow()
+        now = datetime.now(UTC).replace(tzinfo=None)
         
         # Success logs
         for i in range(5):
@@ -295,7 +295,7 @@ class TestConnectionLogRetention:
     
     def test_old_logs_cleanup(self, auth_client, db):
         """古いログの削除"""
-        now = datetime.utcnow()
+        now = datetime.now(UTC).replace(tzinfo=None)
         
         # Old log (91 days ago)
         old_log = McpConnectionLog(

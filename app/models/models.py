@@ -2,10 +2,27 @@
 Database models for MCP Server
 """
 import json
-from datetime import datetime
+from datetime import datetime, UTC
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.exceptions import NotFound
+
+
+def utcnow():
+    """UTC現在時刻を返すヘルパー関数（SQLAlchemyのdefault用）"""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 db = SQLAlchemy()
+
+
+def get_or_404(model, id, description=None):
+    """
+    db.session.get()を使ってオブジェクトを取得し、見つからなければ404エラーを発生させる。
+    Flask-SQLAlchemyのquery.get_or_404()の代替（SQLAlchemy 2.0準拠）
+    """
+    obj = db.session.get(model, id)
+    if obj is None:
+        raise NotFound(description or f'{model.__name__} not found')
+    return obj
 
 
 class ConnectionAccount(db.Model):
@@ -16,8 +33,8 @@ class ConnectionAccount(db.Model):
     name = db.Column(db.String(100), nullable=False)
     bearer_token = db.Column(db.String(100), unique=True, nullable=False)
     notes = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
     
     # Relationships
     permissions = db.relationship('AccountPermission', back_populates='account', cascade='all, delete-orphan')
@@ -44,8 +61,8 @@ class McpService(db.Model):
     description = db.Column(db.Text)
     access_control = db.Column(db.String(20), nullable=False, default='restricted')  # 'public' or 'restricted'
     is_enabled = db.Column(db.Boolean, default=True, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
     
     # Relationships
     apps = db.relationship('Service', back_populates='mcp_service', cascade='all, delete-orphan')
@@ -83,8 +100,8 @@ class Service(db.Model):
     description = db.Column(db.Text)
     access_control = db.Column(db.String(20), nullable=False, default='public')  # 'public' or 'restricted'
     is_enabled = db.Column(db.Boolean, default=True, nullable=False)  # 有効/無効フラグ
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
     
     # Relationships
     mcp_service = db.relationship('McpService', back_populates='apps')
@@ -129,8 +146,8 @@ class Capability(db.Model):
     description = db.Column(db.Text)
     access_control = db.Column(db.String(20), nullable=False, default='public')  # 'public' or 'restricted'
     is_enabled = db.Column(db.Boolean, default=True, nullable=False)  # 有効/無効フラグ
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
     
     # Relationships
     service = db.relationship('Service', back_populates='capabilities')
@@ -171,7 +188,7 @@ class AccountPermission(db.Model):
     app_id = db.Column(db.Integer, db.ForeignKey('apps.id'), nullable=True)
     capability_id = db.Column(db.Integer, db.ForeignKey('capabilities.id'), nullable=True)
     
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
     
     # Relationships
     account = db.relationship('ConnectionAccount', back_populates='permissions')
@@ -232,8 +249,8 @@ class AdminSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     setting_key = db.Column(db.String(50), unique=True, nullable=False)
     setting_value = db.Column(db.String(255), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
     
     def to_dict(self):
         return {
@@ -261,8 +278,8 @@ class McpServiceTemplate(db.Model):
     category = db.Column(db.String(50))  # e.g., 'Communication', 'Cloud', 'AI', etc.
     template_id = db.Column(db.String(100))  # Unique template identifier (e.g., 'github-mcp', 'slack-api')
     template_version = db.Column(db.String(20))  # Template version (e.g., '1.0.0')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
     
     # Relationships
     capability_templates = db.relationship('McpCapabilityTemplate', back_populates='service_template', cascade='all, delete-orphan')
@@ -319,8 +336,8 @@ class McpCapabilityTemplate(db.Model):
     headers = db.Column(db.Text)  # JSON string - 個別ヘッダー
     body_params = db.Column(db.Text)  # JSON string - リクエストボディパラメータ定義
     query_params = db.Column(db.Text)  # JSON string - クエリパラメータ定義
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
     
     # Relationships
     service_template = db.relationship('McpServiceTemplate', back_populates='capability_templates')
@@ -367,8 +384,8 @@ class Variable(db.Model):
     env_var_name = db.Column(db.String(100))  # 環境変数名（source_type='env'の場合）
     description = db.Column(db.Text)
     is_secret = db.Column(db.Boolean, default=True, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
     
     @staticmethod
     def encrypt_value(value):
@@ -439,7 +456,7 @@ class McpConnectionLog(db.Model):
     __tablename__ = 'mcp_connection_logs'
     
     id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False, index=True)
     duration_ms = db.Column(db.Integer, nullable=True)
     
     # Account info (nullable for public access)
@@ -545,7 +562,7 @@ class AdminLoginLog(db.Model):
     __tablename__ = 'admin_login_logs'
     
     id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False, index=True)
     username = db.Column(db.String(100), nullable=False, index=True)
     ip_address = db.Column(db.String(45), nullable=False, index=True)  # IPv6 compatible
     user_agent = db.Column(db.String(500))
@@ -591,7 +608,7 @@ class AdminActionLog(db.Model):
     __tablename__ = 'admin_action_logs'
     
     id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False, index=True)
     admin_username = db.Column(db.String(100), nullable=False, index=True)
     action_type = db.Column(db.String(50), nullable=False, index=True)  # 'create', 'update', 'delete'
     resource_type = db.Column(db.String(50), nullable=False, index=True)  # 'mcp_service', 'app', 'capability', etc.
@@ -653,15 +670,15 @@ class LoginLockStatus(db.Model):
     ip_address = db.Column(db.String(45), nullable=False, unique=True, index=True)
     failed_attempts = db.Column(db.Integer, nullable=False, default=0)
     locked_until = db.Column(db.DateTime, nullable=True, index=True)
-    last_attempt_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    last_attempt_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
     
     def is_locked(self):
         """現在ロック中かどうか"""
         if self.locked_until is None:
             return False
-        return datetime.utcnow() < self.locked_until
+        return datetime.now(UTC).replace(tzinfo=None) < self.locked_until
     
     def to_dict(self):
         return {

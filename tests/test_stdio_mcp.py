@@ -250,6 +250,14 @@ class TestStdioConnectionTestAPI:
         assert 'Command not found' in data['error']
 
 
+def close_coroutine_and_return(return_value):
+    """Create a side_effect function that closes the coroutine and returns a value"""
+    def side_effect(coro):
+        coro.close()  # Close the coroutine to prevent "never awaited" warning
+        return return_value
+    return side_effect
+
+
 class TestStdioMcpDiscovery:
     """Test stdio MCP capability discovery"""
     
@@ -258,10 +266,10 @@ class TestStdioMcpDiscovery:
         """Test stdio capability discovery"""
         from app.services.mcp_discovery import discover_stdio_mcp_capabilities
         
-        mock_run.return_value = [
+        mock_run.side_effect = close_coroutine_and_return([
             {'name': 'read_file', 'description': 'Read a file', 'inputSchema': {'type': 'object'}},
             {'name': 'write_file', 'description': 'Write a file', 'inputSchema': {'type': 'object'}}
-        ]
+        ])
         
         # Create a service first
         service = Service(
@@ -297,9 +305,9 @@ class TestStdioMcpDiscovery:
         """Test stdio capability discovery with variable replacement"""
         from app.services.mcp_discovery import discover_stdio_mcp_capabilities
         
-        mock_run.return_value = [
+        mock_run.side_effect = close_coroutine_and_return([
             {'name': 'search', 'description': 'Search', 'inputSchema': {'type': 'object'}}
-        ]
+        ])
         
         # Create a service
         service = Service(
@@ -332,10 +340,10 @@ class TestStdioMcpDiscovery:
         """Test test_stdio_mcp_connection function"""
         from app.services.mcp_discovery import test_stdio_mcp_connection
         
-        mock_run.return_value = [
+        mock_run.side_effect = close_coroutine_and_return([
             {'name': 'tool1', 'description': 'Tool 1'},
             {'name': 'tool2', 'description': 'Tool 2'}
-        ]
+        ])
         
         result = test_stdio_mcp_connection('npx', ['-y', 'package'], {}, None)
         
@@ -348,7 +356,10 @@ class TestStdioMcpDiscovery:
         """Test test_stdio_mcp_connection function when error occurs"""
         from app.services.mcp_discovery import test_stdio_mcp_connection
         
-        mock_run.side_effect = Exception('Connection refused')
+        def raise_error(coro):
+            coro.close()
+            raise Exception('Connection refused')
+        mock_run.side_effect = raise_error
         
         result = test_stdio_mcp_connection('npx', ['-y', 'bad-package'], {}, None)
         
@@ -359,8 +370,11 @@ class TestStdioMcpDiscovery:
 class TestStdioAppCreation:
     """Test creating apps with stdio transport via API"""
     
-    def test_create_stdio_app_via_api(self, auth_client, db, sample_mcp_service):
+    @patch('app.services.mcp_discovery.discover_stdio_mcp_capabilities')
+    def test_create_stdio_app_via_api(self, mock_discover, auth_client, db, sample_mcp_service):
         """Test creating a stdio MCP app via API"""
+        mock_discover.return_value = 0  # Mock to return 0 tools
+        
         response = auth_client.post('/api/apps',
             json={
                 'mcp_service_id': sample_mcp_service.id,
@@ -384,8 +398,11 @@ class TestStdioAppCreation:
         assert data['stdio_args'] == ['-m', 'mcp_server']
         assert data['stdio_env'] == {'DEBUG': 'true'}
     
-    def test_create_http_app_via_api(self, auth_client, db, sample_mcp_service):
+    @patch('app.services.mcp_discovery.discover_mcp_capabilities')
+    def test_create_http_app_via_api(self, mock_discover, auth_client, db, sample_mcp_service):
         """Test creating an HTTP MCP app via API (default transport)"""
+        mock_discover.return_value = 0  # Mock to return 0 tools
+        
         response = auth_client.post('/api/apps',
             json={
                 'mcp_service_id': sample_mcp_service.id,
