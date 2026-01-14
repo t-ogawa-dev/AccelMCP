@@ -131,7 +131,7 @@ function handleFileSelect(file) {
     }
     
     selectedFile = file;
-    document.getElementById('file-info-name').textContent = file.name;
+    document.querySelector('.file-info-name').textContent = file.name;
     document.getElementById('file-info').style.display = 'flex';
     document.querySelector('.drop-zone-content').style.display = 'none';
     document.getElementById('import-btn').disabled = false;
@@ -166,12 +166,12 @@ async function confirmImport() {
         
         closeImportModal();
         
-        // Show success message with subdomain change warning if applicable
+        // Show success message with identifier change warning if applicable
         let message = currentLanguage === 'ja' ? 'インポートしました' : 'Imported successfully';
-        if (result.subdomain_changed) {
+        if (result.identifier_changed) {
             message += currentLanguage === 'ja' 
-                ? `<br><br>サブドメインが重複していたため、新しいサブドメイン「${result.mcp_service.subdomain}」が割り当てられました。`
-                : `<br><br>Subdomain was changed to "${result.mcp_service.subdomain}" due to conflict.`;
+                ? `<br><br>識別子が重複していたため、新しい識別子「${result.mcp_service.identifier}」が割り当てられました。`
+                : `<br><br>Identifier was changed to "${result.mcp_service.identifier}" due to conflict.`;
         }
         await modal.success(message);
         

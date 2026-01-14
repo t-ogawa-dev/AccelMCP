@@ -5,7 +5,7 @@
 
 const mcpServiceId = parseInt(window.location.pathname.split('/')[2]);
 
-function copyEndpoint(btn) {
+async function copyEndpoint(btn) {
     const endpoint = document.getElementById('mcp-endpoint').textContent;
     
     // Create temporary textarea element

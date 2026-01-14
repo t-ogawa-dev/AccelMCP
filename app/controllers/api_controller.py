@@ -189,7 +189,7 @@ def import_mcp_service():
     return jsonify({
         'success': True,
         'mcp_service': mcp_service.to_dict(),
-        'subdomain_changed': subdomain != original_subdomain
+        'identifier_changed': identifier != original_identifier
     }), 201
 
 
