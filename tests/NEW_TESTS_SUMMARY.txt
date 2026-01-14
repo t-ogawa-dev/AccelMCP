@@ -1,8 +1,9 @@
 ===========================================
 新規作成テストファイル一覧 (最終版)
 ===========================================
+最終更新: 2026-01-14
 
-## ユニットテスト (6ファイル)
+## ユニットテスト (7ファイル)
 
 1. tests/test_security.py
    - セキュリティ機能の包括的テスト
@@ -88,6 +89,30 @@
    - TestMcpServicePermissionsAPI (2 tests)
    - TestAppPermissionsAPI (2 tests)
    - TestHierarchicalPermissions (2 tests)
+
+7. tests/test_modal_and_sync.py ⭐NEW (2026-01-14)
+   - 共通モーダル機能とビルトインテンプレート同期の完全テスト
+   - モーダルダイアログ機能
+   - テンプレート更新チェック
+   - テンプレート同期
+   - APIエンドポイント
+   
+   テストクラス:
+   - TestTemplateSyncService (3 tests)
+     * test_check_for_updates_with_update_available
+     * test_check_for_updates_already_latest
+     * test_sync_templates_success
+   - TestCommonModalBasic (3 tests)
+     * test_modal_html_structure_exists
+     * test_i18n_modal_keys_exist
+     * test_modal_js_file_exists
+   - TestAPIEndpoints (2 tests)
+     * test_check_updates_endpoint_exists
+     * test_sync_templates_endpoint_exists
+   
+   統合テスト (2 tests):
+   - test_template_sync_service_initialization
+   - test_modal_and_sync_integration
 
 ## E2Eテスト (3ファイル)
 
@@ -255,4 +280,15 @@ docker compose exec web python -m pytest tests/test_connection_logs.py::TestMcpC
   - 権限付与/剥奪
   - 階層的継承
 
-===========================================
+✅ 共通モーダル機能 (2026-01-14)
+  - カスタムBootstrapモーダル
+  - confirm/alert/success/error/warning ダイアログ
+  - i18n対応（日本語/英語）
+  - ブラウザネイティブダイアログからの置き換え
+
+✅ ビルトインテンプレート同期 (2026-01-14)
+  - GitHubリポジトリからの同期
+  - バージョン管理と更新チェック
+  - 互換性チェック
+  - API エンドポイント (/api/templates/check-updates, /api/templates/sync)
+

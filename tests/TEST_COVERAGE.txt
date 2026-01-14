@@ -2,7 +2,7 @@
 AccelMCP Test Coverage Report
 ===========================================
 Generated: 2026-01-09
-Updated: All 98 unit tests passing (0 skipped)
+Updated: 2026-01-14 (All 108 unit tests passing)
 
 ===========================================
 1. UNIT TESTS (tests/)
@@ -413,6 +413,25 @@ Updated: All 98 unit tests passing (0 skipped)
   - test_account_permissions_by_level
   - test_permission_inheritance
 
+## test_modal_and_sync.py (NEW - 2026-01-14 追加)
+✅ TestTemplateSyncService
+  - test_check_for_updates_with_update_available
+  - test_check_for_updates_already_latest
+  - test_sync_templates_success
+
+✅ TestCommonModalBasic
+  - test_modal_html_structure_exists
+  - test_i18n_modal_keys_exist
+  - test_modal_js_file_exists
+
+✅ TestAPIEndpoints
+  - test_check_updates_endpoint_exists
+  - test_sync_templates_endpoint_exists
+
+✅ Integration Tests
+  - test_template_sync_service_initialization
+  - test_modal_and_sync_integration
+
 ===========================================
 3. E2E TESTS (NEW - 2026-01-09 追加)
 ===========================================
@@ -548,7 +567,7 @@ Coverage by Module (最終):
 - Variables: 100% ✅ (Variable Replacement実装完了)
 - Admin Settings: 100% ✅ (汎用API実装完了)
 
-全体ユニットテストカバレッジ: 98/98 (100% 成功) ✅
+全体ユニットテストカバレッジ: 108/108 (100% 成功) ✅
 
 ===========================================
 5. 完全実装済み機能
@@ -591,5 +610,19 @@ Coverage by Module (最終):
   - 階層的アクセス制御 (ユニット)
   - 権限付与/剥奪 (ユニット)
   - MCP Service/App/Capability権限 (ユニット)
+
+✅ 共通モーダル機能 (2026-01-14 追加)
+  - CommonModalクラス (modal.js)
+  - confirm/alert/success/error/warning/confirmDeleteメソッド
+  - i18n対応 (日本語/英語翻訳キー)
+  - Bootstrap 5 Modal統合
+  - 全画面のブラウザダイアログ置換完了
+
+✅ ビルトインテンプレート同期機能 (2026-01-14 追加)
+  - TemplateSyncServiceクラス
+  - GitHubリポジトリからの更新チェック
+  - バージョン互換性チェック
+  - テンプレート同期 (/api/templates/sync)
+  - 更新バッジUI表示
 
 ===========================================
