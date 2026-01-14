@@ -3,7 +3,7 @@
 
 metadata:
   repository: "t-ogawa-dev/AccelMCP"
-  base_url: "https://raw.githubusercontent.com/t-ogawa-dev/AccelMCP/main/templates/versions"
+  base_url: "https://raw.githubusercontent.com/t-ogawa-dev/AccelMCP/main/data/builtin_templates/versions"
   description: "AccelMCP builtin service templates version management"
 
 versions:
