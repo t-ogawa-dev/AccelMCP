@@ -249,6 +249,8 @@ class McpServiceTemplate(db.Model):
     common_headers = db.Column(db.Text)  # JSON string
     icon = db.Column(db.String(10))  # emoji icon
     category = db.Column(db.String(50))  # e.g., 'Communication', 'Cloud', 'AI', etc.
+    template_id = db.Column(db.String(100))  # Unique template identifier (e.g., 'github-mcp', 'slack-api')
+    template_version = db.Column(db.String(20))  # Template version (e.g., '1.0.0')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -267,6 +269,8 @@ class McpServiceTemplate(db.Model):
             'common_headers': json.loads(self.common_headers) if self.common_headers else {},
             'icon': self.icon,
             'category': self.category,
+            'template_id': self.template_id,
+            'template_version': self.template_version,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }

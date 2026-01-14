@@ -435,6 +435,9 @@ document.addEventListener('DOMContentLoaded', () => {
 (async () => {
     await initLanguageSwitcher();
     
+    // Check for template updates on page load
+    checkTemplateUpdatesOnLoad();
+    
     // Check for flash message in URL params
     const urlParams = new URLSearchParams(window.location.search);
     const message = urlParams.get('message');
@@ -455,3 +458,120 @@ document.addEventListener('DOMContentLoaded', () => {
         loadTemplates('api');
     }
 })();
+
+// ============= Template Update Functions =============
+
+async function checkTemplateUpdatesOnLoad() {
+    try {
+        const response = await fetch('/api/templates/check-updates');
+        if (response.ok) {
+            const data = await response.json();
+            if (data.has_update) {
+                document.getElementById('update-badge').style.display = 'inline-block';
+            }
+        }
+    } catch (error) {
+        console.error('Failed to check for template updates:', error);
+    }
+}
+
+async function checkTemplateUpdates() {
+    const updateModal = document.getElementById('update-modal');
+    const updateError = document.getElementById('update-error');
+    const updateCheckContent = document.getElementById('update-check-content');
+    const updateProgress = document.getElementById('update-progress');
+    const syncBtn = document.getElementById('sync-btn');
+    
+    updateModal.style.display = 'block';
+    updateCheckContent.style.display = 'none';
+    updateProgress.style.display = 'block';
+    updateError.style.display = 'none';
+    syncBtn.style.display = 'none';
+    
+    try {
+        const response = await fetch('/api/templates/check-updates');
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to check for updates');
+        }
+        
+        updateProgress.style.display = 'none';
+        updateCheckContent.style.display = 'block';
+        
+        if (data.has_update) {
+            document.getElementById('update-modal-title').textContent = t('mcp_template_update_available') || '最新版のテンプレートがあります';
+            document.getElementById('update-modal-message').textContent = 
+                t('mcp_template_update_confirm') || 'テンプレートを最新版に同期しますか？';
+            document.getElementById('current-version').textContent = data.current_version;
+            document.getElementById('latest-version').textContent = data.latest_version;
+            document.getElementById('changelog').textContent = data.changelog;
+            syncBtn.style.display = 'inline-block';
+        } else {
+            document.getElementById('update-modal-title').textContent = t('mcp_template_up_to_date') || '最新の状態です';
+            document.getElementById('update-modal-message').textContent = 
+                t('mcp_template_no_update') || 'テンプレートは最新版です。';
+            document.getElementById('current-version').textContent = data.current_version;
+            document.getElementById('latest-version').textContent = data.latest_version;
+            document.getElementById('changelog').textContent = '-';
+            document.getElementById('update-details').style.display = 'none';
+        }
+    } catch (error) {
+        updateProgress.style.display = 'none';
+        updateCheckContent.style.display = 'none';
+        updateError.textContent = error.message;
+        updateError.style.display = 'block';
+    }
+}
+
+async function syncTemplates() {
+    const updateCheckContent = document.getElementById('update-check-content');
+    const updateProgress = document.getElementById('update-progress');
+    const updateError = document.getElementById('update-error');
+    const syncBtn = document.getElementById('sync-btn');
+    
+    updateCheckContent.style.display = 'none';
+    updateProgress.style.display = 'block';
+    updateError.style.display = 'none';
+    syncBtn.disabled = true;
+    
+    try {
+        const response = await fetch('/api/templates/sync', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to sync templates');
+        }
+        
+        // Success - close modal and reload templates
+        closeUpdateModal();
+        showFlashMessage(
+            `${t('mcp_template_sync_success') || 'テンプレートを同期しました'}: ${data.added} ${t('added') || '追加'}, ${data.updated} ${t('updated') || '更新'}`
+        );
+        
+        // Hide update badge
+        document.getElementById('update-badge').style.display = 'none';
+        
+        // Reload templates
+        loadTemplates(currentTab);
+        
+    } catch (error) {
+        updateProgress.style.display = 'none';
+        updateCheckContent.style.display = 'block';
+        updateError.textContent = error.message;
+        updateError.style.display = 'block';
+        syncBtn.disabled = false;
+    }
+}
+
+function closeUpdateModal() {
+    document.getElementById('update-modal').style.display = 'none';
+    document.getElementById('update-details').style.display = 'block';
+    document.getElementById('sync-btn').disabled = false;
+}

@@ -1,0 +1,17 @@
+# AccelMCP Builtin Templates Version Management
+# このファイルは利用可能なテンプレートバージョンを管理します
+
+metadata:
+  repository: "t-ogawa-dev/AccelMCP"
+  base_url: "https://raw.githubusercontent.com/t-ogawa-dev/AccelMCP/main/templates/versions"
+  description: "AccelMCP builtin service templates version management"
+
+versions:
+  - version: "1.0.0"
+    accel_mcp_min: "1.0.0"
+    accel_mcp_max: "1.9.9"
+    file: "v1.0.0.yaml"
+    released_at: "2026-01-14T00:00:00Z"
+    changelog: "初期リリース - GitHub MCP, MS Learn MCP, Slack API, GitHub API, OpenAI API, Google Calendar APIを含む"
+    schema_breaking: false
+    template_count: 6

@@ -24,6 +24,12 @@ class Config:
     SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False').lower() == 'true'
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
+    
+    # Template Repository Configuration
+    TEMPLATE_REPOSITORY_URL = os.getenv('TEMPLATE_REPOSITORY_URL', 
+                                         'https://raw.githubusercontent.com/AccelMCP/AccelMCP/main/templates')
+    TEMPLATE_INDEX_FILE = os.getenv('TEMPLATE_INDEX_FILE', 'index.yaml')
+    TEMPLATE_VERSIONS_DIR = os.getenv('TEMPLATE_VERSIONS_DIR', 'versions')
 
 
 class DevelopmentConfig(Config):

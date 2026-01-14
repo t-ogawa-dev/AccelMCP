@@ -11,6 +11,9 @@ httpx>=0.26.0
 python-dotenv==1.0.0
 Werkzeug==3.0.1
 gunicorn==21.2.0
+PyYAML==6.0.1
+packaging==23.2
+requests==2.31.0
 
 # Testing
 pytest==7.4.3

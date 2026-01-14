@@ -26,6 +26,12 @@
     <button class="tab active" data-tab="api" data-i18n="mcp_template_tab_api">WebService(API)</button>
     <button class="tab" data-tab="mcp" data-i18n="mcp_template_tab_mcp">WebService(MCP)</button>
     <button class="tab" data-tab="custom" data-i18n="mcp_template_tab_custom">カスタム</button>
+    <div style="margin-left: auto;">
+        <button id="check-updates-btn" class="btn btn-secondary" onclick="checkTemplateUpdates()">
+            <span data-i18n="mcp_template_check_updates">テンプレート更新を確認</span>
+            <span id="update-badge" class="badge badge-danger" style="display: none; margin-left: 8px;">New</span>
+        </button>
+    </div>
 </div>
 
 <div class="tab-content" id="api-tab">
@@ -120,6 +126,40 @@
     </div>
 </div>
 
+<!-- Template Update Modal -->
+<div id="update-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 data-i18n="mcp_template_update_title">テンプレート更新</h3>
+            <span class="modal-close" onclick="closeUpdateModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div id="update-check-content">
+                <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 48px; margin-bottom: 20px;">🔄</div>
+                    <h4 id="update-modal-title" style="margin-bottom: 10px;"></h4>
+                    <p id="update-modal-message" style="color: #666; margin-bottom: 20px;"></p>
+                    <div id="update-details" style="text-align: left; background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <p><strong data-i18n="mcp_template_current_version">現在のバージョン:</strong> <span id="current-version"></span></p>
+                        <p><strong data-i18n="mcp_template_latest_version">最新バージョン:</strong> <span id="latest-version"></span></p>
+                        <p><strong data-i18n="mcp_template_changelog">変更内容:</strong></p>
+                        <p id="changelog" style="margin-left: 15px; color: #666;"></p>
+                    </div>
+                </div>
+            </div>
+            <div id="update-error" class="modal-error" style="display: none;"></div>
+            <div id="update-progress" style="display: none; text-align: center; padding: 20px;">
+                <div class="spinner"></div>
+                <p data-i18n="mcp_template_syncing">同期中...</p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeUpdateModal()" data-i18n="button_cancel">キャンセル</button>
+            <button id="sync-btn" class="btn btn-primary" onclick="syncTemplates()" data-i18n="mcp_template_sync_button">同期する</button>
+        </div>
+    </div>
+</div>
+
 <style>
 .flash-message {
     padding: 16px 24px;
@@ -149,6 +189,36 @@
     gap: 10px;
     margin-bottom: 20px;
     border-bottom: 2px solid #e0e0e0;
+    align-items: center;
+}
+
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-danger {
+    background-color: #ef4444;
+    color: white;
+}
+
+.spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 .tab {

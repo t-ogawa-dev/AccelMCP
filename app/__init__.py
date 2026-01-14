@@ -6,6 +6,9 @@ import logging
 from flask import Flask
 from flask_cors import CORS
 
+# Application version
+__version__ = "1.0.0"
+
 # Import extensions
 from app.models.models import db
 from app.config.config import Config

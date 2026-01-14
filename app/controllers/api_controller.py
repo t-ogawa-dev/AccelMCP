@@ -1857,3 +1857,41 @@ def get_locked_ips():
     })
 
 
+# ============= Template Sync API =============
+
+@api_bp.route('/templates/check-updates', methods=['GET'])
+@login_required
+def check_template_updates():
+    """Check for template updates from GitHub repository"""
+    from app.services.template_sync import TemplateSyncService, TemplateNotFoundError, VersionIncompatibleError
+    
+    try:
+        service = TemplateSyncService()
+        update_info = service.check_for_updates()
+        return jsonify(update_info)
+    except VersionIncompatibleError as e:
+        return jsonify({'error': str(e), 'type': 'incompatible'}), 400
+    except TemplateNotFoundError as e:
+        return jsonify({'error': str(e), 'type': 'not_found'}), 404
+    except Exception as e:
+        return jsonify({'error': f'Update check failed: {str(e)}', 'type': 'unknown'}), 500
+
+
+@api_bp.route('/templates/sync', methods=['POST'])
+@login_required
+@audit_log('template', action_type='sync')
+def sync_templates():
+    """Synchronize templates from GitHub repository"""
+    from app.services.template_sync import TemplateSyncService, TemplateNotFoundError, VersionIncompatibleError
+    
+    try:
+        service = TemplateSyncService()
+        result = service.sync_templates()
+        return jsonify(result)
+    except VersionIncompatibleError as e:
+        return jsonify({'error': str(e), 'type': 'incompatible'}), 400
+    except TemplateNotFoundError as e:
+        return jsonify({'error': str(e), 'type': 'not_found'}), 404
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Template sync failed: {str(e)}', 'type': 'unknown'}), 500
