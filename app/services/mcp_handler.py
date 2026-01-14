@@ -901,15 +901,17 @@ class MCPHandler:
     def _execute_mcp_call(self, service, capability, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Execute MCP relay call"""
         # For MCP relay, we need to connect to another MCP server
-        # This is a placeholder - actual implementation would use MCP client
         
         try:
             # Parse MCP server URL
-            # Expected format: http://host:port or mcp://command
-            
             # For mcp_tool type, use service.mcp_url (capability.service is the Service/App model)
             app = capability.service
+            mcp_transport = getattr(app, 'mcp_transport', 'http') or 'http'
             mcp_url = app.mcp_url if app else capability.url
+            
+            # Check if stdio transport
+            if mcp_transport == 'stdio':
+                return self._execute_stdio_mcp_call(app, capability, arguments)
             
             if not mcp_url:
                 return {
@@ -997,14 +999,133 @@ class MCPHandler:
                 return response.json()
             
             else:
-                # For stdio MCP, would need to spawn process
                 return {
                     'success': False,
-                    'error': 'stdio MCP relay not yet implemented'
+                    'error': 'Unsupported MCP transport'
                 }
         
         except Exception as e:
             return {
                 'success': False,
                 'error': str(e)
+            }
+    
+    def _execute_stdio_mcp_call(self, app, capability, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute stdio MCP relay call"""
+        try:
+            # Get stdio configuration from app
+            command = app.stdio_command
+            args = json.loads(app.stdio_args) if app.stdio_args else []
+            env = json.loads(app.stdio_env) if app.stdio_env else {}
+            cwd = app.stdio_cwd
+            
+            if not command:
+                return {
+                    'success': False,
+                    'error': 'stdio command is not configured'
+                }
+            
+            # Replace variables in args and env
+            from app.services.variable_replacer import VariableReplacer
+            replacer = VariableReplacer()
+            
+            # Replace variables in args
+            resolved_args = [replacer.replace_in_string(str(arg)) for arg in args]
+            
+            # Replace variables in env
+            resolved_env = {}
+            for key, value in env.items():
+                resolved_env[key] = replacer.replace_in_string(str(value))
+            
+            # Run the async call
+            result = asyncio.run(self._async_stdio_mcp_call(
+                command, resolved_args, resolved_env, cwd,
+                capability.name, arguments
+            ))
+            
+            return result
+        
+        except Exception as e:
+            logger.error(f"stdio MCP call failed: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    async def _async_stdio_mcp_call(
+        self, 
+        command: str, 
+        args: List[str], 
+        env: Dict[str, str], 
+        cwd: Optional[str],
+        tool_name: str,
+        arguments: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Async implementation of stdio MCP call"""
+        import os
+        
+        # Create server parameters
+        server_params = StdioServerParameters(
+            command=command,
+            args=args,
+            env={**os.environ, **env} if env else None,
+            cwd=cwd
+        )
+        
+        try:
+            async with stdio_client(server_params) as (read, write):
+                async with ClientSession(read, write) as session:
+                    # Initialize the session
+                    await session.initialize()
+                    
+                    # Call the tool
+                    result = await session.call_tool(tool_name, arguments)
+                    
+                    # Convert result to dict format
+                    if result.content:
+                        content_list = []
+                        for item in result.content:
+                            if hasattr(item, 'text'):
+                                content_list.append({
+                                    'type': 'text',
+                                    'text': item.text
+                                })
+                            elif hasattr(item, 'data'):
+                                content_list.append({
+                                    'type': 'blob',
+                                    'data': item.data
+                                })
+                            else:
+                                content_list.append({
+                                    'type': 'unknown',
+                                    'value': str(item)
+                                })
+                        
+                        return {
+                            'jsonrpc': '2.0',
+                            'id': 1,
+                            'result': {
+                                'content': content_list,
+                                'isError': result.isError if hasattr(result, 'isError') else False
+                            }
+                        }
+                    else:
+                        return {
+                            'jsonrpc': '2.0',
+                            'id': 1,
+                            'result': {
+                                'content': [],
+                                'isError': False
+                            }
+                        }
+        
+        except Exception as e:
+            logger.error(f"async stdio MCP call error: {e}")
+            return {
+                'jsonrpc': '2.0',
+                'id': 1,
+                'error': {
+                    'code': -32603,
+                    'message': str(e)
+                }
             }

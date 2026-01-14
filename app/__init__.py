@@ -51,9 +51,12 @@ def create_app(config_class=Config):
     # Setup logging
     setup_logging(app)
     
-    # Store admin credentials in app config
-    app.config['ADMIN_USERNAME'] = os.getenv('ADMIN_USERNAME', 'admin')
-    app.config['ADMIN_PASSWORD'] = os.getenv('ADMIN_PASSWORD', 'admin123')
+    # Store admin credentials in app config (only if not already set by config class)
+    if 'ADMIN_USERNAME' not in app.config or app.config.get('TESTING'):
+        # In testing mode, don't override with env vars
+        if not app.config.get('TESTING'):
+            app.config['ADMIN_USERNAME'] = os.getenv('ADMIN_USERNAME', 'admin')
+            app.config['ADMIN_PASSWORD'] = os.getenv('ADMIN_PASSWORD', 'admin123')
     
     app.logger.debug(f"Admin username: {app.config['ADMIN_USERNAME']}")
     

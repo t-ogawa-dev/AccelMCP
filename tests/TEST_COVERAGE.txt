@@ -2,7 +2,7 @@
 AccelMCP Test Coverage Report
 ===========================================
 Generated: 2026-01-09
-Updated: 2026-01-14 (All 108 unit tests passing)
+Updated: 2026-01-15 (All 131 unit tests passing)
 
 ===========================================
 1. UNIT TESTS (tests/)
@@ -432,6 +432,44 @@ Updated: 2026-01-14 (All 108 unit tests passing)
   - test_template_sync_service_initialization
   - test_modal_and_sync_integration
 
+## test_stdio_mcp.py (NEW - 2026-01-15 追加)
+✅ TestStdioMcpModel
+  - test_service_stdio_fields_exist
+  - test_service_to_dict_includes_stdio_fields
+  - test_service_http_transport_default
+
+✅ TestVariableReplacementInStdio
+  - test_variable_replacement_in_env
+  - test_variable_replacement_in_args
+  - test_unresolved_variable_stays_unchanged
+  - test_multiple_variables_in_string
+
+✅ TestStdioConnectionTestAPI
+  - test_test_stdio_connection_missing_command
+  - test_test_stdio_connection_unresolved_variable_in_args
+  - test_test_stdio_connection_unresolved_variable_in_env
+  - test_test_stdio_connection_success
+  - test_test_stdio_connection_failure
+
+✅ TestStdioMcpDiscovery
+  - test_discover_stdio_capabilities
+  - test_discover_stdio_capabilities_with_variables
+  - test_test_stdio_mcp_connection_function
+  - test_test_stdio_mcp_connection_error
+
+✅ TestStdioAppCreation
+  - test_create_stdio_app_via_api
+  - test_create_http_app_via_api
+
+✅ TestMcpHandlerStdio
+  - test_mcp_handler_detects_stdio_transport
+  - test_mcp_handler_calls_stdio_method
+  - test_stdio_mcp_call_variable_replacement
+
+✅ TestVariableEncryption
+  - test_variable_set_and_get_value
+  - test_variable_in_replacer
+
 ===========================================
 3. E2E TESTS (NEW - 2026-01-09 追加)
 ===========================================
@@ -532,12 +570,20 @@ Updated: 2026-01-14 (All 108 unit tests passing)
 4. TEST STATISTICS
 ===========================================
 
-総ユニットテスト数: 98テスト ✅
-  - 全テスト成功: 98/98 (100%)
-  - スキップ: 0/98 (0%)
-  - 失敗: 0/98 (0%)
+総ユニットテスト数: 131テスト ✅
+  - 全テスト成功: 131/131 (100%)
+  - スキップ: 0/131 (0%)
+  - 失敗: 0/131 (0%)
 
 テストカテゴリー:
+  ✅ stdio MCP: 23テスト (100%成功) [NEW]
+    - Model Tests: 3テスト
+    - Variable Replacement: 4テスト
+    - API Tests: 5テスト
+    - Discovery Tests: 4テスト
+    - App Creation: 2テスト
+    - Handler Tests: 3テスト
+    - Encryption Tests: 2テスト
   ✅ Connection Logs: 10テスト (100%成功)
   ✅ Permissions: 16テスト (100%成功)
   ✅ Security: 15テスト (100%成功)
@@ -560,14 +606,15 @@ Coverage by Module (最終):
 - Models: 100% ✅ (全モデル網羅)
 - API Controllers: 100% ✅ (全エンドポイント網羅)
 - Views: 95% ✅ (全画面網羅)
-- MCP Protocol: 90% ✅
+- MCP Protocol: 100% ✅ (stdio/HTTP両方カバー)
 - Auth & Security: 100% ✅ (完全カバー、非同期ログ含む)
 - Connection Logs: 100% ✅
 - Permissions: 100% ✅
 - Variables: 100% ✅ (Variable Replacement実装完了)
 - Admin Settings: 100% ✅ (汎用API実装完了)
+- stdio MCP: 100% ✅ (2026-01-15 新規追加)
 
-全体ユニットテストカバレッジ: 108/108 (100% 成功) ✅
+全体ユニットテストカバレッジ: 131/131 (100% 成功) ✅
 
 ===========================================
 5. 完全実装済み機能
@@ -624,5 +671,13 @@ Coverage by Module (最終):
   - バージョン互換性チェック
   - テンプレート同期 (/api/templates/sync)
   - 更新バッジUI表示
+
+✅ stdio MCP機能 (2026-01-15 追加)
+  - stdioトランスポート (ローカルプロセス実行)
+  - MCP SDK統合 (ClientSession, StdioServerParameters)
+  - 接続テストAPI (/api/apps/test-stdio-connection)
+  - Capability自動検出 (discover_stdio_mcp_capabilities)
+  - Variables変数置換 (args/env両方)
+  - 未解決変数エラーチェック
 
 ===========================================

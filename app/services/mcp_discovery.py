@@ -410,3 +410,151 @@ def discover_mcp_capabilities(service_id, mcp_url):
     except Exception as e:
         db.session.rollback()
         raise Exception(f"MCP capability discovery failed: {str(e)}")
+
+
+async def _discover_tools_stdio_async(command: str, args: list, env: dict, cwd: str = None) -> list:
+    """
+    非同期でstdio MCPサーバーに接続してツールリストを取得
+    
+    Args:
+        command: 実行するコマンド
+        args: コマンド引数
+        env: 環境変数
+        cwd: 作業ディレクトリ
+    
+    Returns:
+        ツールのリスト
+    """
+    import os
+    from mcp import ClientSession, StdioServerParameters
+    from mcp.client.stdio import stdio_client
+    
+    try:
+        logging.info(f"Attempting stdio connection: {command} {args}")
+        
+        # Create server parameters
+        server_params = StdioServerParameters(
+            command=command,
+            args=args,
+            env={**os.environ, **env} if env else None,
+            cwd=cwd
+        )
+        
+        async with stdio_client(server_params) as (read, write):
+            async with ClientSession(read, write) as session:
+                # Initialize
+                await session.initialize()
+                logging.info("stdio MCP initialized")
+                
+                # List tools
+                tools_result = await session.list_tools()
+                
+                # Extract tools
+                if hasattr(tools_result, 'tools'):
+                    tools_data = tools_result.tools
+                    logging.info(f"Received {len(tools_data)} tools from stdio MCP")
+                    
+                    return [
+                        {
+                            'name': tool.name,
+                            'description': tool.description if hasattr(tool, 'description') else '',
+                            'inputSchema': tool.inputSchema if hasattr(tool, 'inputSchema') else {}
+                        }
+                        for tool in tools_data
+                    ]
+                else:
+                    logging.warning("stdio: tools_result does not have 'tools' attribute")
+                    return []
+                    
+    except Exception as e:
+        logging.error(f"stdio MCP connection failed: {str(e)}")
+        raise Exception(f"stdio MCP connection failed: {str(e)}")
+
+
+def discover_stdio_mcp_capabilities(service_id: int, command: str, args: list, env: dict, cwd: str = None) -> int:
+    """
+    stdio MCPサーバーに接続してtoolsリストを取得し、Capabilityとして登録
+    
+    Args:
+        service_id: サービスID
+        command: 実行するコマンド
+        args: コマンド引数
+        env: 環境変数
+        cwd: 作業ディレクトリ
+    
+    Returns:
+        登録されたCapability数
+    """
+    try:
+        # サービス情報を取得
+        service = Service.query.get(service_id)
+        if not service:
+            raise Exception(f"Service with id {service_id} not found")
+        
+        # 引数と環境変数の変数置換
+        replacer = VariableReplacer()
+        
+        # 引数の変数置換
+        resolved_args = [replacer.replace_in_string(str(arg)) for arg in args]
+        
+        # 環境変数の変数置換
+        resolved_env = {}
+        for key, value in env.items():
+            resolved_env[key] = replacer.replace_in_string(str(value))
+        
+        # 非同期関数を実行
+        tools = asyncio.run(_discover_tools_stdio_async(command, resolved_args, resolved_env, cwd))
+        
+        # 既存のMCP Capabilityを削除
+        Capability.query.filter_by(
+            app_id=service_id,
+            capability_type='mcp_tool'
+        ).delete()
+        
+        # 各toolをCapabilityとして登録
+        for tool in tools:
+            capability = Capability(
+                app_id=service_id,
+                name=tool.get('name', 'Unknown Tool'),
+                capability_type='mcp_tool',
+                description=tool.get('description', ''),
+                # MCPツールはURLやヘッダーを持たない（MCP経由で実行）
+                url=None,
+                headers=None,
+                body_params=json.dumps(tool.get('inputSchema', {}))  # パラメータスキーマを保存
+            )
+            db.session.add(capability)
+        
+        db.session.commit()
+        return len(tools)
+        
+    except Exception as e:
+        db.session.rollback()
+        raise Exception(f"stdio MCP capability discovery failed: {str(e)}")
+
+
+def test_stdio_mcp_connection(command: str, args: list, env: dict, cwd: str = None) -> dict:
+    """
+    stdio MCP接続をテストしてツールリストを取得
+    
+    Args:
+        command: 実行するコマンド
+        args: コマンド引数
+        env: 環境変数
+        cwd: 作業ディレクトリ
+    
+    Returns:
+        dict with 'success', 'tools', 'error', 'server_info'
+    """
+    try:
+        tools = asyncio.run(_discover_tools_stdio_async(command, args, env, cwd))
+        return {
+            'success': True,
+            'tools': [t.get('name') for t in tools],
+            'server_info': {}
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'error': str(e)
+        }

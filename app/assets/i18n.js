@@ -429,6 +429,7 @@ const translations = {
         app_mcp_url_readonly_hint: 'MCP接続URLは登録後に変更できません',
         app_common_headers_readonly_hint: '共通ヘッダーは登録後に変更できません',
         app_mcp_connection_required: 'MCP接続テストに成功してから登録してください',
+        app_stdio_connection_required: 'stdio接続テストに成功してから登録してください',
         app_mcp_url_label: 'MCP接続URL',
         app_mcp_url_hint: 'MCPサーバーのSSEエンドポイントURLを入力してください',
         app_test_connection: '接続テスト',
@@ -452,6 +453,28 @@ const translations = {
         app_template_capabilities_auto_register: '個のCapabilityが自動登録されます',
         app_api_base_url_label: 'API ベースURL',
         app_api_base_url_hint: 'APIの共通ベースURL（任意）例: https://api.example.com/v1/',
+        
+        // MCP トランスポート
+        app_mcp_transport_label: 'MCPトランスポート',
+        app_transport_http: 'HTTP (SSE/Streamable)',
+        app_transport_stdio: 'stdio (ローカルプロセス)',
+        app_transport_readonly_hint: 'トランスポートは登録後に変更できません',
+        
+        // stdio設定
+        app_stdio_command_label: 'コマンド',
+        app_stdio_command_hint: 'MCPサーバーを起動するコマンド',
+        app_stdio_command_required: 'コマンドを入力してください',
+        app_stdio_args_label: '引数',
+        app_stdio_args_hint: 'コマンド引数（1行に1つずつ、Variablesが使用可能）',
+        app_stdio_env_label: '環境変数',
+        app_stdio_env_hint: 'MCPプロセスに渡す環境変数（値にVariablesが使用可能）',
+        app_stdio_cwd_label: '作業ディレクトリ',
+        app_stdio_cwd_hint: 'コマンド実行時の作業ディレクトリ（オプション）',
+        app_stdio_readonly_hint: 'stdio設定は登録後に変更できません',
+        button_add_env: '+ 環境変数を追加',
+        form_env_key_placeholder: '環境変数名 (例: API_KEY)',
+        form_env_value_placeholder: '値 または {{VARIABLE}}',
+        tools_detected: 'ツール検出',
         
         // アプリ編集
         app_edit_title: 'アプリ編集',
@@ -1065,6 +1088,7 @@ const translations = {
         app_mcp_url_readonly_hint: 'MCP connection URL cannot be changed after registration',
         app_common_headers_readonly_hint: 'Common headers cannot be changed after registration',
         app_mcp_connection_required: 'Please complete the MCP connection test successfully before registration',
+        app_stdio_connection_required: 'Please complete the stdio connection test successfully before registration',
         app_mcp_url_label: 'MCP Connection URL',
         app_mcp_url_hint: 'Enter the SSE endpoint URL of the MCP server',
         app_test_connection: 'Test Connection',
@@ -1088,6 +1112,28 @@ const translations = {
         app_template_capabilities_auto_register: ' capabilities will be automatically registered',
         app_api_base_url_label: 'API Base URL',
         app_api_base_url_hint: 'Common API base URL (optional), e.g., https://api.example.com/v1/',
+        
+        // MCP Transport
+        app_mcp_transport_label: 'MCP Transport',
+        app_transport_http: 'HTTP (SSE/Streamable)',
+        app_transport_stdio: 'stdio (Local Process)',
+        app_transport_readonly_hint: 'Transport cannot be changed after registration',
+        
+        // stdio settings
+        app_stdio_command_label: 'Command',
+        app_stdio_command_hint: 'Command to start MCP server',
+        app_stdio_command_required: 'Please enter a command',
+        app_stdio_args_label: 'Arguments',
+        app_stdio_args_hint: 'Command arguments (one per line, Variables can be used)',
+        app_stdio_env_label: 'Environment Variables',
+        app_stdio_env_hint: 'Environment variables for MCP process (Variables can be used in values)',
+        app_stdio_cwd_label: 'Working Directory',
+        app_stdio_cwd_hint: 'Working directory for command execution (optional)',
+        app_stdio_readonly_hint: 'stdio settings cannot be changed after registration',
+        button_add_env: '+ Add Environment Variable',
+        form_env_key_placeholder: 'Variable Name (e.g., API_KEY)',
+        form_env_value_placeholder: 'Value or {{VARIABLE}}',
+        tools_detected: 'tools detected',
         
         // App Edit
         app_edit_title: 'Edit App',

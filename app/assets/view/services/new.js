@@ -1,8 +1,10 @@
 // services/new.js - Service Registration Page
 let headerIndex = 0;
+let envIndex = 0;
 
 function toggleServiceType() {
     const serviceType = document.querySelector('input[name="service_type"]:checked').value;
+    const mcpConfigSection = document.getElementById('mcp-config-section');
     const mcpUrlSection = document.getElementById('mcp-url-section');
     const mcpUrlInput = document.getElementById('mcp_url');
     const mcpUrlLabel = document.querySelector('#mcp-url-label span:first-child');
@@ -11,26 +13,49 @@ function toggleServiceType() {
     const testConnectionBtn = document.getElementById('test-connection-btn');
     
     if (serviceType === 'mcp') {
-        mcpUrlSection.style.display = 'block';
-        mcpUrlInput.setAttribute('required', 'required');
-        mcpUrlLabel.setAttribute('data-i18n', 'app_mcp_url_label');
-        mcpUrlLabel.textContent = 'MCP接続URL';
-        mcpUrlRequired.textContent = '*';
-        mcpUrlHint.setAttribute('data-i18n', 'app_mcp_url_hint');
-        mcpUrlHint.textContent = 'MCPサーバーのSSEエンドポイントURLを入力してください';
-        mcpUrlInput.placeholder = 'http://localhost:3000/sse';
-        testConnectionBtn.style.display = 'block';
+        mcpConfigSection.style.display = 'block';
+        // Reset to HTTP transport by default
+        document.querySelector('input[name="mcp_transport"][value="http"]').checked = true;
+        toggleMcpTransport();
     } else {
-        // API type
+        // API type - show URL field without MCP config section
+        mcpConfigSection.style.display = 'none';
+        
+        // Show mcp_url field for API base URL (optional)
         mcpUrlSection.style.display = 'block';
         mcpUrlInput.removeAttribute('required');
-        mcpUrlLabel.setAttribute('data-i18n', 'app_api_base_url_label');
-        mcpUrlLabel.textContent = t('app_api_base_url_label');
-        mcpUrlRequired.textContent = '';
-        mcpUrlHint.setAttribute('data-i18n', 'app_api_base_url_hint');
-        mcpUrlHint.textContent = t('app_api_base_url_hint');
-        mcpUrlInput.placeholder = 'https://api.example.com/v1/';
-        testConnectionBtn.style.display = 'none';
+        if (mcpUrlLabel) {
+            mcpUrlLabel.setAttribute('data-i18n', 'app_api_base_url_label');
+            mcpUrlLabel.textContent = t('app_api_base_url_label');
+        }
+        if (mcpUrlRequired) mcpUrlRequired.textContent = '';
+        if (mcpUrlHint) {
+            mcpUrlHint.setAttribute('data-i18n', 'app_api_base_url_hint');
+            mcpUrlHint.textContent = t('app_api_base_url_hint');
+        }
+        if (mcpUrlInput) mcpUrlInput.placeholder = 'https://api.example.com/v1/';
+        if (testConnectionBtn) testConnectionBtn.style.display = 'none';
+    }
+}
+
+function toggleMcpTransport() {
+    const transport = document.querySelector('input[name="mcp_transport"]:checked').value;
+    const mcpUrlSection = document.getElementById('mcp-url-section');
+    const stdioConfigSection = document.getElementById('stdio-config-section');
+    const mcpUrlInput = document.getElementById('mcp_url');
+    const stdioCommandInput = document.getElementById('stdio_command');
+    
+    if (transport === 'http') {
+        mcpUrlSection.style.display = 'block';
+        stdioConfigSection.style.display = 'none';
+        mcpUrlInput.setAttribute('required', 'required');
+        if (stdioCommandInput) stdioCommandInput.removeAttribute('required');
+    } else {
+        // stdio
+        mcpUrlSection.style.display = 'none';
+        stdioConfigSection.style.display = 'block';
+        mcpUrlInput.removeAttribute('required');
+        if (stdioCommandInput) stdioCommandInput.setAttribute('required', 'required');
     }
 }
 
@@ -48,6 +73,22 @@ function addHeaderRow(key = '', value = '') {
     `;
     container.appendChild(row);
     headerIndex++;
+}
+
+function addEnvRow(key = '', value = '') {
+    const container = document.getElementById('env-container');
+    const row = document.createElement('div');
+    row.className = 'key-value-row';
+    row.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px; align-items: center;';
+    row.innerHTML = `
+        <input type="text" placeholder="${t('form_env_key_placeholder') || '環境変数名 (例: API_KEY)'}" value="${key}" 
+               style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+        <input type="text" placeholder="${t('form_env_value_placeholder') || '値 または {{VARIABLE}}'}" value="${value}" 
+               style="flex: 2; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+        <button type="button" onclick="this.parentElement.remove()" class="btn btn-sm btn-danger">${t('button_delete')}</button>
+    `;
+    container.appendChild(row);
+    envIndex++;
 }
 
 async function testConnection() {
@@ -104,6 +145,91 @@ async function testConnection() {
             resultDiv.style.border = '1px solid #10b981';
             resultDiv.style.color = '#065f46';
             resultDiv.textContent = '✓ ' + (t('app_connection_success') || '接続成功');
+            return true;
+        } else {
+            // Failure
+            resultDiv.style.backgroundColor = '#fee';
+            resultDiv.style.border = '1px solid #fcc';
+            resultDiv.style.color = '#c33';
+            resultDiv.textContent = '✗ ' + (result.error || t('app_connection_failed') || '接続失敗');
+            return false;
+        }
+    } catch (e) {
+        // Error
+        resultDiv.style.backgroundColor = '#fee';
+        resultDiv.style.border = '1px solid #fcc';
+        resultDiv.style.color = '#c33';
+        resultDiv.textContent = '✗ ' + (t('app_connection_error') || '接続エラー') + ': ' + e.message;
+        return false;
+    }
+}
+
+async function testStdioConnection() {
+    const command = document.getElementById('stdio_command').value.trim();
+    const argsText = document.getElementById('stdio_args').value.trim();
+    const resultDiv = document.getElementById('stdio-test-result');
+    
+    if (!command) {
+        resultDiv.style.display = 'block';
+        resultDiv.style.padding = '12px';
+        resultDiv.style.borderRadius = '6px';
+        resultDiv.style.backgroundColor = '#fee';
+        resultDiv.style.border = '1px solid #fcc';
+        resultDiv.style.color = '#c33';
+        resultDiv.textContent = t('app_stdio_command_required') || 'コマンドを入力してください';
+        return false;
+    }
+    
+    // Parse args (one per line)
+    const args = argsText ? argsText.split('\n').map(line => line.trim()).filter(line => line) : [];
+    
+    // Collect environment variables
+    const env = {};
+    const envRows = document.querySelectorAll('#env-container .key-value-row');
+    envRows.forEach(row => {
+        const inputs = row.querySelectorAll('input[type="text"]');
+        const key = inputs[0].value.trim();
+        const value = inputs[1].value.trim();
+        if (key) {
+            env[key] = value;
+        }
+    });
+    
+    const cwd = document.getElementById('stdio_cwd').value.trim() || null;
+    
+    // Show loading state
+    resultDiv.style.display = 'block';
+    resultDiv.style.padding = '12px';
+    resultDiv.style.borderRadius = '6px';
+    resultDiv.style.backgroundColor = '#f0f9ff';
+    resultDiv.style.border = '1px solid #bae6fd';
+    resultDiv.style.color = '#0369a1';
+    resultDiv.textContent = t('app_testing_connection') || '接続テスト中...';
+    
+    try {
+        const response = await fetch('/api/apps/test-stdio-connection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                command: command,
+                args: args,
+                env: env,
+                cwd: cwd
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+            // Success
+            resultDiv.style.backgroundColor = '#d1fae5';
+            resultDiv.style.border = '1px solid #10b981';
+            resultDiv.style.color = '#065f46';
+            let successMsg = '✓ ' + (t('app_connection_success') || '接続成功');
+            if (result.tools && result.tools.length > 0) {
+                successMsg += ` (${result.tools.length} ${t('tools_detected') || 'ツール検出'})`;
+            }
+            resultDiv.textContent = successMsg;
             return true;
         } else {
             // Failure
@@ -223,13 +349,23 @@ async function testConnection() {
         
         const formData = new FormData(e.target);
         const serviceType = formData.get('service_type');
+        const mcpTransport = formData.get('mcp_transport') || 'http';
         
         // For MCP type, validate connection first
         if (serviceType === 'mcp') {
-            const connectionSuccess = await testConnection();
-            if (!connectionSuccess) {
-                await modal.warning(t('app_mcp_connection_required') || 'MCP接続テストに成功してから登録してください');
-                return;
+            if (mcpTransport === 'http') {
+                const connectionSuccess = await testConnection();
+                if (!connectionSuccess) {
+                    await modal.warning(t('app_mcp_connection_required') || 'MCP接続テストに成功してから登録してください');
+                    return;
+                }
+            } else {
+                // stdio transport
+                const connectionSuccess = await testStdioConnection();
+                if (!connectionSuccess) {
+                    await modal.warning(t('app_stdio_connection_required') || 'stdio接続テストに成功してから登録してください');
+                    return;
+                }
             }
         }
         
@@ -241,10 +377,48 @@ async function testConnection() {
             mcp_service_id: mcpServiceId
         };
         
-        // Get mcp_url for both MCP and API types
-        const mcpUrlValue = formData.get('mcp_url');
-        if (mcpUrlValue && mcpUrlValue.trim()) {
-            data.mcp_url = mcpUrlValue.trim();
+        // Handle MCP transport specific data
+        if (serviceType === 'mcp') {
+            data.mcp_transport = mcpTransport;
+            
+            if (mcpTransport === 'http') {
+                // Get mcp_url for HTTP transport
+                const mcpUrlValue = formData.get('mcp_url');
+                if (mcpUrlValue && mcpUrlValue.trim()) {
+                    data.mcp_url = mcpUrlValue.trim();
+                }
+            } else {
+                // Get stdio config
+                data.stdio_command = formData.get('stdio_command');
+                
+                // Parse args (one per line)
+                const argsText = formData.get('stdio_args') || '';
+                data.stdio_args = argsText ? argsText.split('\n').map(line => line.trim()).filter(line => line) : [];
+                
+                // Collect environment variables
+                const env = {};
+                const envRows = document.querySelectorAll('#env-container .key-value-row');
+                envRows.forEach(row => {
+                    const inputs = row.querySelectorAll('input[type="text"]');
+                    const key = inputs[0].value.trim();
+                    const value = inputs[1].value.trim();
+                    if (key) {
+                        env[key] = value;
+                    }
+                });
+                data.stdio_env = env;
+                
+                const cwd = formData.get('stdio_cwd');
+                if (cwd && cwd.trim()) {
+                    data.stdio_cwd = cwd.trim();
+                }
+            }
+        } else {
+            // API type - optional base URL
+            const mcpUrlValue = formData.get('mcp_url');
+            if (mcpUrlValue && mcpUrlValue.trim()) {
+                data.mcp_url = mcpUrlValue.trim();
+            }
         }
         
         // Collect headers for both API and MCP types

@@ -54,18 +54,77 @@
             <small style="color: #6b7280; margin-top: 4px; display: block;" data-i18n="app_type_readonly_hint">アプリタイプは登録後に変更できません</small>
         </div>
         
-        <div id="mcp-url-section" style="display: none;">
+        <div id="mcp-config-section" style="display: none;">
             <div class="form-group">
-                <label for="mcp_url" id="mcp-url-label"><span data-i18n="app_mcp_url_label">MCP接続URL</span> <span id="mcp-url-required">*</span></label>
-                <div style="display: flex; gap: 10px; align-items: start;">
-                    <div style="flex: 1;">
-                        <input type="url" id="mcp_url" name="mcp_url" placeholder="http://localhost:3000/sse">
-                        <small id="mcp-url-hint" data-i18n="app_mcp_url_hint">MCPサーバーのSSEエンドポイントURLを入力してください</small>
-                        <small id="mcp-url-readonly-hint" style="color: #6b7280; margin-top: 4px; display: none;" data-i18n="app_mcp_url_readonly_hint">MCP接続URLは登録後に変更できません</small>
-                    </div>
-                    <button type="button" id="test-connection-btn" onclick="testConnection()" class="btn btn-secondary" data-i18n="app_test_connection">接続テスト</button>
+                <label data-i18n="app_mcp_transport_label">MCPトランスポート</label>
+                <div style="display: flex; gap: 20px; margin-top: 8px;">
+                    <label style="display: flex; align-items: center; cursor: not-allowed; opacity: 0.6;">
+                        <input type="radio" name="mcp_transport" value="http" disabled>
+                        <span style="margin-left: 8px;" data-i18n="app_transport_http">HTTP (SSE/Streamable)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: not-allowed; opacity: 0.6;">
+                        <input type="radio" name="mcp_transport" value="stdio" disabled>
+                        <span style="margin-left: 8px;" data-i18n="app_transport_stdio">stdio (ローカルプロセス)</span>
+                    </label>
                 </div>
-                <div id="connection-test-result" style="display: none; margin-top: 10px;"></div>
+                <small style="color: #6b7280; margin-top: 4px; display: block;" data-i18n="app_transport_readonly_hint">トランスポートは登録後に変更できません</small>
+            </div>
+            
+            <div id="mcp-url-section">
+                <div class="form-group">
+                    <label for="mcp_url" id="mcp-url-label"><span data-i18n="app_mcp_url_label">MCP接続URL</span> <span id="mcp-url-required">*</span></label>
+                    <div style="display: flex; gap: 10px; align-items: start;">
+                        <div style="flex: 1;">
+                            <input type="url" id="mcp_url" name="mcp_url" placeholder="http://localhost:3000/sse" readonly>
+                            <small id="mcp-url-hint" data-i18n="app_mcp_url_hint">MCPサーバーのSSEエンドポイントURLを入力してください</small>
+                            <small id="mcp-url-readonly-hint" style="color: #6b7280; margin-top: 4px; display: none;" data-i18n="app_mcp_url_readonly_hint">MCP接続URLは登録後に変更できません</small>
+                        </div>
+                        <button type="button" id="test-connection-btn" onclick="testConnection()" class="btn btn-secondary" data-i18n="app_test_connection">接続テスト</button>
+                    </div>
+                    <div id="connection-test-result" style="display: none; margin-top: 10px;"></div>
+                </div>
+            </div>
+            
+            <div id="stdio-config-section" style="display: none;">
+                <div class="form-group">
+                    <label for="stdio_command"><span data-i18n="app_stdio_command_label">コマンド</span></label>
+                    <input type="text" id="stdio_command" name="stdio_command" placeholder="npx, python, node など" readonly>
+                    <small data-i18n="app_stdio_command_hint">MCPサーバーを起動するコマンド</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="stdio_args">
+                        <span data-i18n="app_stdio_args_label">引数</span>
+                        <span class="variable-hint" title="Variablesが使用できます。例: --token &#123;&#123;API_KEY&#125;&#125;">
+                            <span class="variable-icon">🔐</span>
+                        </span>
+                    </label>
+                    <textarea id="stdio_args" name="stdio_args" rows="3" readonly placeholder="-y&#10;@modelcontextprotocol/server-filesystem&#10;/path/to/directory"></textarea>
+                    <small data-i18n="app_stdio_args_hint">コマンド引数（1行に1つずつ、Variablesが使用可能）</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <span data-i18n="app_stdio_env_label">環境変数</span>
+                        <span class="variable-hint" title="Variablesが使用できます。例: &#123;&#123;OPENAI_API_KEY&#125;&#125;">
+                            <span class="variable-icon">🔐</span>
+                        </span>
+                    </label>
+                    <div id="env-container"></div>
+                    <small data-i18n="app_stdio_env_hint">MCPプロセスに渡す環境変数（値にVariablesが使用可能）</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="stdio_cwd" data-i18n="app_stdio_cwd_label">作業ディレクトリ</label>
+                    <input type="text" id="stdio_cwd" name="stdio_cwd" placeholder="/path/to/working/directory" readonly>
+                    <small data-i18n="app_stdio_cwd_hint">コマンド実行時の作業ディレクトリ（オプション）</small>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button type="button" id="test-stdio-btn" onclick="testStdioConnection()" class="btn btn-secondary" data-i18n="app_test_connection">接続テスト</button>
+                </div>
+                <div id="stdio-test-result" style="display: none; margin-top: 10px;"></div>
+                <small style="color: #6b7280; margin-top: 8px; display: block;" data-i18n="app_stdio_readonly_hint">stdio設定は登録後に変更できません</small>
             </div>
         </div>
         

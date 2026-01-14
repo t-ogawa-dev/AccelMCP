@@ -344,6 +344,81 @@ def test_service_connection():
         return jsonify({'success': False, 'error': str(e)}), 200
 
 
+@api_bp.route('/apps/test-stdio-connection', methods=['POST'])
+@login_required
+def test_stdio_connection():
+    """Test stdio MCP server connection"""
+    data = request.get_json()
+    command = data.get('command')
+    args = data.get('args', [])
+    env = data.get('env', {})
+    cwd = data.get('cwd')
+    
+    if not command:
+        return jsonify({'success': False, 'error': 'Command is required'}), 400
+    
+    try:
+        from app.services.mcp_discovery import test_stdio_mcp_connection
+        from app.services.variable_replacer import VariableReplacer
+        from flask import current_app
+        import re
+        
+        replacer = VariableReplacer()
+        unresolved_vars = []
+        
+        # Replace variables in args
+        resolved_args = []
+        for arg in args:
+            resolved_arg = replacer.replace_in_string(str(arg))
+            resolved_args.append(resolved_arg)
+            
+            # Check if variables were not resolved
+            if re.search(r'\{\{[A-Z0-9_]+\}\}', resolved_arg):
+                for match in re.finditer(r'\{\{([A-Z0-9_]+)\}\}', resolved_arg):
+                    unresolved_vars.append(match.group(1))
+        
+        # Replace variables in env
+        resolved_env = {}
+        for key, value in env.items():
+            resolved_value = replacer.replace_in_string(value)
+            resolved_env[key] = resolved_value
+            
+            # Check if variables were not resolved
+            if re.search(r'\{\{[A-Z0-9_]+\}\}', resolved_value):
+                for match in re.finditer(r'\{\{([A-Z0-9_]+)\}\}', resolved_value):
+                    unresolved_vars.append(match.group(1))
+        
+        # If there are unresolved variables, return error
+        if unresolved_vars:
+            return jsonify({
+                'success': False, 
+                'error': f'未定義の変数: {", ".join(set(unresolved_vars))}。Variables画面で登録してください。'
+            }), 400
+        
+        current_app.logger.info(f"Test stdio connection: {command} {resolved_args}")
+        
+        # Test the connection
+        result = test_stdio_mcp_connection(command, resolved_args, resolved_env, cwd)
+        
+        if result.get('success'):
+            return jsonify({
+                'success': True,
+                'message': 'Connection successful',
+                'tools': result.get('tools', []),
+                'server_info': result.get('server_info', {})
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Unknown error')
+            })
+    
+    except Exception as e:
+        from flask import current_app
+        current_app.logger.error(f"Stdio connection test failed: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 200
+
+
 @api_bp.route('/mcp-services/<int:mcp_service_id>/apps', methods=['GET', 'POST'])
 @login_required
 @audit_log('app', action_type='create')
@@ -361,6 +436,11 @@ def mcp_service_apps(mcp_service_id):
             name=data['name'],
             service_type=data.get('service_type', 'api'),
             mcp_url=data.get('mcp_url'),
+            mcp_transport=data.get('mcp_transport', 'http'),
+            stdio_command=data.get('stdio_command'),
+            stdio_args=json.dumps(data.get('stdio_args', [])) if data.get('stdio_args') else None,
+            stdio_env=json.dumps(data.get('stdio_env', {})) if data.get('stdio_env') else None,
+            stdio_cwd=data.get('stdio_cwd'),
             common_headers=json.dumps(data.get('common_headers', {})),
             description=data.get('description', '')
         )
@@ -368,12 +448,25 @@ def mcp_service_apps(mcp_service_id):
         db.session.commit()
         
         # MCPタイプの場合、自動でCapabilityを検出
-        if service.service_type == 'mcp' and service.mcp_url:
-            from app.services.mcp_discovery import discover_mcp_capabilities
+        if service.service_type == 'mcp':
+            from app.services.mcp_discovery import discover_mcp_capabilities, discover_stdio_mcp_capabilities
             from flask import current_app
             try:
                 current_app.logger.info(f"Starting MCP capability discovery for service {service.id}")
-                tool_count = discover_mcp_capabilities(service.id, service.mcp_url)
+                if service.mcp_transport == 'stdio' and service.stdio_command:
+                    # stdio transport
+                    tool_count = discover_stdio_mcp_capabilities(
+                        service.id,
+                        service.stdio_command,
+                        json.loads(service.stdio_args) if service.stdio_args else [],
+                        json.loads(service.stdio_env) if service.stdio_env else {},
+                        service.stdio_cwd
+                    )
+                elif service.mcp_url:
+                    # HTTP transport
+                    tool_count = discover_mcp_capabilities(service.id, service.mcp_url)
+                else:
+                    tool_count = 0
                 current_app.logger.info(f"Successfully discovered {tool_count} MCP tools")
             except Exception as e:
                 current_app.logger.error(f"MCP capability discovery failed: {e}")
@@ -399,6 +492,11 @@ def apps():
             name=data['name'],
             service_type=data.get('service_type', 'api'),
             mcp_url=data.get('mcp_url'),
+            mcp_transport=data.get('mcp_transport', 'http'),
+            stdio_command=data.get('stdio_command'),
+            stdio_args=json.dumps(data.get('stdio_args', [])) if data.get('stdio_args') else None,
+            stdio_env=json.dumps(data.get('stdio_env', {})) if data.get('stdio_env') else None,
+            stdio_cwd=data.get('stdio_cwd'),
             common_headers=json.dumps(data.get('common_headers', {})),
             description=data.get('description', '')
         )
@@ -406,12 +504,25 @@ def apps():
         db.session.commit()
         
         # MCPタイプの場合、自動でCapabilityを検出
-        if service.service_type == 'mcp' and service.mcp_url:
-            from app.services.mcp_discovery import discover_mcp_capabilities
+        if service.service_type == 'mcp':
+            from app.services.mcp_discovery import discover_mcp_capabilities, discover_stdio_mcp_capabilities
             from flask import current_app
             try:
                 current_app.logger.info(f"Starting MCP capability discovery for service {service.id}")
-                tool_count = discover_mcp_capabilities(service.id, service.mcp_url)
+                if service.mcp_transport == 'stdio' and service.stdio_command:
+                    # stdio transport
+                    tool_count = discover_stdio_mcp_capabilities(
+                        service.id,
+                        service.stdio_command,
+                        json.loads(service.stdio_args) if service.stdio_args else [],
+                        json.loads(service.stdio_env) if service.stdio_env else {},
+                        service.stdio_cwd
+                    )
+                elif service.mcp_url:
+                    # HTTP transport
+                    tool_count = discover_mcp_capabilities(service.id, service.mcp_url)
+                else:
+                    tool_count = 0
                 current_app.logger.info(f"Successfully discovered {tool_count} MCP tools")
             except Exception as e:
                 current_app.logger.error(f"MCP capability discovery failed: {e}")

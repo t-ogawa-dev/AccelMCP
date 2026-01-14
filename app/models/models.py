@@ -74,6 +74,11 @@ class Service(db.Model):
     name = db.Column(db.String(100), nullable=False)
     service_type = db.Column(db.String(20), nullable=False)  # 'api' or 'mcp'
     mcp_url = db.Column(db.String(500))  # MCP接続先URL (service_type='mcp'の場合)
+    mcp_transport = db.Column(db.String(20), default='http')  # 'http' or 'stdio' (service_type='mcp'の場合)
+    stdio_command = db.Column(db.String(500))  # stdio実行コマンド (例: 'npx', 'python')
+    stdio_args = db.Column(db.Text)  # stdioコマンド引数 (JSON array, 例: ["-y", "@modelcontextprotocol/server-filesystem"])
+    stdio_env = db.Column(db.Text)  # stdio環境変数 (JSON object, 例: {"API_KEY": "xxx"})
+    stdio_cwd = db.Column(db.String(500))  # stdio作業ディレクトリ (オプション)
     common_headers = db.Column(db.Text)  # JSON string
     description = db.Column(db.Text)
     access_control = db.Column(db.String(20), nullable=False, default='public')  # 'public' or 'restricted'
@@ -93,6 +98,11 @@ class Service(db.Model):
             'name': self.name,
             'service_type': self.service_type,
             'mcp_url': self.mcp_url,
+            'mcp_transport': self.mcp_transport or 'http',
+            'stdio_command': self.stdio_command,
+            'stdio_args': json.loads(self.stdio_args) if self.stdio_args else [],
+            'stdio_env': json.loads(self.stdio_env) if self.stdio_env else {},
+            'stdio_cwd': self.stdio_cwd,
             'common_headers': json.loads(self.common_headers) if self.common_headers else {},
             'description': self.description,
             'access_control': self.access_control,
