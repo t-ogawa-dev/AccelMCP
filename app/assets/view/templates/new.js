@@ -46,7 +46,7 @@ document.getElementById('template-form').addEventListener('submit', async (e) =>
         
         if (response.ok) {
             const template = await response.json();
-            window.location.href = `/templates?message=${encodeURIComponent('登録しました')}`;
+            window.location.href = `/mcp-templates?message=${encodeURIComponent('登録しました')}`;
         } else {
             const error = await response.json();
             alert('登録に失敗しました: ' + (error.error || 'Unknown error'));

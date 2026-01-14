@@ -110,6 +110,7 @@ class TemplateSyncService:
     def sync_templates(self):
         """
         テンプレートを同期
+        バージョンに関係なく常に実行可能（再同期・復旧用）
         
         Returns:
             dict: {
@@ -121,27 +122,20 @@ class TemplateSyncService:
             }
         """
         try:
-            # 更新チェック
-            update_info = self.check_for_updates()
-            
-            if not update_info['has_update']:
-                return {
-                    'success': True,
-                    'version': update_info['current_version'],
-                    'added': 0,
-                    'updated': 0,
-                    'message': 'Already up to date'
-                }
-            
             # index.yamlを取得
             index_data = self.fetch_yaml(self.get_index_url())
             compatible_version = self._find_compatible_version(index_data['versions'])
+            
+            if not compatible_version:
+                raise VersionIncompatibleError(
+                    f"No compatible template version found for AccelMCP {ACCEL_MCP_VERSION}"
+                )
             
             # テンプレートファイルを取得
             template_url = self.get_template_url(compatible_version['file'])
             template_data = self.fetch_yaml(template_url)
             
-            # DBに同期
+            # DBに同期（常に実行）
             stats = self._sync_to_database(template_data)
             
             # バージョン情報を保存
@@ -154,7 +148,7 @@ class TemplateSyncService:
                 'version': template_data['version'],
                 'added': stats['added'],
                 'updated': stats['updated'],
-                'message': f"Successfully synced {stats['added'] + stats['updated']} templates"
+                'message': f"Successfully synced {stats['added']} templates"
             }
             
         except Exception as e:
@@ -226,6 +220,7 @@ class TemplateSyncService:
     def _sync_to_database(self, template_data):
         """
         テンプレートデータをデータベースに同期
+        トランザクション内で実行し、エラー時は全てロールバック
         
         Args:
             template_data: YAMLから読み込んだテンプレートデータ
@@ -233,41 +228,22 @@ class TemplateSyncService:
         Returns:
             dict: {'added': int, 'updated': int}
         """
-        added = 0
-        updated = 0
         template_version = template_data['version']
         
-        for tpl in template_data['templates']:
-            template_id = tpl['id']
+        try:
+            # 既存のbuiltinテンプレートを全削除（クリーンな状態で再登録）
+            logger.info("Removing all existing builtin templates...")
+            deleted_count = McpServiceTemplate.query.filter_by(template_type='builtin').delete()
+            logger.info(f"Deleted {deleted_count} existing builtin templates")
+            db.session.flush()
             
-            # 既存テンプレートを検索（template_idで）
-            existing = McpServiceTemplate.query.filter_by(
-                template_id=template_id,
-                template_type='builtin'
-            ).first()
+            added = 0
             
-            if existing:
-                # 更新
-                logger.info(f"Updating template: {tpl['name']} ({template_id})")
-                existing.name = tpl['name']
-                existing.service_type = tpl['service_type']
-                existing.mcp_url = tpl.get('mcp_url')
-                existing.official_url = tpl.get('official_url')
-                existing.description = tpl['description']
-                existing.common_headers = json.dumps(tpl.get('common_headers', {}))
-                existing.icon = tpl.get('icon')
-                existing.category = tpl.get('category')
-                existing.template_version = template_version
-                existing.updated_at = datetime.utcnow()
+            for tpl in template_data['templates']:
+                template_id = tpl['id']
                 
-                # 既存のcapabilityを削除
-                McpCapabilityTemplate.query.filter_by(template_id=existing.id).delete()
-                
-                template = existing
-                updated += 1
-            else:
-                # 新規作成
-                logger.info(f"Adding new template: {tpl['name']} ({template_id})")
+                # 新規作成（全削除したので全て新規）
+                logger.info(f"Adding template: {tpl['name']} ({template_id})")
                 template = McpServiceTemplate(
                     name=tpl['name'],
                     template_type='builtin',
@@ -284,23 +260,30 @@ class TemplateSyncService:
                 db.session.add(template)
                 db.session.flush()
                 added += 1
+                
+                # Capabilityを追加（APIタイプの場合）
+                if tpl['service_type'] == 'api' and 'capabilities' in tpl:
+                    for cap in tpl['capabilities']:
+                        capability = McpCapabilityTemplate(
+                            template_id=template.id,
+                            name=cap['name'],
+                            capability_type=cap['capability_type'],
+                            endpoint_path=cap.get('endpoint_path', ''),
+                            method=cap.get('method', 'GET'),
+                            description=cap.get('description', ''),
+                            headers=json.dumps(cap.get('headers', {})),
+                            body_params=json.dumps(cap.get('body_params', {})),
+                            query_params=json.dumps(cap.get('query_params', {}))
+                        )
+                        db.session.add(capability)
             
-            # Capabilityを追加（APIタイプの場合）
-            if tpl['service_type'] == 'api' and 'capabilities' in tpl:
-                for cap in tpl['capabilities']:
-                    capability = McpCapabilityTemplate(
-                        template_id=template.id,
-                        name=cap['name'],
-                        capability_type=cap['capability_type'],
-                        endpoint_path=cap.get('endpoint_path', ''),
-                        method=cap.get('method', 'GET'),
-                        description=cap.get('description', ''),
-                        headers=json.dumps(cap.get('headers', {})),
-                        body_params=json.dumps(cap.get('body_params', {})),
-                        query_params=json.dumps(cap.get('query_params', {}))
-                    )
-                    db.session.add(capability)
-        
-        db.session.commit()
-        
-        return {'added': added, 'updated': updated}
+            # 全て成功したらコミット
+            db.session.commit()
+            logger.info(f"Template sync complete: {added} templates added")
+            return {'added': added, 'updated': 0}
+            
+        except Exception as e:
+            # エラー発生時はロールバック（削除も登録も全て元に戻る）
+            logger.error(f"Template sync failed, rolling back: {e}")
+            db.session.rollback()
+            raise

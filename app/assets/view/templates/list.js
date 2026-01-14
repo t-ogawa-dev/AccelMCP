@@ -499,23 +499,29 @@ async function checkTemplateUpdates() {
         updateProgress.style.display = 'none';
         updateCheckContent.style.display = 'block';
         
+        // バージョン情報を表示
+        document.getElementById('current-version').textContent = data.current_version;
+        document.getElementById('latest-version').textContent = data.latest_version;
+        
         if (data.has_update) {
+            // 新しいバージョンがある場合
             document.getElementById('update-modal-title').textContent = t('mcp_template_update_available') || '最新版のテンプレートがあります';
             document.getElementById('update-modal-message').textContent = 
                 t('mcp_template_update_confirm') || 'テンプレートを最新版に同期しますか？';
-            document.getElementById('current-version').textContent = data.current_version;
-            document.getElementById('latest-version').textContent = data.latest_version;
             document.getElementById('changelog').textContent = data.changelog;
-            syncBtn.style.display = 'inline-block';
+            document.getElementById('update-details').style.display = 'block';
         } else {
+            // 最新の状態（再同期も可能）
             document.getElementById('update-modal-title').textContent = t('mcp_template_up_to_date') || '最新の状態です';
             document.getElementById('update-modal-message').textContent = 
-                t('mcp_template_no_update') || 'テンプレートは最新版です。';
-            document.getElementById('current-version').textContent = data.current_version;
-            document.getElementById('latest-version').textContent = data.latest_version;
-            document.getElementById('changelog').textContent = '-';
-            document.getElementById('update-details').style.display = 'none';
+                t('mcp_template_resync_confirm') || 'テンプレートは最新版です。再同期しますか？';
+            document.getElementById('changelog').textContent = t('mcp_template_no_changes') || '変更なし';
+            document.getElementById('update-details').style.display = 'block';
         }
+        
+        // 同期ボタンは常に表示（最新の状態でも再同期可能）
+        syncBtn.style.display = 'inline-block';
+        
     } catch (error) {
         updateProgress.style.display = 'none';
         updateCheckContent.style.display = 'none';
@@ -551,9 +557,10 @@ async function syncTemplates() {
         
         // Success - close modal and reload templates
         closeUpdateModal();
-        showFlashMessage(
-            `${t('mcp_template_sync_success') || 'テンプレートを同期しました'}: ${data.added} ${t('added') || '追加'}, ${data.updated} ${t('updated') || '更新'}`
-        );
+        const message = data.added === 1 
+            ? `${t('mcp_template_sync_success') || 'テンプレートを同期しました'}: ${data.added} ${t('template') || 'テンプレート'}`
+            : `${t('mcp_template_sync_success') || 'テンプレートを同期しました'}: ${data.added} ${t('templates') || 'テンプレート'}`;
+        showFlashMessage(message);
         
         // Hide update badge
         document.getElementById('update-badge').style.display = 'none';

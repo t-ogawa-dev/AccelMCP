@@ -27,7 +27,7 @@ class Config:
     
     # Template Repository Configuration
     TEMPLATE_REPOSITORY_URL = os.getenv('TEMPLATE_REPOSITORY_URL', 
-                                         'https://raw.githubusercontent.com/AccelMCP/AccelMCP/main/templates')
+                                         'https://raw.githubusercontent.com/t-ogawa-dev/AccelMCP/main/templates')
     TEMPLATE_INDEX_FILE = os.getenv('TEMPLATE_INDEX_FILE', 'index.yaml')
     TEMPLATE_VERSIONS_DIR = os.getenv('TEMPLATE_VERSIONS_DIR', 'versions')
 
