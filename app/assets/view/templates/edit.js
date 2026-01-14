@@ -56,7 +56,7 @@ async function loadTemplate() {
         }
         
     } catch (e) {
-        alert('Failed to load template: ' + e.message);
+        await modal.error(t('common_error') + ': ' + e.message);
     }
 }
 
@@ -83,10 +83,10 @@ document.getElementById('template-form').addEventListener('submit', async (e) =>
             window.location.href = `/templates?message=${encodeURIComponent('更新しました')}`;
         } else {
             const error = await response.json();
-            alert('更新に失敗しました: ' + (error.error || 'Unknown error'));
+            await modal.error('更新に失敗しました: ' + (error.error || t('error_unknown')));
         }
     } catch (e) {
-        alert('更新に失敗しました: ' + e.message);
+        await modal.error('更新に失敗しました: ' + e.message);
     }
 });
 

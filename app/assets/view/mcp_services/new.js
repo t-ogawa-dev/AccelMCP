@@ -66,7 +66,7 @@ function updateRoutingHint() {
             window.location.href = '/mcp-services';
         } else {
             const error = await response.json();
-            alert(t('mcp_service_register_failed') + ': ' + (error.error || t('error_unknown')));
+            await modal.error(t('mcp_service_register_failed') + ': ' + (error.error || t('error_unknown')));
         }
     });
 })();

@@ -60,15 +60,16 @@ async function toggleCapability(id) {
             loadCapabilities();
         } else {
             const error = await response.json();
-            alert('切り替えに失敗しました: ' + (error.error || 'Unknown error'));
+            await modal.error(t('common_error') + ': ' + (error.error || t('error_unknown')));
         }
     } catch (e) {
-        alert('切り替えに失敗しました: ' + e.message);
+        await modal.error(t('common_error') + ': ' + e.message);
     }
 }
 
 async function deleteCapability(id) {
-    if (!confirm(t('capability_delete_confirm'))) return;
+    const confirmed = await modal.confirmDelete(t('capability_delete_confirm'));
+    if (!confirmed) return;
     
     await fetch(`/api/capabilities/${id}`, { method: 'DELETE' });
     loadCapabilities();

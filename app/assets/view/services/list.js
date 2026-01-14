@@ -51,15 +51,16 @@ async function toggleApp(id, mcpServiceId) {
             loadServices(mcpServiceId);
         } else {
             const error = await response.json();
-            alert('切り替えに失敗しました: ' + (error.error || 'Unknown error'));
+            await modal.error(t('common_error') + ': ' + (error.error || t('error_unknown')));
         }
     } catch (e) {
-        alert('切り替えに失敗しました: ' + e.message);
+        await modal.error(t('common_error') + ': ' + e.message);
     }
 }
 
 async function deleteService(id, mcpServiceId) {
-    if (!confirm(t('app_delete_confirm'))) return;
+    const confirmed = await modal.confirmDelete(t('app_delete_confirm'));
+    if (!confirmed) return;
     
     await fetch(`/api/apps/${id}`, { method: 'DELETE' });
     loadServices(mcpServiceId);

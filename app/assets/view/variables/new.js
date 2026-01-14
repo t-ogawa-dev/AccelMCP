@@ -102,10 +102,10 @@ document.getElementById('variable-form').addEventListener('submit', async (e) =>
             window.location.href = '/variables';
         } else {
             const error = await response.json();
-            alert(t('variable_register_failed') + ': ' + (error.error || 'Unknown error'));
+            await modal.error(t('variable_register_failed') + ': ' + (error.error || t('error_unknown')));
         }
     } catch (error) {
-        alert(t('variable_register_failed') + ': ' + error.message);
+        await modal.error(t('variable_register_failed') + ': ' + error.message);
     }
 });
 

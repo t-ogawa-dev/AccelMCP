@@ -80,15 +80,16 @@ async function toggleMcpService(id) {
             loadMcpServices();
         } else {
             const error = await response.json();
-            alert('切り替えに失敗しました: ' + (error.error || 'Unknown error'));
+            await modal.error(t('common_error') + ': ' + (error.error || t('error_unknown')));
         }
     } catch (e) {
-        alert('切り替えに失敗しました: ' + e.message);
+        await modal.error(t('common_error') + ': ' + e.message);
     }
 }
 
 async function deleteMcpService(id) {
-    if (!confirm(t('mcp_service_delete_confirm'))) return;
+    const confirmed = await modal.confirmDelete(t('mcp_service_delete_confirm'));
+    if (!confirmed) return;
     
     await fetch(`/api/mcp-services/${id}`, { method: 'DELETE' });
     loadMcpServices();
@@ -98,7 +99,14 @@ async function deleteMcpService(id) {
 let selectedFile = null;
 
 function openImportModal() {
-    document.getElementById('import-modal').style.display = 'block';
+    // Bootstrapのbackdropを削除（Bootstrapモーダルが誤って作成されている場合）
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops.forEach(backdrop => backdrop.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+    
+    document.getElementById('import-modal').style.display = 'flex';
     document.getElementById('import-error').style.display = 'none';
     clearFile();
 }
@@ -162,10 +170,10 @@ async function confirmImport() {
         let message = currentLanguage === 'ja' ? 'インポートしました' : 'Imported successfully';
         if (result.subdomain_changed) {
             message += currentLanguage === 'ja' 
-                ? `\n\nサブドメインが重複していたため、新しいサブドメイン「${result.mcp_service.subdomain}」が割り当てられました。`
-                : `\n\nSubdomain was changed to "${result.mcp_service.subdomain}" due to conflict.`;
+                ? `<br><br>サブドメインが重複していたため、新しいサブドメイン「${result.mcp_service.subdomain}」が割り当てられました。`
+                : `<br><br>Subdomain was changed to "${result.mcp_service.subdomain}" due to conflict.`;
         }
-        alert(message);
+        await modal.success(message);
         
         loadMcpServices();
     } catch (error) {

@@ -28,7 +28,8 @@ async function loadAccounts() {
 }
 
 async function deleteAccount(id) {
-    if (!confirm(t('account_delete_confirm'))) return;
+    const confirmed = await modal.confirmDelete(t('account_delete_confirm'));
+    if (!confirmed) return;
     
     await fetch(`/api/accounts/${id}`, { method: 'DELETE' });
     loadAccounts();

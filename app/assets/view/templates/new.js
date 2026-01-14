@@ -49,10 +49,10 @@ document.getElementById('template-form').addEventListener('submit', async (e) =>
             window.location.href = `/mcp-templates?message=${encodeURIComponent('登録しました')}`;
         } else {
             const error = await response.json();
-            alert('登録に失敗しました: ' + (error.error || 'Unknown error'));
+            await modal.error('登録に失敗しました: ' + (error.error || t('error_unknown')));
         }
     } catch (e) {
-        alert('登録に失敗しました: ' + e.message);
+        await modal.error('登録に失敗しました: ' + e.message);
     }
 });
 

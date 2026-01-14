@@ -41,7 +41,7 @@ async function loadTemplate() {
         await loadCapabilities();
         
     } catch (e) {
-        alert('Failed to load template: ' + e.message);
+        await modal.error(t('common_error') + ': ' + e.message);
     }
 }
 
@@ -88,7 +88,8 @@ function editCapability(capabilityId, event) {
 async function deleteCapability(capabilityId, event) {
     event.stopPropagation();
     
-    if (!confirm(t('capability_delete_confirm'))) return;
+    const confirmed = await modal.confirmDelete(t('capability_delete_confirm'));
+    if (!confirmed) return;
     
     try {
         const response = await fetch(`/api/template-capabilities/${capabilityId}`, {
@@ -101,10 +102,10 @@ async function deleteCapability(capabilityId, event) {
             await loadTemplate();
         } else {
             const error = await response.json();
-            alert('削除に失敗しました: ' + (error.error || 'Unknown error'));
+            await modal.error(t('common_error') + ': ' + (error.error || t('error_unknown')));
         }
     } catch (e) {
-        alert('削除に失敗しました: ' + e.message);
+        await modal.error(t('common_error') + ': ' + e.message);
     }
 }
 

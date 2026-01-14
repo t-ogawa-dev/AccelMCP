@@ -78,7 +78,7 @@ async function loadTemplate() {
         }
         
     } catch (e) {
-        alert('Failed to load template: ' + e.message);
+        await modal.error(t('common_error') + ': ' + e.message);
     }
 }
 
@@ -129,12 +129,13 @@ async function exportTemplate() {
         a.click();
         URL.revokeObjectURL(url);
     } catch (e) {
-        alert('Export failed: ' + e.message);
+        await modal.error(t('common_error') + ': ' + e.message);
     }
 }
 
 async function deleteTemplate() {
-    if (!confirm(t('mcp_template_delete_confirm'))) return;
+    const confirmed = await modal.confirmDelete(t('mcp_template_delete_confirm'));
+    if (!confirmed) return;
     
     try {
         const response = await fetch(`/api/mcp-templates/${TEMPLATE_ID}`, {
@@ -142,14 +143,14 @@ async function deleteTemplate() {
         });
         
         if (response.ok) {
-            alert('テンプレートを削除しました');
+            await modal.success(t('mcp_template_deleted') || 'テンプレートを削除しました');
             window.location.href = '/mcp-templates';
         } else {
             const error = await response.json();
-            alert('削除に失敗しました: ' + (error.error || 'Unknown error'));
+            await modal.error(t('common_error') + ': ' + (error.error || t('error_unknown')));
         }
     } catch (e) {
-        alert('削除に失敗しました: ' + e.message);
+        await modal.error(t('common_error') + ': ' + e.message);
     }
 }
 

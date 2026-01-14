@@ -27,13 +27,13 @@
 <div id="services-list"></div>
 
 <!-- Import Modal -->
-<div id="import-modal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
+<div id="import-modal" class="custom-modal">
+    <div class="custom-modal-content">
+        <div class="custom-modal-header">
             <h3 data-i18n="mcp_service_import_title">MCPサービスをインポート</h3>
             <span class="modal-close" onclick="closeImportModal()">&times;</span>
         </div>
-        <div class="modal-body">
+        <div class="custom-modal-body">
             <p data-i18n="mcp_service_import_description">エクスポートしたJSONファイルをドラッグ&ドロップまたは選択してください</p>
             <div id="import-error" class="modal-error" style="display: none;"></div>
             <div id="drop-zone" class="drop-zone">
@@ -51,7 +51,7 @@
                 </div>
             </div>
         </div>
-        <div class="modal-footer">
+        <div class="custom-modal-footer">
             <button class="btn btn-secondary" onclick="closeImportModal()" data-i18n="button_cancel">キャンセル</button>
             <button class="btn btn-primary" onclick="confirmImport()" id="import-btn" disabled data-i18n="mcp_service_import_button">インポート</button>
         </div>

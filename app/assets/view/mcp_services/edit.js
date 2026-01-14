@@ -228,7 +228,7 @@ async function savePermissions() {
             
             window.location.href = `/mcp-services/${mcpServiceId}`;
         } catch (error) {
-            alert(t('mcp_service_update_failed') + ': ' + error.message);
+            await modal.error(t('mcp_service_update_failed') + ': ' + error.message);
         }
     });
 })();

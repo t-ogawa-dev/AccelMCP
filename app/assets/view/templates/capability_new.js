@@ -134,10 +134,10 @@ document.getElementById('capability-form').addEventListener('submit', async (e) 
             const capability = await response.json();
             window.location.href = `/mcp-templates/${TEMPLATE_ID}/capabilities?message=${encodeURIComponent(t('capability_registered'))}`;        } else {
             const error = await response.json();
-            alert(t('capability_register_failed') + ': ' + (error.error || 'Unknown error'));
+            await modal.error(t('capability_register_failed') + ': ' + (error.error || t('error_unknown')));
         }
     } catch (e) {
-        alert(t('capability_register_failed') + ': ' + e.message);
+        await modal.error(t('capability_register_failed') + ': ' + e.message);
     }
 });
 

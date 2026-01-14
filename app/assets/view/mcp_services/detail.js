@@ -38,12 +38,12 @@ function copyEndpoint(btn) {
             }, 2000);
         } else {
             const errorMsg = currentLanguage === 'ja' ? 'コピーに失敗しました' : 'Failed to copy';
-            alert(errorMsg);
+            await modal.error(errorMsg);
         }
     } catch (err) {
         console.error('Failed to copy:', err);
         const errorMsg = currentLanguage === 'ja' ? 'コピーに失敗しました: ' : 'Failed to copy: ';
-        alert(errorMsg + err.message);
+        await modal.error(errorMsg + err.message);
     } finally {
         document.body.removeChild(textarea);
     }
@@ -69,11 +69,11 @@ async function exportMcpService() {
         
         // Show success message
         const successMsg = currentLanguage === 'ja' ? 'エクスポートしました' : 'Exported successfully';
-        alert(successMsg);
+        await modal.success(successMsg);
     } catch (error) {
         console.error('Export failed:', error);
         const errorMsg = currentLanguage === 'ja' ? 'エクスポートに失敗しました' : 'Export failed';
-        alert(errorMsg);
+        await modal.error(errorMsg);
     }
 }
 

@@ -47,25 +47,33 @@ async function loadAccount() {
     `;
 }
 
-function copyToken(token) {
+async function copyToken(token) {
     navigator.clipboard.writeText(token);
-    alert(t('account_token_copied'));
+    await modal.success(t('account_token_copied'));
 }
 
 async function regenerateToken() {
-    if (!confirm(t('account_regenerate_confirm'))) return;
+    const confirmed = await modal.confirm(
+        t('account_regenerate_confirm'),
+        null,
+        {
+            confirmText: t('common_confirm') || 'OK',
+            confirmClass: 'btn-warning'
+        }
+    );
+    if (!confirmed) return;
     
     try {
         const response = await fetch(`/api/accounts/${accountId}/regenerate_token`, { method: 'POST' });
         if (response.ok) {
-            alert(t('account_token_regenerated'));
+            await modal.success(t('account_token_regenerated'));
             await loadAccount();
         } else {
-            alert('トークンの再発行に失敗しました');
+            await modal.error('トークンの再発行に失敗しました');
         }
     } catch (error) {
         console.error('Error regenerating token:', error);
-        alert('トークンの再発行に失敗しました');
+        await modal.error('トークンの再発行に失敗しました');
     }
 }
 
@@ -91,11 +99,11 @@ async function regenerateToken() {
         });
         
         if (response.ok) {
-            alert(t('account_update_success'));
+            await modal.success(t('account_update_success'));
             loadAccount();
         } else {
             const error = await response.json();
-            alert(t('account_update_failed') + ': ' + (error.error || t('error_unknown')));
+            await modal.error(t('account_update_failed') + ': ' + (error.error || t('error_unknown')));
         }
     });
 })();

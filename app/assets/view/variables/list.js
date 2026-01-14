@@ -46,7 +46,8 @@ async function loadVariables() {
 }
 
 async function deleteVariable(id) {
-    if (!confirm(t('variable_delete_confirm'))) return;
+    const confirmed = await modal.confirmDelete(t('variable_delete_confirm'));
+    if (!confirmed) return;
     
     await fetch(`/api/variables/${id}`, { method: 'DELETE' });
     loadVariables();

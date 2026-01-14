@@ -341,6 +341,7 @@ const translations = {
         button_clear: 'クリア',
         mcp_template_import_button: 'インポート',
         mcp_template_delete_confirm: 'このテンプレートを削除してもよろしいですか?',
+        mcp_template_deleted: 'テンプレートを削除しました',
         mcp_template_builtin_cannot_edit: '標準搭載テンプレートは編集できません',
         mcp_template_builtin_cannot_delete: '標準搭載テンプレートは削除できません',
         mcp_template_name_label: 'テンプレート名',
@@ -622,6 +623,17 @@ const translations = {
         form_key_placeholder: 'キー (例: Authorization)',
         form_value_placeholder: '値 (例: Bearer xxx)',
         form_json_placeholder: 'JSON形式で入力',
+        
+        // 共通モーダル
+        common_confirm: '確認',
+        common_notice: '通知',
+        common_success: '成功',
+        common_error: 'エラー',
+        common_warning: '警告',
+        common_cancel: 'キャンセル',
+        common_delete: '削除',
+        common_delete_confirm: '本当に削除しますか？',
+        common_delete_confirm_title: '削除確認',
         
         // メッセージ
         error_unknown: '不明なエラー',
@@ -965,6 +977,7 @@ const translations = {
         button_clear: 'Clear',
         mcp_template_import_button: 'Import',
         mcp_template_delete_confirm: 'Are you sure you want to delete this template?',
+        mcp_template_deleted: 'Template deleted successfully',
         mcp_template_builtin_cannot_edit: 'Built-in templates cannot be edited',
         mcp_template_builtin_cannot_delete: 'Built-in templates cannot be deleted',
         mcp_template_name_label: 'Template Name',
@@ -1246,6 +1259,17 @@ const translations = {
         form_key_placeholder: 'Key (e.g., Authorization)',
         form_value_placeholder: 'Value (e.g., Bearer xxx)',
         form_json_placeholder: 'Enter in JSON format',
+        
+        // Common Modal
+        common_confirm: 'Confirm',
+        common_notice: 'Notice',
+        common_success: 'Success',
+        common_error: 'Error',
+        common_warning: 'Warning',
+        common_cancel: 'Cancel',
+        common_delete: 'Delete',
+        common_delete_confirm: 'Are you sure you want to delete?',
+        common_delete_confirm_title: 'Confirm Deletion',
         
         // Messages
         error_unknown: 'Unknown error',

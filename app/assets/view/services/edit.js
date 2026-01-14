@@ -393,7 +393,7 @@ async function savePermissions() {
             
             window.location.href = `/mcp-services/${mcpServiceId}/apps/${serviceId}`;
         } catch (error) {
-            alert(t('app_update_failed') + ': ' + error.message);
+            await modal.error(t('app_update_failed') + ': ' + error.message);
         }
     });
 })();

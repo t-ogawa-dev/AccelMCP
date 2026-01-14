@@ -133,7 +133,7 @@ async function testConnection() {
     
     if (!mcpServiceId) {
         console.error('MCP Service ID not found in URL');
-        alert('MCPサービスIDが見つかりません');
+        await modal.error('MCPサービスIDが見つかりません');
         window.location.href = '/mcp-services';
         return;
     }
@@ -228,7 +228,7 @@ async function testConnection() {
         if (serviceType === 'mcp') {
             const connectionSuccess = await testConnection();
             if (!connectionSuccess) {
-                alert(t('app_mcp_connection_required') || 'MCP接続テストに成功してから登録してください');
+                await modal.warning(t('app_mcp_connection_required') || 'MCP接続テストに成功してから登録してください');
                 return;
             }
         }
@@ -328,7 +328,7 @@ async function testConnection() {
             window.location.href = `/mcp-services/${mcpServiceId}/apps`;
         } else {
             const error = await response.json();
-            alert(t('app_register_failed') + ': ' + (error.error || t('error_unknown')));
+            await modal.error(t('app_register_failed') + ': ' + (error.error || t('error_unknown')));
         }
     });
 })();

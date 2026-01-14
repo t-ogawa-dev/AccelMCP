@@ -99,11 +99,18 @@ function useTemplate(templateId, event) {
     // Load MCP services
     loadMcpServicesForModal();
     
+    // Bootstrapのbackdropを削除
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops.forEach(backdrop => backdrop.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+    
     // Show modal
     const modal = document.getElementById('use-template-modal');
     const errorDiv = document.getElementById('modal-error');
     
-    modal.style.display = 'block';
+    modal.style.display = 'flex';
     errorDiv.style.display = 'none';
     errorDiv.textContent = '';
 }
@@ -146,10 +153,17 @@ function showModalError(message) {
 }
 
 function showSuccessModal(serviceName) {
+    // Bootstrapのbackdropを削除
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops.forEach(backdrop => backdrop.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+    
     const modal = document.getElementById('success-modal');
     const message = document.getElementById('success-message');
     message.textContent = serviceName;
-    modal.style.display = 'block';
+    modal.style.display = 'flex';
 }
 
 function closeSuccessModal() {
@@ -257,7 +271,7 @@ async function exportTemplate(templateId, event) {
         a.click();
         URL.revokeObjectURL(url);
     } catch (e) {
-        alert('Export failed: ' + e.message);
+        await modal.error(t('common_error') + ': ' + e.message);
     }
 }
 
@@ -274,7 +288,8 @@ function viewCapabilities(templateId, event) {
 async function deleteTemplate(templateId, event) {
     event.stopPropagation();
     
-    if (!confirm(t('mcp_template_delete_confirm'))) return;
+    const confirmed = await modal.confirmDelete(t('mcp_template_delete_confirm'));
+    if (!confirmed) return;
     
     try {
         const response = await fetch(`/api/mcp-templates/${templateId}`, {method: 'DELETE'});
@@ -283,10 +298,10 @@ async function deleteTemplate(templateId, event) {
             loadTemplates('custom');
         } else {
             const error = await response.json();
-            alert(error.error || 'Delete failed');
+            await modal.error(error.error || t('common_error'));
         }
     } catch (e) {
-        alert('Delete failed: ' + e.message);
+        await modal.error(t('common_error') + ': ' + e.message);
     }
 }
 
@@ -313,9 +328,16 @@ document.querySelectorAll('.tab').forEach(tab => {
 let selectedFile = null;
 
 function openImportModal() {
+    // Bootstrapのbackdropを削除
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops.forEach(backdrop => backdrop.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+    
     const modal = document.getElementById('import-modal');
     const errorDiv = document.getElementById('import-error');
-    modal.style.display = 'block';
+    modal.style.display = 'flex';
     errorDiv.style.display = 'none';
     clearFile();
 }
@@ -476,13 +498,20 @@ async function checkTemplateUpdatesOnLoad() {
 }
 
 async function checkTemplateUpdates() {
+    // Bootstrapのbackdropを削除
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops.forEach(backdrop => backdrop.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+    
     const updateModal = document.getElementById('update-modal');
     const updateError = document.getElementById('update-error');
     const updateCheckContent = document.getElementById('update-check-content');
     const updateProgress = document.getElementById('update-progress');
     const syncBtn = document.getElementById('sync-btn');
     
-    updateModal.style.display = 'block';
+    updateModal.style.display = 'flex';
     updateCheckContent.style.display = 'none';
     updateProgress.style.display = 'block';
     updateError.style.display = 'none';

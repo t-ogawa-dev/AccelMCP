@@ -118,7 +118,15 @@ async function executeCleanup() {
         return;
     }
     
-    if (!confirm(t('cleanup_confirm'))) {
+    const confirmed = await modal.confirm(
+        t('cleanup_confirm'),
+        null,
+        {
+            confirmText: t('common_delete') || '削除',
+            confirmClass: 'btn-danger'
+        }
+    );
+    if (!confirmed) {
         return;
     }
     

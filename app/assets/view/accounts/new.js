@@ -24,7 +24,7 @@
             window.location.href = '/accounts';
         } else {
             const error = await response.json();
-            alert(t('account_register_failed') + ': ' + (error.error || t('error_unknown')));
+            await modal.error(t('account_register_failed') + ': ' + (error.error || t('error_unknown')));
         }
     });
 })();
