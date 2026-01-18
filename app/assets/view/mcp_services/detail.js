@@ -54,14 +54,23 @@ async function exportMcpService() {
         const response = await fetch(`/api/mcp-services/${mcpServiceId}/export`);
         if (!response.ok) throw new Error('Export failed');
         
-        const data = await response.json();
+        // Get YAML content as text
+        const yamlContent = await response.text();
         
-        // Download as JSON file
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        // Extract filename from Content-Disposition header or use default
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let filename = 'mcp-service.yaml';
+        if (contentDisposition) {
+            const matches = /filename="(.+)"/.exec(contentDisposition);
+            if (matches) filename = matches[1];
+        }
+        
+        // Download as YAML file
+        const blob = new Blob([yamlContent], { type: 'application/x-yaml' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${data.name}.json`;
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

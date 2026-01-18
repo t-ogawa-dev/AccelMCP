@@ -374,3 +374,62 @@ class TestMcpServiceAccessControl:
         logged_in_page.goto('http://localhost:5100/mcp-services')
         restricted_badge = logged_in_page.locator('.badge:has-text("Restricted"), .badge-warning:has-text("Restricted")')
         expect(restricted_badge.first).to_be_visible()
+
+
+class TestMcpServiceExportImport:
+    """MCP ServiceのExport/Importテスト"""
+    
+    def test_export_mcp_service(self, logged_in_page: Page):
+        """MCP ServiceをYAML形式でエクスポートできる"""
+        # First create a service
+        logged_in_page.goto('http://localhost:5100/mcp-services/new')
+        logged_in_page.fill('input[name="identifier"]', 'export-test-service')
+        logged_in_page.fill('input[name="name"]', 'Export Test Service')
+        logged_in_page.fill('textarea[name="description"]', 'Service for export testing')
+        
+        routing_select = logged_in_page.locator('select[name="routing_type"]')
+        routing_select.select_option('subdomain')
+        logged_in_page.fill('input[name="subdomain"]', 'exporttest')
+        
+        logged_in_page.click('button[type="submit"]')
+        logged_in_page.wait_for_timeout(1000)
+        
+        # Navigate to service detail and export
+        logged_in_page.goto('http://localhost:5100/mcp-services')
+        
+        # Click on the created service
+        service_link = logged_in_page.get_by_text('Export Test Service').first
+        if service_link.is_visible():
+            service_link.click()
+            logged_in_page.wait_for_timeout(500)
+            
+            # Click export button
+            export_button = logged_in_page.get_by_role('button', name='エクスポート') or logged_in_page.get_by_role('button', name='Export')
+            if export_button.is_visible():
+                with logged_in_page.expect_download() as download_info:
+                    export_button.click()
+                
+                download = download_info.value
+                # Verify YAML file
+                assert download.suggested_filename.endswith('.yaml') or download.suggested_filename.endswith('.yml')
+    
+    def test_import_mcp_service_modal_opens(self, logged_in_page: Page):
+        """MCPサービスインポートモーダルが開く"""
+        logged_in_page.goto('http://localhost:5100/mcp-services')
+        
+        # Click import button
+        import_button = logged_in_page.get_by_role('button', name='インポート') or logged_in_page.get_by_role('button', name='Import')
+        if import_button.is_visible():
+            import_button.click()
+            
+            # Modal should appear
+            modal = logged_in_page.locator('.modal, .custom-modal')
+            expect(modal).to_be_visible()
+            
+            # Check for file input
+            file_input = logged_in_page.locator('input[type="file"]')
+            expect(file_input).to_be_visible()
+            
+            # Check file accept attribute
+            accept_attr = file_input.get_attribute('accept')
+            assert '.yaml' in accept_attr or '.yml' in accept_attr

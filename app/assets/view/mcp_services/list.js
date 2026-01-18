@@ -125,8 +125,8 @@ function clearFile() {
 }
 
 function handleFileSelect(file) {
-    if (!file || !file.name.endsWith('.json')) {
-        showImportError(currentLanguage === 'ja' ? 'JSONファイルを選択してください' : 'Please select a JSON file');
+    if (!file || (!file.name.endsWith('.yaml') && !file.name.endsWith('.yml'))) {
+        showImportError(currentLanguage === 'ja' ? 'YAMLファイルを選択してください' : 'Please select a YAML file');
         return;
     }
     
@@ -148,13 +148,12 @@ async function confirmImport() {
     if (!selectedFile) return;
     
     try {
-        const text = await selectedFile.text();
-        const data = JSON.parse(text);
+        const fileContent = await selectedFile.text();
         
         const response = await fetch('/api/mcp-services/import', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            headers: { 'Content-Type': 'application/x-yaml' },
+            body: fileContent
         });
         
         if (!response.ok) {

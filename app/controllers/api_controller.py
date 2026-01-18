@@ -4,7 +4,8 @@ Handles RESTful API endpoints for services, capabilities, accounts, and permissi
 """
 import json
 import secrets
-from flask import Blueprint, request, jsonify
+import yaml
+from flask import Blueprint, request, jsonify, Response
 from app.controllers.auth_controller import login_required
 from app.services.audit_logger import audit_log
 
@@ -86,7 +87,7 @@ def toggle_mcp_service(mcp_service_id):
 @api_bp.route('/mcp-services/<int:mcp_service_id>/export', methods=['GET'])
 @login_required
 def export_mcp_service(mcp_service_id):
-    """Export MCP service with all apps and capabilities"""
+    """Export MCP service with all apps and capabilities as YAML"""
     mcp_service = get_or_404(McpService, mcp_service_id)
     
     # Build nested structure: service -> apps -> capabilities
@@ -123,17 +124,25 @@ def export_mcp_service(mcp_service_id):
         
         export_data['apps'].append(app_data)
     
-    return jsonify(export_data)
+    # Convert to YAML
+    yaml_content = yaml.dump(export_data, allow_unicode=True, default_flow_style=False, sort_keys=False)
+    return Response(yaml_content, mimetype='application/x-yaml', headers={
+        'Content-Disposition': f'attachment; filename="{mcp_service.name}.yaml"'
+    })
 
 
 @api_bp.route('/mcp-services/import', methods=['POST'])
 @login_required
 def import_mcp_service():
-    """Import MCP service from exported JSON"""
+    """Import MCP service from exported YAML"""
     import string
     import random
     
-    data = request.get_json()
+    # Parse YAML from request body
+    try:
+        data = yaml.safe_load(request.data)
+    except yaml.YAMLError as e:
+        return jsonify({'error': f'Invalid YAML format: {str(e)}'}), 400
     
     # Validate required fields
     if not data.get('name') or not data.get('identifier'):
@@ -1033,20 +1042,30 @@ def create_template():
 @api_bp.route('/mcp-templates/<int:template_id>/export', methods=['GET'])
 @login_required
 def export_template(template_id):
-    """Export template as JSON"""
+    """Export template as YAML"""
     from app.models.models import McpServiceTemplate
     
     template = get_or_404(McpServiceTemplate, template_id)
-    return jsonify(template.to_export_dict())
+    export_data = template.to_export_dict()
+    
+    # Convert to YAML
+    yaml_content = yaml.dump(export_data, allow_unicode=True, default_flow_style=False, sort_keys=False)
+    return Response(yaml_content, mimetype='application/x-yaml', headers={
+        'Content-Disposition': f'attachment; filename="template-{template.name}.yaml"'
+    })
 
 
 @api_bp.route('/mcp-templates/import', methods=['POST'])
 @login_required
 def import_template():
-    """Import template from JSON"""
+    """Import template from YAML"""
     from app.models.models import McpServiceTemplate
     
-    data = request.get_json()
+    # Parse YAML from request body
+    try:
+        data = yaml.safe_load(request.data)
+    except yaml.YAMLError as e:
+        return jsonify({'error': f'Invalid YAML format: {str(e)}'}), 400
     
     # Create template as custom
     template = McpServiceTemplate(

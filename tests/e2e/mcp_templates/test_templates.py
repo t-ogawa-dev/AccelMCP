@@ -118,7 +118,7 @@ class TestTemplateDetailPage:
                 page.wait_for_timeout(1000)
     
     def test_export_template(self, page: Page):
-        """テンプレートをエクスポートできる"""
+        """テンプレートをエクスポートできる（YAML形式）"""
         page.goto("http://localhost:5000/templates")
         
         # Switch to custom tab
@@ -133,8 +133,8 @@ class TestTemplateDetailPage:
                 page.click('button:has-text("エクスポート"):first-of-type')
             
             download = download_info.value
-            # Verify download
-            assert download.suggested_filename.endswith('.json')
+            # Verify download - should be YAML now
+            assert download.suggested_filename.endswith('.yaml') or download.suggested_filename.endswith('.yml')
     
     def test_navigate_to_edit(self, page: Page):
         """編集画面に遷移できる（カスタムテンプレートのみ）"""

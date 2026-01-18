@@ -260,14 +260,24 @@ async function exportTemplate(templateId, event) {
     
     try {
         const response = await fetch(`/api/mcp-templates/${templateId}/export`);
-        const data = await response.json();
         
-        // Download as JSON file
-        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+        // Get YAML content as text
+        const yamlContent = await response.text();
+        
+        // Extract filename from Content-Disposition header or use default
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let filename = 'template.yaml';
+        if (contentDisposition) {
+            const matches = /filename="(.+)"/.exec(contentDisposition);
+            if (matches) filename = matches[1];
+        }
+        
+        // Download as YAML file
+        const blob = new Blob([yamlContent], {type: 'application/x-yaml'});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `export-template-${data.name}.json`;
+        a.download = filename;
         a.click();
         URL.revokeObjectURL(url);
     } catch (e) {
@@ -367,8 +377,8 @@ function showImportError(message) {
 function handleFileSelect(file) {
     if (!file) return;
     
-    if (!file.name.endsWith('.json')) {
-        showImportError('JSONファイルを選択してください');
+    if (!file.name.endsWith('.yaml') && !file.name.endsWith('.yml')) {
+        showImportError('YAMLファイルを選択してください');
         return;
     }
     
@@ -385,15 +395,14 @@ async function confirmImport() {
     if (!selectedFile) return;
     
     try {
-        const text = await selectedFile.text();
-        const data = JSON.parse(text);
+        const fileContent = await selectedFile.text();
         
         const response = await fetch('/api/mcp-templates/import', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/x-yaml'
             },
-            body: JSON.stringify(data)
+            body: fileContent
         });
         
         if (response.ok) {

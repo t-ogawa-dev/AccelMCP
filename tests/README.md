@@ -22,6 +22,7 @@ tests/
 ├── test_variables.py           # Variables feature tests (NEW)
 ├── test_mcp_services.py        # MCP Services tests (NEW)
 ├── test_admin_settings.py      # Admin settings tests (NEW)
+├── test_template_import_export.py  # Template Import/Export tests (NEW)
 │
 └── e2e/                        # End-to-end tests
     ├── test_login.py
@@ -112,6 +113,18 @@ Tests for MCP Services feature including:
 - Access control (public/restricted)
 - Apps association with MCP Services
 - Toggle enabled/disabled state
+- **YAML Export/Import**: Export MCP services with apps and capabilities, import with identifier collision handling
+
+### test_template_import_export.py
+
+Tests for Template Import/Export feature including:
+
+- **YAML Export**: Export templates as YAML files with proper formatting
+- **YAML Import**: Import templates from YAML with validation
+- **Unicode Support**: Japanese and emoji characters in YAML
+- **Roundtrip Testing**: Export and re-import produces equivalent data
+- **Error Handling**: Invalid YAML format detection
+- **Format Quality**: Human-readable YAML output
 
 ### test_admin_settings.py
 

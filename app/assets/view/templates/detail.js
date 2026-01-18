@@ -118,14 +118,24 @@ async function loadCapabilities() {
 async function exportTemplate() {
     try {
         const response = await fetch(`/api/mcp-templates/${TEMPLATE_ID}/export`);
-        const data = await response.json();
         
-        // Download as JSON file
-        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+        // Get YAML content as text
+        const yamlContent = await response.text();
+        
+        // Extract filename from Content-Disposition header or use default
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let filename = 'template.yaml';
+        if (contentDisposition) {
+            const matches = /filename="(.+)"/.exec(contentDisposition);
+            if (matches) filename = matches[1];
+        }
+        
+        // Download as YAML file
+        const blob = new Blob([yamlContent], {type: 'application/x-yaml'});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `export-template-${data.name}.json`;
+        a.download = filename;
         a.click();
         URL.revokeObjectURL(url);
     } catch (e) {

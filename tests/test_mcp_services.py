@@ -2,8 +2,9 @@
 Tests for MCP Services feature
 """
 import json
+import yaml
 import pytest
-from app.models.models import McpService, Service
+from app.models.models import McpService, Service, Capability
 
 
 class TestMcpServiceModel:
@@ -231,6 +232,174 @@ class TestMcpServiceAPI:
                                    content_type='application/json')
         
         assert response.status_code in [400, 409]
+    
+    def test_export_mcp_service_yaml(self, auth_client, db):
+        """Test GET /api/mcp-services/<id>/export - YAML形式でエクスポート"""
+        # Create MCP service with apps and capabilities
+        mcp_service = McpService(
+            name='Export Test Service',
+            identifier='export-test',
+            routing_type='subdomain',
+            description='Service for export testing'
+        )
+        db.session.add(mcp_service)
+        db.session.commit()
+        
+        # Create app
+        app = Service(
+            mcp_service_id=mcp_service.id,
+            name='Test App',
+            service_type='api',
+            mcp_url='https://api.example.com',
+            common_headers='{"Authorization": "Bearer TOKEN"}',
+            description='Test app'
+        )
+        db.session.add(app)
+        db.session.commit()
+        
+        # Create capability
+        capability = Capability(
+            app_id=app.id,
+            name='Test Capability',
+            capability_type='tool',
+            url='https://api.example.com/test',
+            headers='{"Content-Type": "application/json"}',
+            body_params='{"param1": "value"}',
+            description='Test capability'
+        )
+        db.session.add(capability)
+        db.session.commit()
+        
+        # Export
+        response = auth_client.get(f'/api/mcp-services/{mcp_service.id}/export')
+        
+        assert response.status_code == 200
+        assert 'application/x-yaml' in response.content_type
+        assert 'attachment' in response.headers.get('Content-Disposition', '')
+        
+        # Parse YAML
+        data = yaml.safe_load(response.data)
+        assert data['name'] == 'Export Test Service'
+        assert data['identifier'] == 'export-test'
+        assert data['description'] == 'Service for export testing'
+        assert len(data['apps']) == 1
+        
+        app_data = data['apps'][0]
+        assert app_data['name'] == 'Test App'
+        assert app_data['service_type'] == 'api'
+        assert app_data['mcp_url'] == 'https://api.example.com'
+        assert 'Authorization' in app_data['common_headers']
+        assert len(app_data['capabilities']) == 1
+        
+        cap_data = app_data['capabilities'][0]
+        assert cap_data['name'] == 'Test Capability'
+        assert cap_data['capability_type'] == 'tool'
+    
+    def test_import_mcp_service_yaml(self, auth_client):
+        """Test POST /api/mcp-services/import - YAML形式でインポート"""
+        yaml_data = """
+name: Imported Service
+identifier: imported-service
+description: Imported from YAML
+apps:
+  - name: Imported App
+    description: App from import
+    service_type: api
+    mcp_url: https://api.imported.com
+    common_headers:
+      Authorization: Bearer IMPORT_TOKEN
+    capabilities:
+      - name: Imported Capability
+        capability_type: resource
+        description: Capability from import
+        url: https://api.imported.com/resource
+        headers:
+          Accept: application/json
+        body_params: {}
+        template_content: null
+"""
+        
+        response = auth_client.post(
+            '/api/mcp-services/import',
+            data=yaml_data,
+            content_type='application/x-yaml'
+        )
+        
+        assert response.status_code == 201
+        data = json.loads(response.data)
+        assert data['success'] is True
+        assert data['mcp_service']['name'] == 'Imported Service'
+        assert data['mcp_service']['identifier'] == 'imported-service'
+        assert data['identifier_changed'] is False
+    
+    def test_import_mcp_service_identifier_collision(self, auth_client, db):
+        """Test importing with duplicate identifier generates new identifier"""
+        # Create existing service
+        existing = McpService(
+            name='Existing',
+            identifier='duplicate-id',
+            routing_type='subdomain'
+        )
+        db.session.add(existing)
+        db.session.commit()
+        
+        # Import with same identifier
+        yaml_data = """
+name: New Service
+identifier: duplicate-id
+description: Should get new identifier
+apps: []
+"""
+        
+        response = auth_client.post(
+            '/api/mcp-services/import',
+            data=yaml_data,
+            content_type='application/x-yaml'
+        )
+        
+        assert response.status_code == 201
+        data = json.loads(response.data)
+        assert data['success'] is True
+        assert data['identifier_changed'] is True
+        assert data['mcp_service']['identifier'] != 'duplicate-id'
+        assert data['mcp_service']['identifier'].startswith('duplicate-id-')
+    
+    def test_import_invalid_yaml(self, auth_client):
+        """Test importing invalid YAML returns error"""
+        invalid_yaml = """
+name: Invalid
+identifier: invalid
+  this is not valid yaml:
+    - malformed
+"""
+        
+        response = auth_client.post(
+            '/api/mcp-services/import',
+            data=invalid_yaml,
+            content_type='application/x-yaml'
+        )
+        
+        assert response.status_code == 400
+        data = json.loads(response.data)
+        assert 'error' in data
+        assert 'YAML' in data['error']
+    
+    def test_import_missing_required_fields(self, auth_client):
+        """Test importing without required fields returns error"""
+        yaml_data = """
+description: Missing name and identifier
+apps: []
+"""
+        
+        response = auth_client.post(
+            '/api/mcp-services/import',
+            data=yaml_data,
+            content_type='application/x-yaml'
+        )
+        
+        assert response.status_code == 400
+        data = json.loads(response.data)
+        assert 'error' in data
 
 
 class TestMcpServiceAppsAPI:
