@@ -1,10 +1,16 @@
 // capabilities/detail.js - Capability Detail Page
 const capabilityId = parseInt(window.location.pathname.split('/')[2]);
 let llmParamsSchema = { properties: {}, required: [] }; // Store LLM params schema for form generation
+let currentCapabilityType = 'tool'; // Store capability type for test/preview logic
+let currentTemplateContent = ''; // Store template content for prompt preview
 
 async function loadCapability() {
     const response = await fetch(`/api/capabilities/${capabilityId}`);
     const cap = await response.json();
+    
+    // Store capability type and template content
+    currentCapabilityType = cap.capability_type;
+    currentTemplateContent = cap.template_content || '';
     
     let baseUrl = '';
     let serviceType = 'api'; // default
@@ -139,6 +145,48 @@ async function loadCapability() {
         : t('capability_no_params');
     
     const container = document.getElementById('capability-detail');
+    
+    // Build sections based on capability type
+    let typeSpecificSections = '';
+    
+    if (cap.capability_type === 'prompt') {
+        // Prompt type: show template content instead of URL/headers/params
+        const templateContent = cap.template_content || t('capability_no_template_content');
+        typeSpecificSections = `
+        <div class="detail-section">
+            <h3>${t("capability_mcp_template_content_label")}</h3>
+            <p class="text-muted" style="font-size: 0.9em; margin-bottom: 0.5rem;">${t('capability_template_content_description')}</p>
+            <pre class="code-block" style="white-space: pre-wrap;">${escapeHtml(templateContent)}</pre>
+        </div>
+        
+        <div class="detail-section">
+            <h3>${t("capability_body_params_label")}</h3>
+            <p class="text-muted" style="font-size: 0.9em; margin-bottom: 0.5rem;">${t('capability_prompt_args_description')}</p>
+            <pre class="code-block">${llmParamsJson}</pre>
+        </div>
+        `;
+    } else {
+        // Tool/Resource type: show URL, headers, params
+        typeSpecificSections = `
+        <div class="detail-section">
+            <h3>${t("capability_individual_headers")}</h3>
+            <pre class="code-block">${Object.keys(displayHeaders).length > 0 ? JSON.stringify(displayHeaders, null, 2) : t('capability_no_headers')}</pre>
+        </div>
+        
+        <div class="detail-section">
+            <h3>${relayParamsLabel}</h3>
+            <p class="text-muted" style="font-size: 0.9em; margin-bottom: 0.5rem;">${relayParamsDescription}</p>
+            <pre class="code-block">${relayParamsJson}</pre>
+        </div>
+        
+        <div class="detail-section">
+            <h3>${t("capability_body_params_label")}</h3>
+            <p class="text-muted" style="font-size: 0.9em; margin-bottom: 0.5rem;">${t('capability_llm_params_description')}</p>
+            <pre class="code-block">${llmParamsJson}</pre>
+        </div>
+        `;
+    }
+    
     container.innerHTML = `
         <div class="detail-section">
             <h2>${cap.name}</h2>
@@ -159,6 +207,7 @@ async function loadCapability() {
                         <span id="access-control-badge"></span>
                     </td>
                 </tr>
+                ${cap.capability_type !== 'prompt' ? `
                 <tr>
                     <th>${t("capability_method_label")}</th>
                     <td><span class="badge badge-method">${cap.headers['X-HTTP-Method'] || 'POST'}</span></td>
@@ -167,6 +216,7 @@ async function loadCapability() {
                     <th>${t("capability_url_label")}</th>
                     <td><code style="font-size: 0.9em;">${urlDisplay}</code></td>
                 </tr>
+                ` : ''}
                 <tr>
                     <th>${t("capability_registered_at")}</th>
                     <td>${new Date(cap.created_at).toLocaleString(currentLanguage === 'ja' ? 'ja-JP' : 'en-US')}</td>
@@ -178,22 +228,7 @@ async function loadCapability() {
             </table>
         </div>
         
-        <div class="detail-section">
-            <h3>${t("capability_individual_headers")}</h3>
-            <pre class="code-block">${Object.keys(displayHeaders).length > 0 ? JSON.stringify(displayHeaders, null, 2) : t('capability_no_headers')}</pre>
-        </div>
-        
-        <div class="detail-section">
-            <h3>${relayParamsLabel}</h3>
-            <p class="text-muted" style="font-size: 0.9em; margin-bottom: 0.5rem;">${relayParamsDescription}</p>
-            <pre class="code-block">${relayParamsJson}</pre>
-        </div>
-        
-        <div class="detail-section">
-            <h3>${t("capability_body_params_label")}</h3>
-            <p class="text-muted" style="font-size: 0.9em; margin-bottom: 0.5rem;">${t('capability_llm_params_description')}</p>
-            <pre class="code-block">${llmParamsJson}</pre>
-        </div>
+        ${typeSpecificSections}
     `;
     
     // Update access control badge
@@ -211,8 +246,33 @@ async function loadCapability() {
     // Store LLM params schema for test form
     llmParamsSchema = llmParams;
     
+    // Update test section UI based on capability type
+    updateTestSectionForType();
+    
     // Generate test parameter form
     generateTestParamsForm();
+}
+
+// Update test section UI based on capability type (tool vs prompt)
+function updateTestSectionForType() {
+    const testSectionTitle = document.getElementById('test-section-title');
+    const testSectionDesc = document.getElementById('test-section-desc');
+    const testButton = document.getElementById('test-button');
+    const testResultHeader = document.getElementById('test-result-header');
+    
+    if (currentCapabilityType === 'prompt') {
+        // Prompt type: Preview mode
+        testSectionTitle.textContent = t('capability_preview_title');
+        testSectionDesc.textContent = t('capability_preview_desc');
+        testButton.textContent = t('button_preview');
+        testResultHeader.textContent = t('capability_preview_result_title');
+    } else {
+        // Tool/Resource type: Test mode
+        testSectionTitle.textContent = t('capability_test_title');
+        testSectionDesc.textContent = t('capability_test_desc');
+        testButton.textContent = t('button_test_execute');
+        testResultHeader.textContent = t('capability_test_result_title');
+    }
 }
 
 // Generate dynamic form fields based on LLM params schema
@@ -375,41 +435,74 @@ async function executeTest() {
     
     // Show loading
     testButton.disabled = true;
-    testButton.textContent = t('capability_test_running');
-    resultDiv.style.display = 'none';
     
-    try {
-        const response = await fetch(`/api/capabilities/${capabilityId}/test`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ params })
-        });
+    if (currentCapabilityType === 'prompt') {
+        // Prompt type: Preview template expansion (client-side)
+        testButton.textContent = t('capability_preview_running');
         
-        const result = await response.json();
-        
-        // Show result
-        resultDiv.style.display = 'block';
-        
-        if (result.success) {
-            statusDiv.textContent = `✓ ${t('capability_test_success')} (HTTP ${result.status_code})`;
+        try {
+            // Expand template with provided parameters
+            let expandedTemplate = currentTemplateContent;
+            for (const [key, value] of Object.entries(params)) {
+                // Replace {{key}} patterns
+                const pattern = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g');
+                expandedTemplate = expandedTemplate.replace(pattern, String(value));
+            }
+            
+            // Show result
+            resultDiv.style.display = 'block';
+            statusDiv.textContent = `✓ ${t('capability_preview_success')}`;
             statusDiv.style.backgroundColor = '#d1fae5';
             statusDiv.style.color = '#065f46';
-            bodyPre.textContent = JSON.stringify(result.data, null, 2);
-        } else {
-            statusDiv.textContent = `✗ ${t('capability_test_error')}`;
+            bodyPre.textContent = expandedTemplate;
+        } catch (e) {
+            resultDiv.style.display = 'block';
+            statusDiv.textContent = `✗ ${t('capability_preview_error')}`;
             statusDiv.style.backgroundColor = '#fee2e2';
             statusDiv.style.color = '#991b1b';
-            bodyPre.textContent = JSON.stringify(result.error, null, 2);
+            bodyPre.textContent = e.message;
+        } finally {
+            testButton.disabled = false;
+            testButton.textContent = t('button_preview');
         }
-    } catch (e) {
-        resultDiv.style.display = 'block';
-        statusDiv.textContent = `✗ ${t('capability_test_comm_error')}`;
-        statusDiv.style.backgroundColor = '#fee2e2';
-        statusDiv.style.color = '#991b1b';
-        bodyPre.textContent = e.message;
-    } finally {
-        testButton.disabled = false;
-        testButton.textContent = t('button_test_execute');
+    } else {
+        // Tool/Resource type: Call API test endpoint
+        testButton.textContent = t('capability_test_running');
+        resultDiv.style.display = 'none';
+        
+        try {
+            const response = await fetch(`/api/capabilities/${capabilityId}/test`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ params })
+            });
+            
+            const result = await response.json();
+            
+            // Show result
+            resultDiv.style.display = 'block';
+            
+            if (result.success) {
+                statusDiv.textContent = `✓ ${t('capability_test_success')} (HTTP ${result.status_code})`;
+                statusDiv.style.backgroundColor = '#d1fae5';
+                statusDiv.style.color = '#065f46';
+                bodyPre.textContent = JSON.stringify(result.data, null, 2);
+            } else {
+                statusDiv.textContent = `✗ ${t('capability_test_error')}`;
+                statusDiv.style.backgroundColor = '#fee2e2';
+                statusDiv.style.color = '#991b1b';
+                bodyPre.textContent = JSON.stringify(result.error, null, 2);
+            }
+        } catch (e) {
+            resultDiv.style.display = 'block';
+            statusDiv.textContent = `✗ ${t('capability_test_comm_error')}`;
+            statusDiv.style.backgroundColor = '#fee2e2';
+            statusDiv.style.color = '#991b1b';
+            bodyPre.textContent = e.message;
+        } finally {
+            testButton.disabled = false;
+            testButton.textContent = t('button_test_execute');
+        }
     }
 }
 

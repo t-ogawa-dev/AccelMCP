@@ -91,7 +91,11 @@ function toggleCapabilityType() {
     const toolFields = document.getElementById('tool-fields');
     const promptFields = document.getElementById('prompt-fields');
     const headersGroup = document.querySelector('[data-i18n="capability_header_params"]')?.closest('.form-group');
-    const bodyParamsGroup = document.querySelector('[data-i18n="capability_body_params"]')?.closest('.form-group');
+    const bodyParamsGroup = document.getElementById('body-params-group');
+    const bodyParamsLabel = document.getElementById('body-params-label');
+    const bodyParamsHint = document.getElementById('body-params-hint');
+    const fixedParamsSection = document.getElementById('fixed-params-section');
+    const requestSamplePost = document.getElementById('request-sample-post');
     
     if (capabilityType === 'prompt') {
         // Show prompt fields, hide tool fields
@@ -101,7 +105,13 @@ function toggleCapabilityType() {
         if (bodyParamsGroup) {
             // For prompts, body_params defines template variables (JSON Schema)
             bodyParamsGroup.style.display = 'block';
+            // Change labels for prompt type
+            if (bodyParamsLabel) bodyParamsLabel.textContent = t('capability_template_args_label');
+            if (bodyParamsHint) bodyParamsHint.textContent = t('capability_template_args_hint');
         }
+        // Hide fixed params section and request sample for prompts (only LLM params needed)
+        if (fixedParamsSection) fixedParamsSection.style.display = 'none';
+        if (requestSamplePost) requestSamplePost.style.display = 'none';
         // Make URL and method optional for prompts
         document.getElementById('url').required = false;
         document.getElementById('method').required = false;
@@ -111,7 +121,15 @@ function toggleCapabilityType() {
         if (toolFields) toolFields.style.display = 'block';
         if (promptFields) promptFields.style.display = 'none';
         if (headersGroup) headersGroup.style.display = 'block';
-        if (bodyParamsGroup) bodyParamsGroup.style.display = 'block';
+        if (bodyParamsGroup) {
+            bodyParamsGroup.style.display = 'block';
+            // Restore labels for tool type
+            if (bodyParamsLabel) bodyParamsLabel.textContent = t('capability_body_params');
+            if (bodyParamsHint) bodyParamsHint.textContent = t('capability_body_json_hint');
+        }
+        // Show fixed params section and request sample for tools
+        if (fixedParamsSection) fixedParamsSection.style.display = 'block';
+        if (requestSamplePost) requestSamplePost.style.display = 'block';
         // Make URL and method required for tools
         document.getElementById('url').required = true;
         document.getElementById('method').required = true;

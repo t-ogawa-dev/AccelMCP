@@ -35,10 +35,10 @@
 
 <div id="capability-detail" class="detail-card"></div>
 
-<div class="detail-card" style="margin-top: 20px;">
+<div id="test-section" class="detail-card" style="margin-top: 20px;">
     <div class="detail-section">
-        <h3 data-i18n="capability_test_title">Capability テスト実行</h3>
-        <p data-i18n="capability_test_desc" style="color: #6c757d; margin-bottom: 15px;">
+        <h3 id="test-section-title" data-i18n="capability_test_title">Capability テスト実行</h3>
+        <p id="test-section-desc" data-i18n="capability_test_desc" style="color: #6c757d; margin-bottom: 15px;">
             このCapabilityをテスト実行します。LLMパラメータで定義した値を入力してください。
         </p>
         
@@ -56,7 +56,7 @@
         </div>
         
         <div id="test-result" style="margin-top: 20px; display: none;">
-            <h4 data-i18n="capability_test_result_title">実行結果</h4>
+            <h4 id="test-result-header" data-i18n="capability_test_result_title">実行結果</h4>
             <div id="test-result-status" style="padding: 10px; border-radius: 4px; margin-bottom: 10px; font-weight: 500;"></div>
             <pre id="test-result-body" class="code-block" style="max-height: 500px; overflow-y: auto;"></pre>
         </div>

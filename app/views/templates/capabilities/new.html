@@ -66,10 +66,10 @@
         <div id="prompt-fields" style="display: none;">
             <div class="form-group">
                 <label for="template_content"><span data-i18n="capability_template_content_label">プロンプトテンプレート</span> *</label>
-                <textarea id="template_content" name="template_content" rows="8" placeholder="例: あなたは{{role}}です。{{task}}を実行してください。"></textarea>
+                <textarea id="template_content" name="template_content" rows="8" placeholder="例: あなたは&#123;&#123;role&#125;&#125;です。&#123;&#123;task&#125;&#125;を実行してください。"></textarea>
                 <small data-i18n="capability_template_content_hint" style="color: #6c757d;">
-                    プロンプトのテンプレート。{{変数名}}の形式で変数を埋め込めます。<br>
-                    例: "あなたは{{role}}です。以下の{{topic}}について説明してください。"
+                    プロンプトのテンプレート。&#123;&#123;変数名&#125;&#125;の形式で変数を埋め込めます。<br>
+                    例: "あなたは&#123;&#123;role&#125;&#125;です。以下の&#123;&#123;topic&#125;&#125;について説明してください。"
                 </small>
             </div>
         </div>
@@ -99,9 +99,9 @@
             <small data-i18n="capability_header_params_hint">個別のヘッダーパラメータ（アプリ共通ヘッダーに追加されます）</small>
         </div>
         
-        <div class="form-group">
-            <label data-i18n="capability_body_params">Bodyパラメータ</label>
-            <small data-i18n="capability_body_json_hint" style="display:block; margin-bottom:6px; font-size:0.78em; color:#666;">JSON形式のリクエストボディ</small>
+        <div class="form-group" id="body-params-group">
+            <label id="body-params-label" data-i18n="capability_body_params">Bodyパラメータ</label>
+            <small id="body-params-hint" data-i18n="capability_body_json_hint" style="display:block; margin-bottom:6px; font-size:0.78em; color:#666;">JSON形式のリクエストボディ</small>
             <div id="body-key-value" style="display: none;">
                 <!-- Fixed Parameters Section (for GET query strings) -->
                 <div style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 4px;">
@@ -132,7 +132,7 @@
                 <!-- ビジュアルエディタ（階層構造） -->
                 <div id="visual-editor" style="display: block;">
                     <!-- 固定パラメータ -->
-                    <div style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 4px;">
+                    <div id="fixed-params-section" style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 4px;">
                         <h4 style="margin-top: 0; font-size: 0.95rem; color: #495057;">固定パラメータ (Fixed Parameters)</h4>
                         <small style="display: block; margin-bottom: 10px; color: #6c757d;">リクエストボディに常に含まれる固定値（API Key等）。階層構造をサポート。変数 {{VARIABLE_NAME}} も利用可能。</small>
                         <div id="fixed-params-post-container"></div>
