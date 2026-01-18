@@ -605,6 +605,17 @@ const translations = {
         capability_preview_running: 'プレビュー中...',
         button_preview: 'プレビュー',
         
+        // 新規登録時のPromptプレビュー
+        prompt_preview_title: 'LLMに返されるプロンプト',
+        prompt_preview_hint: 'テンプレート変数に値が設定されると、以下の形式でLLMに返されます',
+        prompt_preview_empty: '(テンプレートを入力してください)',
+        prompt_detected_variables: '検出された変数',
+        prompt_no_variables: '(変数が検出されていません)',
+        prompt_var_defined: 'LLMパラメータに定義済み',
+        prompt_var_not_defined: 'LLMパラメータに未定義',
+        prompt_undefined_warning: '未定義の変数があります',
+        prompt_add_llm_params: '以下の変数をLLMパラメータに追加してください',
+        
         // Capability編集
         capability_edit_title: 'Capability編集',
         capability_edit_desc: 'Capability情報を編集します',
@@ -1304,6 +1315,17 @@ const translations = {
         capability_preview_error: 'Preview Error',
         capability_preview_running: 'Generating preview...',
         button_preview: 'Preview',
+        
+        // New registration Prompt preview
+        prompt_preview_title: 'Prompt returned to LLM',
+        prompt_preview_hint: 'When template variables are set, it will be returned to the LLM in the following format',
+        prompt_preview_empty: '(Please enter a template)',
+        prompt_detected_variables: 'Detected Variables',
+        prompt_no_variables: '(No variables detected)',
+        prompt_var_defined: 'Defined in LLM parameters',
+        prompt_var_not_defined: 'Not defined in LLM parameters',
+        prompt_undefined_warning: 'There are undefined variables',
+        prompt_add_llm_params: 'Please add the following variables to LLM parameters',
         
         // Capability Edit
         capability_edit_title: 'Edit Capability',

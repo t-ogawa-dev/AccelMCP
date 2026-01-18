@@ -66,11 +66,30 @@
         <div id="prompt-fields" style="display: none;">
             <div class="form-group">
                 <label for="template_content"><span data-i18n="capability_template_content_label">プロンプトテンプレート</span> *</label>
-                <textarea id="template_content" name="template_content" rows="8" placeholder="例: あなたは&#123;&#123;role&#125;&#125;です。&#123;&#123;task&#125;&#125;を実行してください。"></textarea>
+                <textarea id="template_content" name="template_content" rows="8" placeholder="例: あなたは&#123;&#123;role&#125;&#125;です。&#123;&#123;task&#125;&#125;を実行してください。" oninput="generatePromptPreview()"></textarea>
                 <small data-i18n="capability_template_content_hint" style="color: #6c757d;">
                     プロンプトのテンプレート。&#123;&#123;変数名&#125;&#125;の形式で変数を埋め込めます。<br>
                     例: "あなたは&#123;&#123;role&#125;&#125;です。以下の&#123;&#123;topic&#125;&#125;について説明してください。"
                 </small>
+            </div>
+            
+            <!-- Prompt Preview -->
+            <div id="prompt-preview-section" style="margin-top: 20px; padding: 15px; background-color: #d4edda; border-radius: 4px; border-left: 4px solid #28a745;">
+                <h4 style="margin-top: 0; font-size: 0.95rem; color: #155724; display: flex; align-items: center; gap: 8px;">
+                    <span>📝</span> <span data-i18n="prompt_preview_title">LLMに返されるプロンプト</span>
+                </h4>
+                <small style="display: block; margin-bottom: 10px; color: #155724;" data-i18n="prompt_preview_hint">テンプレート変数に値が設定されると、以下の形式でLLMに返されます</small>
+                <pre id="prompt-preview-output" style="background: white; padding: 12px; border-radius: 4px; border: 1px solid #28a745; font-size: 0.85rem; overflow-x: auto; margin: 0; white-space: pre-wrap; word-wrap: break-word;"></pre>
+                
+                <!-- Detected Variables -->
+                <div id="prompt-variables-section" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #c3e6cb;">
+                    <h5 style="margin: 0 0 10px 0; font-size: 0.9rem; color: #155724; display: flex; align-items: center; gap: 6px;">
+                        <span>🔤</span> <span data-i18n="prompt_detected_variables">検出された変数</span>
+                    </h5>
+                    <div id="prompt-variables-list" style="font-size: 0.85rem; color: #155724;">
+                        <em data-i18n="prompt_no_variables">(変数が検出されていません)</em>
+                    </div>
+                </div>
             </div>
         </div>
         

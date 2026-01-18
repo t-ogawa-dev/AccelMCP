@@ -5,6 +5,19 @@ const serviceId = parseInt(pathParts[4]);
 let headerIndex = 0;
 let bodyIndex = 0;
 
+// Debounce utility function
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
 // Show error message
 function showError(message) {
     const errorDiv = document.getElementById('form-error');
@@ -116,6 +129,8 @@ function toggleCapabilityType() {
         document.getElementById('url').required = false;
         document.getElementById('method').required = false;
         document.getElementById('template_content').required = true;
+        // Generate initial prompt preview
+        generatePromptPreview();
     } else {
         // Show tool fields, hide prompt fields
         if (toolFields) toolFields.style.display = 'block';
@@ -512,6 +527,13 @@ function addLlmParamTreeRow(containerOrParent = null, depth = 0, paramData = nul
     // Only set value if it's not a select element (not boolean type)
     if (defaultInput && defaultInput.tagName !== 'SELECT') {
         defaultInput.value = data.default || '';
+    }
+    
+    // Add event listeners for prompt preview update (only for LLM params)
+    if (!isFixedParam) {
+        const updatePromptPreviewDebounced = debounce(generatePromptPreview, 300);
+        if (nameInput) nameInput.addEventListener('input', updatePromptPreviewDebounced);
+        if (descInput) descInput.addEventListener('input', updatePromptPreviewDebounced);
     }
     
     return node;
@@ -1484,4 +1506,123 @@ function generateSampleValue(node) {
         }
     });
 })();
+
+// ========== Prompt Preview機能 ==========
+
+// テンプレートから変数を抽出
+function extractTemplateVariables(template) {
+    const regex = /\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g;
+    const variables = [];
+    let match;
+    while ((match = regex.exec(template)) !== null) {
+        if (!variables.includes(match[1])) {
+            variables.push(match[1]);
+        }
+    }
+    return variables;
+}
+
+// LLMパラメータから変数情報を取得
+function getLlmParamsInfo() {
+    const params = {};
+    const treeNodes = document.querySelectorAll('#llm-params-tree-container > .tree-node');
+    
+    treeNodes.forEach(node => {
+        const nameInput = node.querySelector('.tree-param-name');
+        const typeSelect = node.querySelector('.tree-param-type');
+        const descInput = node.querySelector('.tree-param-description');
+        const requiredCheck = node.querySelector('.tree-param-required');
+        const enumInput = node.querySelector('.tree-param-enum');
+        
+        if (nameInput && nameInput.value.trim()) {
+            const name = nameInput.value.trim();
+            const type = typeSelect ? typeSelect.value : 'string';
+            params[name] = {
+                type: type,
+                description: descInput ? descInput.value.trim() : '',
+                required: requiredCheck ? requiredCheck.checked : false,
+                enum: enumInput ? enumInput.value.trim().split(',').filter(v => v.trim()) : []
+            };
+        }
+    });
+    
+    return params;
+}
+
+// プロンプトプレビューを生成
+function generatePromptPreview() {
+    const templateContent = document.getElementById('template_content')?.value || '';
+    const previewOutput = document.getElementById('prompt-preview-output');
+    const variablesList = document.getElementById('prompt-variables-list');
+    
+    if (!previewOutput || !variablesList) return;
+    
+    // テンプレートから変数を抽出
+    const templateVars = extractTemplateVariables(templateContent);
+    const llmParams = getLlmParamsInfo();
+    
+    // プレビュー生成（サンプル値で置換）
+    let preview = templateContent || t('prompt_preview_empty');
+    
+    templateVars.forEach(varName => {
+        const paramInfo = llmParams[varName];
+        let sampleValue;
+        
+        if (paramInfo) {
+            if (paramInfo.type === 'enum' && paramInfo.enum.length > 0) {
+                sampleValue = `【${paramInfo.enum[0]}】`;
+            } else if (paramInfo.type === 'number' || paramInfo.type === 'integer') {
+                sampleValue = '【<数値>】';
+            } else if (paramInfo.type === 'boolean') {
+                sampleValue = '【<true/false>】';
+            } else {
+                sampleValue = `【<${varName}>】`;
+            }
+        } else {
+            sampleValue = `【<${varName}>】`;
+        }
+        
+        preview = preview.replace(new RegExp(`\\{\\{${varName}\\}\\}`, 'g'), sampleValue);
+    });
+    
+    previewOutput.textContent = preview;
+    
+    // 検出された変数リストを表示
+    if (templateVars.length === 0) {
+        variablesList.innerHTML = `<em data-i18n="prompt_no_variables">${t('prompt_no_variables')}</em>`;
+    } else {
+        const varItems = templateVars.map(varName => {
+            const paramInfo = llmParams[varName];
+            const isDefinedInParams = !!paramInfo;
+            const typeLabel = paramInfo ? paramInfo.type : 'string';
+            const statusIcon = isDefinedInParams ? '✅' : '⚠️';
+            const statusText = isDefinedInParams 
+                ? t('prompt_var_defined')
+                : t('prompt_var_not_defined');
+            const description = paramInfo?.description ? ` - ${paramInfo.description}` : '';
+            
+            return `
+                <div style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; margin-bottom: 4px; background: ${isDefinedInParams ? '#c3e6cb' : '#ffeeba'}; border-radius: 4px;">
+                    <span>${statusIcon}</span>
+                    <code style="font-weight: bold; background: white; padding: 2px 6px; border-radius: 3px;">{{${varName}}}</code>
+                    <span style="color: #666; font-size: 0.85rem;">(${typeLabel})</span>
+                    <span style="font-size: 0.8rem; color: #666;">${statusText}${description}</span>
+                </div>
+            `;
+        }).join('');
+        
+        variablesList.innerHTML = varItems;
+        
+        // 未定義の変数がある場合は警告表示
+        const undefinedVars = templateVars.filter(v => !llmParams[v]);
+        if (undefinedVars.length > 0) {
+            variablesList.innerHTML += `
+                <div style="margin-top: 10px; padding: 10px; background: #fff3cd; border-radius: 4px; font-size: 0.85rem; color: #856404;">
+                    ⚠️ <strong>${t('prompt_undefined_warning')}</strong><br>
+                    ${t('prompt_add_llm_params')}: ${undefinedVars.map(v => `<code>{{${v}}}</code>`).join(', ')}
+                </div>
+            `;
+        }
+    }
+}
 // Cache bust: 2025-12-05T00:00:00

@@ -101,4 +101,13 @@ def create_app(config_class=Config):
         # For non-API routes, use default HTML error page
         return e
     
+    # Health check endpoint
+    @app.route('/health')
+    def health_check():
+        """Health check endpoint for monitoring and load balancers"""
+        return jsonify({
+            'status': 'healthy',
+            'version': __version__
+        }), 200
+    
     return app
