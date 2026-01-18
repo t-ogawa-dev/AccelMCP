@@ -1,0 +1,230 @@
+"""
+JavaScript Syntax Validation Tests
+Tests JavaScript files for syntax errors without running a browser
+Uses Python's esprima or subprocess to validate JS syntax
+"""
+import pytest
+import subprocess
+import os
+from pathlib import Path
+
+
+class TestJavaScriptSyntax:
+    """JavaScriptファイルのシンタックスエラーを検出するテスト"""
+    
+    @pytest.fixture
+    def js_files(self):
+        """テスト対象のJSファイル一覧を取得"""
+        project_root = Path(__file__).parent.parent.parent
+        js_dir = project_root / "app" / "assets"
+        
+        js_files = []
+        for js_file in js_dir.rglob("*.js"):
+            # 除外パターン（node_modules、minified files等）
+            if 'node_modules' in str(js_file):
+                continue
+            if '.min.js' in str(js_file):
+                continue
+            js_files.append(js_file)
+        
+        return js_files
+    
+    def test_all_js_files_have_valid_syntax(self, js_files):
+        """全てのJSファイルが有効なシンタックスを持つことを確認"""
+        errors = []
+        
+        for js_file in js_files:
+            result = self._validate_js_syntax(js_file)
+            if result:
+                errors.append(f"{js_file}: {result}")
+        
+        assert not errors, f"JavaScript syntax errors found:\n" + "\n".join(errors)
+    
+    def _validate_js_syntax(self, js_file: Path) -> str | None:
+        """
+        JavaScriptファイルのシンタックスを検証
+        Node.jsが利用可能ならそれを使用、なければPythonで簡易チェック
+        """
+        # Node.jsでシンタックスチェック
+        try:
+            result = subprocess.run(
+                ['node', '--check', str(js_file)],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode != 0:
+                return result.stderr.strip()
+            return None
+        except FileNotFoundError:
+            # Node.jsがない場合はPythonで簡易チェック
+            return self._python_js_check(js_file)
+        except subprocess.TimeoutExpired:
+            return "Timeout checking syntax"
+    
+    def _python_js_check(self, js_file: Path) -> str | None:
+        """Pythonで簡易的なJSシンタックスチェック"""
+        try:
+            content = js_file.read_text(encoding='utf-8')
+            
+            # 基本的な括弧のバランスチェック
+            brackets = {'(': ')', '[': ']', '{': '}'}
+            stack = []
+            in_string = False
+            string_char = None
+            escape_next = False
+            line_num = 1
+            
+            for i, char in enumerate(content):
+                if char == '\n':
+                    line_num += 1
+                    continue
+                
+                if escape_next:
+                    escape_next = False
+                    continue
+                
+                if char == '\\':
+                    escape_next = True
+                    continue
+                
+                # 文字列内の処理
+                if in_string:
+                    if char == string_char:
+                        in_string = False
+                        string_char = None
+                    continue
+                
+                # 文字列の開始
+                if char in ('"', "'", '`'):
+                    in_string = True
+                    string_char = char
+                    continue
+                
+                # 括弧のチェック
+                if char in brackets:
+                    stack.append((char, line_num))
+                elif char in brackets.values():
+                    if not stack:
+                        return f"Line {line_num}: Unexpected closing bracket '{char}'"
+                    expected = brackets[stack[-1][0]]
+                    if char != expected:
+                        return f"Line {line_num}: Expected '{expected}' but got '{char}'"
+                    stack.pop()
+            
+            if stack:
+                unclosed = stack[-1]
+                return f"Line {unclosed[1]}: Unclosed bracket '{unclosed[0]}'"
+            
+            if in_string:
+                return f"Unclosed string"
+            
+            return None
+            
+        except Exception as e:
+            return f"Error reading file: {e}"
+    
+    def test_specific_capabilities_js(self):
+        """capabilities.js のシンタックスを個別にチェック"""
+        project_root = Path(__file__).parent.parent.parent
+        js_file = project_root / "app" / "assets" / "view" / "services" / "capabilities.js"
+        
+        if not js_file.exists():
+            pytest.skip(f"File not found: {js_file}")
+        
+        error = self._validate_js_syntax(js_file)
+        assert error is None, f"Syntax error in capabilities.js: {error}"
+    
+    def test_dashboard_js(self):
+        """dashboard.js のシンタックスを個別にチェック"""
+        project_root = Path(__file__).parent.parent.parent
+        js_file = project_root / "app" / "assets" / "view" / "dashboard.js"
+        
+        if not js_file.exists():
+            pytest.skip(f"File not found: {js_file}")
+        
+        error = self._validate_js_syntax(js_file)
+        assert error is None, f"Syntax error in dashboard.js: {error}"
+
+
+class TestJavaScriptFetchCalls:
+    """JavaScript内のfetch呼び出しを静的に検証"""
+    
+    @pytest.fixture
+    def js_files(self):
+        """テスト対象のJSファイル一覧を取得"""
+        project_root = Path(__file__).parent.parent.parent
+        js_dir = project_root / "app" / "assets" / "view"
+        
+        return list(js_dir.rglob("*.js"))
+    
+    def test_fetch_calls_have_error_handling(self, js_files):
+        """fetch呼び出しが適切なエラーハンドリングを持つことを確認"""
+        issues = []
+        
+        for js_file in js_files:
+            content = js_file.read_text(encoding='utf-8')
+            
+            # fetchを使用しているが、try-catchがない関数を検出
+            # 簡易的なチェック
+            if 'fetch(' in content:
+                if 'try {' not in content and '.catch(' not in content:
+                    # より詳細なチェック - async関数内でtry-catchがあるか
+                    if 'async function' in content or 'async (' in content:
+                        issues.append(f"{js_file.name}: fetch() without try-catch or .catch()")
+        
+        # 警告として出力（エラーにはしない）
+        if issues:
+            print(f"\nWarning - fetch calls potentially without error handling:\n" + "\n".join(issues))
+    
+    def test_api_fetch_checks_response_ok(self, js_files):
+        """API fetch呼び出しがresponse.okをチェックしているか確認"""
+        issues = []
+        
+        for js_file in js_files:
+            content = js_file.read_text(encoding='utf-8')
+            
+            # /api/ へのfetch呼び出しを検出
+            if "fetch(`/api/" in content or "fetch('/api/" in content:
+                # response.ok または response.status のチェックがあるか
+                if 'response.ok' not in content and 'response.status' not in content:
+                    issues.append(f"{js_file.name}: API fetch without response status check")
+        
+        # 警告として出力
+        if issues:
+            print(f"\nWarning - API calls potentially without status check:\n" + "\n".join(issues))
+
+
+class TestJavaScriptConsoleLog:
+    """本番コードにconsole.logが残っていないかチェック（デバッグ用を除く）"""
+    
+    @pytest.fixture
+    def js_files(self):
+        """テスト対象のJSファイル一覧を取得"""
+        project_root = Path(__file__).parent.parent.parent
+        js_dir = project_root / "app" / "assets" / "view"
+        
+        return list(js_dir.rglob("*.js"))
+    
+    def test_no_debug_console_logs(self, js_files):
+        """デバッグ用のconsole.logが残っていないことを確認"""
+        issues = []
+        
+        for js_file in js_files:
+            content = js_file.read_text(encoding='utf-8')
+            lines = content.split('\n')
+            
+            for i, line in enumerate(lines, 1):
+                # console.log を検出（console.error, console.warn は許可）
+                if 'console.log(' in line:
+                    # コメントアウトされている場合はスキップ
+                    stripped = line.strip()
+                    if stripped.startswith('//') or stripped.startswith('/*'):
+                        continue
+                    issues.append(f"{js_file.name}:{i}: {line.strip()[:50]}")
+        
+        # 警告として出力（エラーにはしない - デバッグ用途もあるため）
+        if issues:
+            print(f"\nNote - console.log found (may be intentional):\n" + "\n".join(issues[:10]))
+            if len(issues) > 10:
+                print(f"  ... and {len(issues) - 10} more")

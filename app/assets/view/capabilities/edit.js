@@ -1432,6 +1432,7 @@ async function loadCapability() {
     document.getElementById('name').value = cap.name;
     document.getElementById('url').value = cap.url;
     document.getElementById('description').value = cap.description || '';
+    document.getElementById('timeout_seconds').value = cap.timeout_seconds || 30;
     
     // Add input event listener for URL preview
     const urlInput = document.getElementById('url');
@@ -1871,6 +1872,7 @@ async function loadCapability() {
             capability_type: 'tool',
             url: urlValue,
             description: formData.get('description'),
+            timeout_seconds: parseInt(formData.get('timeout_seconds')) || 30,
             headers: headers,
             body_params: bodyParams
         };

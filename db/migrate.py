@@ -8,6 +8,7 @@ Usage:
     python migrate.py downgrade         # Revert last migration
     python migrate.py current           # Show current revision
     python migrate.py history           # Show migration history
+    python migrate.py stamp             # Stamp the database with a specific revision
 """
 import sys
 import os
@@ -16,7 +17,7 @@ from pathlib import Path
 # Add parent directory to path to import app module
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from flask_migrate import init, migrate, upgrade, downgrade, current, history
+from flask_migrate import init, migrate, upgrade, downgrade, current, history, stamp
 from app import create_app
 
 app = create_app()
@@ -51,6 +52,10 @@ def main():
         elif command == 'history':
             print("Migration history:")
             history(directory=MIGRATION_DIR)
+        elif command == 'stamp':
+            revision = sys.argv[2] if len(sys.argv) > 2 else 'head'
+            print(f"Stamping database with revision {revision}...")
+            stamp(revision=revision, directory=MIGRATION_DIR)
         else:
             print(f"Unknown command: {command}")
             print(__doc__)

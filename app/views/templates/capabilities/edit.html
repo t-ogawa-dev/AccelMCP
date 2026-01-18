@@ -61,8 +61,20 @@
         
         <div class="form-group">
             <label for="description"><span data-i18n="capability_description_label">説明</span> *</label>
-            <textarea id="description" name="description" rows="3" required></textarea>
-            <small data-i18n="capability_description_hint" style="color: #6c757d;">LLMはこの説明を参考に、使用するtoolを選択します。具体的で分かりやすい説明を記載してください。</small>
+            <textarea id="description" name="description" rows="5" required></textarea>
+            <small data-i18n="capability_description_hint" style="color: #6c757d;">
+                LLMはこの説明を参考に、使用するtoolを選択します。以下を含めた詳細な説明を記載してください：<br>
+                • 機能の概要と目的<br>
+                • 主なパラメータの説明<br>
+                • 実行に必要な前提条件や権限<br>
+                • 期待される結果や副作用
+            </small>
+        </div>
+        
+        <div class="form-group">
+            <label for="timeout_seconds"><span data-i18n="capability_timeout_label">タイムアウト (秒)</span></label>
+            <input type="number" id="timeout_seconds" name="timeout_seconds" min="1" max="300" value="30">
+            <small data-i18n="capability_timeout_hint" style="color: #6c757d;">API呼び出しのタイムアウト時間。デフォルト30秒。大量データや処理時間が長いAPIは大きめに設定してください。</small>
         </div>
         
         <div class="form-group">

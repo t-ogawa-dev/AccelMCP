@@ -146,6 +146,7 @@ class Capability(db.Model):
     description = db.Column(db.Text)
     access_control = db.Column(db.String(20), nullable=False, default='public')  # 'public' or 'restricted'
     is_enabled = db.Column(db.Boolean, default=True, nullable=False)  # 有効/無効フラグ
+    timeout_seconds = db.Column(db.Integer, default=30)  # API呼び出しタイムアウト（秒）
     created_at = db.Column(db.DateTime, default=utcnow)
     updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
     
@@ -167,6 +168,7 @@ class Capability(db.Model):
             'description': self.description,
             'access_control': self.access_control,
             'is_enabled': self.is_enabled,
+            'timeout_seconds': self.timeout_seconds or 30,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }

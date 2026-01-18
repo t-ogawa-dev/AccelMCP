@@ -12,12 +12,14 @@
 
 {% block content %}
 <div class="page-title">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
+    <div class="page-header-responsive">
+        <div class="page-header-text">
             <h2 id="page-title" data-i18n="app_list_title">アプリ一覧</h2>
             <p id="page-desc" data-i18n="app_list_desc">登録されているMCPアプリの管理</p>
         </div>
-        <a href="#" class="btn btn-primary" data-i18n="app_new_button" id="new-app-button">新規アプリ登録</a>
+        <div class="page-header-actions">
+            <a href="#" class="btn btn-primary" data-i18n="app_new_button" id="new-app-button">新規アプリ登録</a>
+        </div>
     </div>
 </div>
 

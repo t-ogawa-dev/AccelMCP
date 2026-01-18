@@ -95,6 +95,7 @@ function setupEventListeners() {
     
     // Clear filter
     document.getElementById('clear-filter-btn').addEventListener('click', () => {
+        document.getElementById('filter-search').value = '';
         document.getElementById('filter-date-from').value = '';
         document.getElementById('filter-date-to').value = '';
         document.getElementById('filter-method').value = '';
@@ -111,6 +112,9 @@ function setupEventListeners() {
 
 function collectFilters() {
     currentFilters = {};
+    
+    const search = document.getElementById('filter-search').value;
+    if (search) currentFilters.search = search;
     
     const dateFrom = document.getElementById('filter-date-from').value;
     if (dateFrom) currentFilters.date_from = new Date(dateFrom).toISOString();

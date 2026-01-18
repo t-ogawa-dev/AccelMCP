@@ -48,6 +48,10 @@
 <!-- Filters -->
 <div class="filter-section">
     <div class="filter-row">
+        <div class="filter-group" style="flex: 2;">
+            <label data-i18n="log_filter_search">キーワード検索</label>
+            <input type="text" id="filter-search" class="form-control" placeholder="リクエスト・レスポンスを検索...">
+        </div>
         <div class="filter-group">
             <label data-i18n="log_filter_date_from">開始日時</label>
             <input type="datetime-local" id="filter-date-from" class="form-control">
@@ -56,6 +60,8 @@
             <label data-i18n="log_filter_date_to">終了日時</label>
             <input type="datetime-local" id="filter-date-to" class="form-control">
         </div>
+    </div>
+    <div class="filter-row" style="margin-top: 10px;">
         <div class="filter-group">
             <label data-i18n="log_filter_method">メソッド</label>
             <select id="filter-method" class="form-control">

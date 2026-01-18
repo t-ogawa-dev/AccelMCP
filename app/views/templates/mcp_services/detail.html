@@ -14,12 +14,12 @@
 
 {% block content %}
 <div class="page-title">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
+    <div class="page-header-responsive">
+        <div class="page-header-text">
             <h2 id="service-name" data-i18n="mcp_service_detail_title">MCPサービス詳細</h2>
             <p data-i18n="mcp_service_detail_desc">MCPサービスの詳細情報</p>
         </div>
-        <div style="display: flex; gap: 10px;">
+        <div class="page-header-actions">
             <a href="/mcp-services/{{ mcp_service_id }}/apps" class="btn btn-primary">
                 <span data-i18n="app_list_title">アプリ一覧</span>
             </a>

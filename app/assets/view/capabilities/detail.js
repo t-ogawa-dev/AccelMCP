@@ -1,5 +1,6 @@
 // capabilities/detail.js - Capability Detail Page
 const capabilityId = parseInt(window.location.pathname.split('/')[2]);
+let llmParamsSchema = { properties: {}, required: [] }; // Store LLM params schema for form generation
 
 async function loadCapability() {
     const response = await fetch(`/api/capabilities/${capabilityId}`);
@@ -206,6 +207,216 @@ async function loadCapability() {
         badge.textContent = t('access_control_restricted');
         badge.style.cssText = 'padding: 4px 12px; border-radius: 4px; background-color: #fef3c7; color: #92400e; font-weight: 500; font-size: 0.875rem;';
     }
+    
+    // Store LLM params schema for test form
+    llmParamsSchema = llmParams;
+    
+    // Generate test parameter form
+    generateTestParamsForm();
+}
+
+// Generate dynamic form fields based on LLM params schema
+function generateTestParamsForm() {
+    const container = document.getElementById('test-params-container');
+    const properties = llmParamsSchema.properties || {};
+    const required = llmParamsSchema.required || [];
+    
+    if (Object.keys(properties).length === 0) {
+        container.innerHTML = `<p style="color: #6c757d; font-style: italic;" data-i18n="capability_test_no_params">${t('capability_test_no_params')}</p>`;
+        return;
+    }
+    
+    let html = '';
+    
+    for (const [key, schema] of Object.entries(properties)) {
+        const isRequired = required.includes(key) || schema.required === true;
+        const requiredBadge = isRequired 
+            ? `<span style="background-color: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 3px; font-size: 0.75rem; margin-left: 8px;">${t('capability_test_required')}</span>`
+            : `<span style="background-color: #e5e7eb; color: #6b7280; padding: 2px 6px; border-radius: 3px; font-size: 0.75rem; margin-left: 8px;">${t('capability_test_optional')}</span>`;
+        
+        const typeLabel = schema.type ? `<span style="color: #6b7280; font-size: 0.85rem; margin-left: 8px;">(${schema.type})</span>` : '';
+        
+        const defaultValue = schema.default !== undefined ? schema.default : getDefaultByType(schema.type);
+        
+        html += `<div class="form-group" style="margin-bottom: 16px;">`;
+        html += `<label for="test-param-${key}" style="display: flex; align-items: center; margin-bottom: 6px;">`;
+        html += `<strong>${key}</strong>${typeLabel}${requiredBadge}`;
+        html += `</label>`;
+        
+        // Generate input based on type
+        if (schema.type === 'boolean') {
+            html += `<div style="display: flex; gap: 16px;">`;
+            html += `<label style="display: flex; align-items: center; cursor: pointer;">`;
+            html += `<input type="radio" name="test-param-${key}" id="test-param-${key}-true" value="true" ${defaultValue === true ? 'checked' : ''} style="margin-right: 6px;">`;
+            html += `<span>${t('capability_test_true')}</span>`;
+            html += `</label>`;
+            html += `<label style="display: flex; align-items: center; cursor: pointer;">`;
+            html += `<input type="radio" name="test-param-${key}" id="test-param-${key}-false" value="false" ${defaultValue !== true ? 'checked' : ''} style="margin-right: 6px;">`;
+            html += `<span>${t('capability_test_false')}</span>`;
+            html += `</label>`;
+            html += `</div>`;
+        } else if (schema.type === 'number' || schema.type === 'integer') {
+            const step = schema.type === 'integer' ? '1' : 'any';
+            html += `<input type="number" id="test-param-${key}" data-key="${key}" data-type="${schema.type}" step="${step}" value="${defaultValue}" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 4px;">`;
+        } else if (schema.type === 'array' || schema.type === 'object') {
+            const placeholderValue = schema.type === 'array' ? '[]' : '{}';
+            const displayValue = typeof defaultValue === 'object' ? JSON.stringify(defaultValue, null, 2) : placeholderValue;
+            html += `<textarea id="test-param-${key}" data-key="${key}" data-type="${schema.type}" rows="3" style="width: 100%; padding: 10px; font-family: monospace; font-size: 0.9em; border: 1px solid #d1d5db; border-radius: 4px;">${displayValue}</textarea>`;
+            html += `<small style="color: #6c757d;">JSON形式で入力</small>`;
+        } else {
+            // Default: string or unknown type
+            html += `<input type="text" id="test-param-${key}" data-key="${key}" data-type="${schema.type || 'string'}" value="${defaultValue}" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 4px;">`;
+        }
+        
+        // Show description if available
+        if (schema.description) {
+            html += `<small style="color: #6c757d; display: block; margin-top: 4px;">${schema.description}</small>`;
+        }
+        
+        // Show default value hint if available
+        if (schema.default !== undefined) {
+            html += `<small style="color: #3b82f6; display: block; margin-top: 2px;">${t('capability_test_default')}: ${JSON.stringify(schema.default)}</small>`;
+        }
+        
+        html += `</div>`;
+    }
+    
+    container.innerHTML = html;
+}
+
+// Get default value by type
+function getDefaultByType(type) {
+    switch (type) {
+        case 'string': return '';
+        case 'number': return 0;
+        case 'integer': return 0;
+        case 'boolean': return false;
+        case 'array': return [];
+        case 'object': return {};
+        default: return '';
+    }
+}
+
+// Collect test parameters from form
+function collectTestParams() {
+    const params = {};
+    const properties = llmParamsSchema.properties || {};
+    const required = llmParamsSchema.required || [];
+    const errors = [];
+    
+    for (const [key, schema] of Object.entries(properties)) {
+        const isRequired = required.includes(key) || schema.required === true;
+        
+        if (schema.type === 'boolean') {
+            // Get radio button value
+            const checkedRadio = document.querySelector(`input[name="test-param-${key}"]:checked`);
+            params[key] = checkedRadio ? checkedRadio.value === 'true' : false;
+        } else if (schema.type === 'number' || schema.type === 'integer') {
+            const input = document.getElementById(`test-param-${key}`);
+            const value = input ? input.value : '';
+            if (value === '' && !isRequired) {
+                // Skip empty optional number fields
+                continue;
+            }
+            if (value === '' && isRequired) {
+                errors.push(key);
+                continue;
+            }
+            params[key] = schema.type === 'integer' ? parseInt(value, 10) : parseFloat(value);
+        } else if (schema.type === 'array' || schema.type === 'object') {
+            const input = document.getElementById(`test-param-${key}`);
+            const value = input ? input.value.trim() : '';
+            if (value === '' || value === '[]' || value === '{}') {
+                if (isRequired) {
+                    errors.push(key);
+                }
+                continue;
+            }
+            try {
+                params[key] = JSON.parse(value);
+            } catch (e) {
+                errors.push(`${key} (JSON形式エラー)`);
+            }
+        } else {
+            // String or unknown type
+            const input = document.getElementById(`test-param-${key}`);
+            const value = input ? input.value : '';
+            if (value === '' && isRequired) {
+                errors.push(key);
+                continue;
+            }
+            if (value !== '' || isRequired) {
+                params[key] = value;
+            }
+        }
+    }
+    
+    return { params, errors };
+}
+
+async function executeTest() {
+    const resultDiv = document.getElementById('test-result');
+    const statusDiv = document.getElementById('test-result-status');
+    const bodyPre = document.getElementById('test-result-body');
+    const testButton = document.getElementById('test-button');
+    
+    // Collect parameters from form
+    const { params, errors } = collectTestParams();
+    
+    // Validate required fields
+    if (errors.length > 0) {
+        statusDiv.textContent = `✗ ${t('capability_test_validation_error')}`;
+        statusDiv.style.backgroundColor = '#fee2e2';
+        statusDiv.style.color = '#991b1b';
+        bodyPre.textContent = `${t('capability_test_required_missing')}: ${errors.join(', ')}`;
+        resultDiv.style.display = 'block';
+        return;
+    }
+    
+    // Show loading
+    testButton.disabled = true;
+    testButton.textContent = t('capability_test_running');
+    resultDiv.style.display = 'none';
+    
+    try {
+        const response = await fetch(`/api/capabilities/${capabilityId}/test`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ params })
+        });
+        
+        const result = await response.json();
+        
+        // Show result
+        resultDiv.style.display = 'block';
+        
+        if (result.success) {
+            statusDiv.textContent = `✓ ${t('capability_test_success')} (HTTP ${result.status_code})`;
+            statusDiv.style.backgroundColor = '#d1fae5';
+            statusDiv.style.color = '#065f46';
+            bodyPre.textContent = JSON.stringify(result.data, null, 2);
+        } else {
+            statusDiv.textContent = `✗ ${t('capability_test_error')}`;
+            statusDiv.style.backgroundColor = '#fee2e2';
+            statusDiv.style.color = '#991b1b';
+            bodyPre.textContent = JSON.stringify(result.error, null, 2);
+        }
+    } catch (e) {
+        resultDiv.style.display = 'block';
+        statusDiv.textContent = `✗ ${t('capability_test_comm_error')}`;
+        statusDiv.style.backgroundColor = '#fee2e2';
+        statusDiv.style.color = '#991b1b';
+        bodyPre.textContent = e.message;
+    } finally {
+        testButton.disabled = false;
+        testButton.textContent = t('button_test_execute');
+    }
+}
+
+function clearTestResult() {
+    document.getElementById('test-result').style.display = 'none';
+    // Reset form fields
+    generateTestParamsForm();
 }
 
 // Initialize language and load capability detail
@@ -213,4 +424,3 @@ async function loadCapability() {
     await initLanguageSwitcher();
     loadCapability();
 })();
-

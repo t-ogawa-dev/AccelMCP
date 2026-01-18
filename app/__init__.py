@@ -80,4 +80,25 @@ def create_app(config_class=Config):
     
     app.logger.info("All blueprints registered")
     
+    # Global error handlers for all routes
+    from flask import jsonify, request
+    from werkzeug.exceptions import NotFound
+    
+    @app.errorhandler(404)
+    def handle_global_404(e):
+        """Handle 404 errors globally - return JSON for API routes, HTML for others"""
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'Resource not found', 'path': request.path}), 404
+        # For non-API routes, use default HTML error page
+        return e
+    
+    @app.errorhandler(500)
+    def handle_global_500(e):
+        """Handle 500 errors globally - return JSON for API routes, HTML for others"""
+        if request.path.startswith('/api/'):
+            app.logger.error(f"Internal server error on {request.path}: {str(e)}")
+            return jsonify({'error': 'Internal server error', 'message': str(e)}), 500
+        # For non-API routes, use default HTML error page
+        return e
+    
     return app

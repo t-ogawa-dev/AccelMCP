@@ -86,6 +86,39 @@ function updateCounts() {
     document.getElementById('disabled-count').textContent = disabledCount;
 }
 
+function toggleCapabilityType() {
+    const capabilityType = document.getElementById('capability_type').value;
+    const toolFields = document.getElementById('tool-fields');
+    const promptFields = document.getElementById('prompt-fields');
+    const headersGroup = document.querySelector('[data-i18n="capability_header_params"]')?.closest('.form-group');
+    const bodyParamsGroup = document.querySelector('[data-i18n="capability_body_params"]')?.closest('.form-group');
+    
+    if (capabilityType === 'prompt') {
+        // Show prompt fields, hide tool fields
+        if (toolFields) toolFields.style.display = 'none';
+        if (promptFields) promptFields.style.display = 'block';
+        if (headersGroup) headersGroup.style.display = 'none';
+        if (bodyParamsGroup) {
+            // For prompts, body_params defines template variables (JSON Schema)
+            bodyParamsGroup.style.display = 'block';
+        }
+        // Make URL and method optional for prompts
+        document.getElementById('url').required = false;
+        document.getElementById('method').required = false;
+        document.getElementById('template_content').required = true;
+    } else {
+        // Show tool fields, hide prompt fields
+        if (toolFields) toolFields.style.display = 'block';
+        if (promptFields) promptFields.style.display = 'none';
+        if (headersGroup) headersGroup.style.display = 'block';
+        if (bodyParamsGroup) bodyParamsGroup.style.display = 'block';
+        // Make URL and method required for tools
+        document.getElementById('url').required = true;
+        document.getElementById('method').required = true;
+        document.getElementById('template_content').required = false;
+    }
+}
+
 function toggleBodyType() {
     const method = document.getElementById('method').value;
     const bodyKeyValue = document.getElementById('body-key-value');
@@ -1402,9 +1435,11 @@ function generateSampleValue(node) {
         
         const data = {
             name: formData.get('name'),
-            capability_type: 'tool',
+            capability_type: formData.get('capability_type') || 'tool',
             url: formData.get('url'),
             description: formData.get('description'),
+            timeout_seconds: parseInt(formData.get('timeout_seconds')) || 30,
+            template_content: formData.get('template_content'),
             headers: headers,
             body_params: bodyParams
         };

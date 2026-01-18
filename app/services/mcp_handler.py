@@ -120,6 +120,9 @@ class MCPHandler:
         elif method == 'prompts/list':
             return self._handle_prompts_list(mcp_request)
         
+        elif method == 'prompts/get':
+            return self._handle_prompts_get(mcp_request)
+        
         else:
             return {
                 'jsonrpc': '2.0',
@@ -395,6 +398,9 @@ class MCPHandler:
         
         elif method == 'prompts/list':
             return self._handle_prompts_list(mcp_request)
+        
+        elif method == 'prompts/get':
+            return self._handle_prompts_get(mcp_request)
         
         else:
             return {
@@ -701,12 +707,109 @@ class MCPHandler:
         }
     
     def _handle_prompts_list(self, mcp_request: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle prompts/list request (stub implementation)"""
+        """Handle prompts/list request - return all prompt-type capabilities"""
+        from app.models.models import Capability, Service
+        
+        # Get all prompt-type capabilities across all services
+        prompts = self.db.session.query(Capability).join(Service).filter(
+            Capability.capability_type == 'prompt',
+            Capability.is_enabled == True,
+            Service.is_enabled == True
+        ).all()
+        
+        prompt_list = []
+        for prompt in prompts:
+            prompt_item = {
+                'name': prompt.name,
+                'description': prompt.description or ''
+            }
+            
+            # Extract arguments from body_params if exists
+            if prompt.body_params:
+                try:
+                    body_params = json.loads(prompt.body_params) if isinstance(prompt.body_params, str) else prompt.body_params
+                    if 'properties' in body_params:
+                        arguments = []
+                        for arg_name, arg_spec in body_params['properties'].items():
+                            argument = {
+                                'name': arg_name,
+                                'description': arg_spec.get('description', ''),
+                                'required': arg_name in body_params.get('required', [])
+                            }
+                            arguments.append(argument)
+                        
+                        if arguments:
+                            prompt_item['arguments'] = arguments
+                except:
+                    pass
+            
+            prompt_list.append(prompt_item)
+        
         return {
             'jsonrpc': '2.0',
             'id': mcp_request.get('id') or 0,
             'result': {
-                'prompts': []
+                'prompts': prompt_list
+            }
+        }
+    
+    def _handle_prompts_get(self, mcp_request: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle prompts/get request - return specific prompt with filled template"""
+        from app.models.models import Capability
+        
+        params = mcp_request.get('params', {})
+        prompt_name = params.get('name')
+        arguments = params.get('arguments', {})
+        
+        if not prompt_name:
+            return {
+                'jsonrpc': '2.0',
+                'id': mcp_request.get('id') or 0,
+                'error': {
+                    'code': -32602,
+                    'message': 'Missing prompt name'
+                }
+            }
+        
+        # Find prompt capability
+        prompt = self.db.session.query(Capability).filter(
+            Capability.name == prompt_name,
+            Capability.capability_type == 'prompt',
+            Capability.is_enabled == True
+        ).first()
+        
+        if not prompt:
+            return {
+                'jsonrpc': '2.0',
+                'id': mcp_request.get('id') or 0,
+                'error': {
+                    'code': -32602,
+                    'message': f'Prompt not found: {prompt_name}'
+                }
+            }
+        
+        # Replace variables in template_content
+        template = prompt.template_content or ''
+        
+        # Simple variable replacement: {{variable_name}}
+        for key, value in arguments.items():
+            template = template.replace(f'{{{{{key}}}}}', str(value))
+        
+        # Return formatted prompt
+        return {
+            'jsonrpc': '2.0',
+            'id': mcp_request.get('id') or 0,
+            'result': {
+                'description': prompt.description or '',
+                'messages': [
+                    {
+                        'role': 'user',
+                        'content': {
+                            'type': 'text',
+                            'text': template
+                        }
+                    }
+                ]
             }
         }
     
@@ -866,6 +969,9 @@ class MCPHandler:
         # Check HTTP method from headers
         http_method = headers.get('X-HTTP-Method', 'POST').upper()
         
+        # Get timeout from capability settings
+        timeout_seconds = float(capability.timeout_seconds or 30)
+        
         try:
             # Make HTTP request
             if http_method == 'GET':
@@ -874,7 +980,7 @@ class MCPHandler:
                     url,
                     params=body,  # Query parameters
                     headers=headers,
-                    timeout=30.0
+                    timeout=timeout_seconds
                 )
             else:
                 # POST or other methods
@@ -882,7 +988,7 @@ class MCPHandler:
                     url,
                     headers=headers,
                     json=body,
-                    timeout=30.0
+                    timeout=timeout_seconds
                 )
             
             response.raise_for_status()
@@ -892,10 +998,43 @@ class MCPHandler:
                 'status_code': response.status_code,
                 'data': response.json() if response.headers.get('content-type', '').startswith('application/json') else response.text
             }
+        except httpx.TimeoutException as e:
+            return {
+                'success': False,
+                'error': {
+                    'code': 'API_TIMEOUT',
+                    'message': f'APIリクエストがタイムアウトしました（{timeout_seconds}秒）',
+                    'details': {
+                        'url': url,
+                        'timeout': timeout_seconds,
+                        'suggestion': 'Capability設定でtimeout_secondsを増やすか、API側の負荷を確認してください'
+                    }
+                }
+            }
+        except httpx.HTTPStatusError as e:
+            return {
+                'success': False,
+                'error': {
+                    'code': f'HTTP_{e.response.status_code}',
+                    'message': f'HTTPエラー: {e.response.status_code} {e.response.reason_phrase}',
+                    'details': {
+                        'url': url,
+                        'status_code': e.response.status_code,
+                        'response_body': e.response.text[:500] if e.response.text else None
+                    }
+                }
+            }
         except httpx.HTTPError as e:
             return {
                 'success': False,
-                'error': str(e)
+                'error': {
+                    'code': 'HTTP_ERROR',
+                    'message': f'HTTP通信エラー: {str(e)}',
+                    'details': {
+                        'url': url,
+                        'error_type': type(e).__name__
+                    }
+                }
             }
     
     def _execute_mcp_call(self, service, capability, arguments: Dict[str, Any]) -> Dict[str, Any]:
@@ -957,12 +1096,15 @@ class MCPHandler:
                         }
                     }
                     
+                    # Get timeout from capability settings
+                    timeout_seconds = float(capability.timeout_seconds or 30)
+                    
                     logger.debug(f"Initializing MCP session at {mcp_url}")
                     init_response = httpx.post(
                         mcp_url,
                         headers=headers,
                         json=init_request,
-                        timeout=30.0
+                        timeout=timeout_seconds
                     )
                     init_response.raise_for_status()
                     
@@ -990,7 +1132,7 @@ class MCPHandler:
                     mcp_url,
                     headers=headers,
                     json=mcp_request,
-                    timeout=30.0
+                    timeout=timeout_seconds
                 )
                 
                 logger.debug(f"MCP response status: {response.status_code}, body: {response.text}")
@@ -1129,3 +1271,157 @@ class MCPHandler:
                     'message': str(e)
                 }
             }
+
+
+def execute_capability_api(capability, params: Dict[str, Any] = None):
+    """
+    Execute a capability API call for testing purposes
+    
+    Args:
+        capability: Capability model instance
+        params: Dictionary of parameters to pass to the API
+    
+    Returns:
+        Dictionary with execution results including success status, data, and execution time
+    """
+    import time
+    from app.services.variable_replacer import VariableReplacer
+    
+    start_time = time.time()
+    params = params or {}
+    
+    # Get the service (app) from capability
+    service = capability.service
+    
+    # Merge headers: service common headers + capability specific headers
+    headers = {}
+    if service.common_headers:
+        headers.update(json.loads(service.common_headers))
+    if capability.headers:
+        headers.update(json.loads(capability.headers))
+    
+    # Replace variables in headers
+    headers = VariableReplacer.replace_in_dict(headers)
+    
+    # Replace variables in URL
+    url = VariableReplacer.replace_in_string(capability.url)
+    
+    # Build final request body
+    body = {}
+    
+    if capability.body_params:
+        try:
+            parsed = json.loads(capability.body_params) if isinstance(capability.body_params, str) else capability.body_params
+            
+            if 'properties' in parsed:
+                # Extract const-constrained fixed params from schema
+                properties = parsed.get('properties', {})
+                
+                # Add const values (fixed params)
+                for key, prop_def in properties.items():
+                    if 'const' in prop_def:
+                        const_value = prop_def['const']
+                        if isinstance(const_value, str):
+                            body[key] = VariableReplacer.replace_in_string(const_value)
+                        else:
+                            body[key] = const_value
+                
+                # Merge user-provided parameters
+                for key, value in params.items():
+                    if key in properties and 'const' not in properties[key]:
+                        body[key] = value
+                    elif key not in properties:
+                        body[key] = value
+            else:
+                # Simple key-value format
+                body.update(VariableReplacer.replace_in_dict(parsed))
+                body.update(params)
+        except (json.JSONDecodeError, TypeError):
+            body.update(params)
+    else:
+        body.update(params)
+    
+    # Get HTTP method
+    http_method = headers.get('X-HTTP-Method', 'POST').upper()
+    
+    # Get timeout from capability settings
+    timeout_seconds = float(capability.timeout_seconds or 30)
+    
+    try:
+        # Make HTTP request
+        if http_method == 'GET':
+            response = httpx.get(
+                url,
+                params=body,
+                headers=headers,
+                timeout=timeout_seconds
+            )
+        else:
+            response = httpx.post(
+                url,
+                headers=headers,
+                json=body,
+                timeout=timeout_seconds
+            )
+        
+        response.raise_for_status()
+        
+        end_time = time.time()
+        execution_time_ms = int((end_time - start_time) * 1000)
+        
+        return {
+            'success': True,
+            'status_code': response.status_code,
+            'data': response.json() if response.headers.get('content-type', '').startswith('application/json') else response.text,
+            'execution_time_ms': execution_time_ms
+        }
+    except httpx.TimeoutException as e:
+        end_time = time.time()
+        execution_time_ms = int((end_time - start_time) * 1000)
+        
+        return {
+            'success': False,
+            'error': {
+                'code': 'API_TIMEOUT',
+                'message': f'APIリクエストがタイムアウトしました（{timeout_seconds}秒）',
+                'details': {
+                    'url': url,
+                    'timeout': timeout_seconds,
+                    'suggestion': 'Capability設定でtimeout_secondsを増やすか、API側の負荷を確認してください'
+                }
+            },
+            'execution_time_ms': execution_time_ms
+        }
+    except httpx.HTTPStatusError as e:
+        end_time = time.time()
+        execution_time_ms = int((end_time - start_time) * 1000)
+        
+        return {
+            'success': False,
+            'error': {
+                'code': f'HTTP_{e.response.status_code}',
+                'message': f'HTTPエラー: {e.response.status_code} {e.response.reason_phrase}',
+                'details': {
+                    'url': url,
+                    'status_code': e.response.status_code,
+                    'response_body': e.response.text[:500] if e.response.text else None
+                }
+            },
+            'execution_time_ms': execution_time_ms
+        }
+    except httpx.HTTPError as e:
+        end_time = time.time()
+        execution_time_ms = int((end_time - start_time) * 1000)
+        
+        return {
+            'success': False,
+            'error': {
+                'code': 'HTTP_ERROR',
+                'message': f'HTTP通信エラー: {str(e)}',
+                'details': {
+                    'url': url,
+                    'error_type': type(e).__name__
+                }
+            },
+            'execution_time_ms': execution_time_ms
+        }

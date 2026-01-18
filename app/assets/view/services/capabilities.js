@@ -6,8 +6,32 @@ let isMcpType = false;
 let baseUrl = '';
 
 async function loadCapabilities() {
-    const response = await fetch(`/api/apps/${serviceId}/capabilities`);
-    const capabilities = await response.json();
+    // Validate serviceId before making API call
+    if (isNaN(serviceId) || serviceId <= 0) {
+        console.error('Invalid service ID:', serviceId, 'from URL:', window.location.pathname);
+        const container = document.getElementById('capabilities-list');
+        container.innerHTML = `<div class="error-state">エラー: サービスIDが無効です（URL: ${window.location.pathname}）</div>`;
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/apps/${serviceId}/capabilities`);
+        
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            console.error('Expected JSON response but got:', contentType);
+            const text = await response.text();
+            console.error('Response text:', text.substring(0, 200));
+            throw new Error(`サーバーエラー: JSONではないレスポンスが返されました (${response.status})`);
+        }
+        
+        const capabilities = await response.json();
+        
+        // Check for error in JSON response
+        if (!response.ok) {
+            throw new Error(capabilities.error || `サーバーエラー: ${response.status}`);
+        }
     
     const container = document.getElementById('capabilities-list');
     
@@ -48,6 +72,11 @@ async function loadCapabilities() {
         </div>
     `;
     }).join('');
+    } catch (error) {
+        console.error('Failed to load capabilities:', error);
+        const container = document.getElementById('capabilities-list');
+        container.innerHTML = `<div class="error-state">エラー: ${error.message}</div>`;
+    }
 }
 
 async function toggleCapability(id) {

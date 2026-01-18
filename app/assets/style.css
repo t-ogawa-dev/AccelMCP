@@ -302,6 +302,7 @@ body {
 .form-group input[type="text"],
 .form-group input[type="password"],
 .form-group input[type="url"],
+.form-group input[type="number"],
 .form-group select,
 .form-group textarea {
     width: 100%;
@@ -339,6 +340,8 @@ body {
     padding: 30px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow-wrap: break-word;
+    word-wrap: break-word;
 }
 
 .detail-section {
@@ -363,6 +366,7 @@ body {
 .detail-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 
 .detail-table th,
@@ -370,6 +374,8 @@ body {
     padding: 12px;
     text-align: left;
     border-bottom: 1px solid #e0e0e0;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .detail-table th {
@@ -378,11 +384,16 @@ body {
     color: #555;
 }
 
+.detail-table td {
+    word-break: break-all;
+}
+
 .detail-table code {
     background: #f5f5f5;
     padding: 2px 6px;
     border-radius: 3px;
     font-size: 13px;
+    word-break: break-all;
 }
 
 /* Code Block */
@@ -463,6 +474,27 @@ body {
     margin-bottom: 20px;
 }
 
+/* Page Header Responsive Layout */
+.page-header-responsive {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.page-header-text h2 {
+    margin: 0;
+}
+
+.page-header-text p {
+    margin: 5px 0 0 0;
+    color: #6c757d;
+}
+
+.page-header-actions {
+    display: flex;
+    gap: 10px;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .header {
@@ -486,10 +518,51 @@ body {
     
     .form-actions {
         flex-direction: column;
+        align-items: center;
     }
     
     .form-actions .btn {
         width: 100%;
+        text-align: center;
+    }
+    
+    .page-header-responsive {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .page-header-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .page-header-actions .btn {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .detail-card {
+        padding: 15px;
+    }
+    
+    .detail-table th,
+    .detail-table td {
+        display: block;
+        width: 100%;
+        padding: 8px 0;
+    }
+    
+    .detail-table th {
+        border-bottom: none;
+        padding-bottom: 0;
+        font-size: 12px;
+        color: #888;
+    }
+    
+    .detail-table td {
+        padding-top: 4px;
+        word-break: break-all;
     }
 }
 

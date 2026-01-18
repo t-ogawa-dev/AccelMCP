@@ -6,6 +6,7 @@ import json
 import secrets
 import yaml
 from flask import Blueprint, request, jsonify, Response
+from werkzeug.exceptions import NotFound
 from app.controllers.auth_controller import login_required
 from app.services.audit_logger import audit_log
 
@@ -14,6 +15,19 @@ from app.models.models import db, ConnectionAccount, McpService, Service, Capabi
 # Service is now mapped to 'apps' table, but keep the class name for compatibility
 
 api_bp = Blueprint('api', __name__)
+
+
+# Error handlers for API blueprint - return JSON instead of HTML
+@api_bp.errorhandler(NotFound)
+def handle_not_found(e):
+    """Handle 404 errors with JSON response instead of HTML"""
+    return jsonify({'error': str(e.description or 'Resource not found')}), 404
+
+
+@api_bp.errorhandler(500)
+def handle_internal_error(e):
+    """Handle 500 errors with JSON response instead of HTML"""
+    return jsonify({'error': 'Internal server error', 'message': str(e)}), 500
 
 
 # ============= MCP Service API =============
@@ -617,7 +631,8 @@ def capabilities(service_id):
             headers=json.dumps(data.get('headers', {})),
             body_params=json.dumps(data.get('body_params', {})),
             template_content=data.get('template_content'),
-            description=data.get('description', '')
+            description=data.get('description', ''),
+            timeout_seconds=data.get('timeout_seconds', 30)
         )
         db.session.add(capability)
         db.session.flush()  # IDを取得するためにflush
@@ -665,6 +680,7 @@ def capability_detail(capability_id):
         capability.body_params = json.dumps(data.get('body_params', {}))
         capability.template_content = data.get('template_content', capability.template_content)
         capability.description = data.get('description', capability.description)
+        capability.timeout_seconds = data.get('timeout_seconds', capability.timeout_seconds)
         
         # 権限設定を更新
         if 'account_ids' in data:
@@ -696,6 +712,50 @@ def toggle_capability(capability_id):
     capability.is_enabled = not capability.is_enabled
     db.session.commit()
     return jsonify(capability.to_dict())
+
+
+@api_bp.route('/capabilities/<int:capability_id>/test', methods=['POST'])
+@login_required
+def test_capability(capability_id):
+    """Test capability execution with provided parameters"""
+    capability = get_or_404(Capability, capability_id)
+    data = request.get_json() or {}
+    
+    # Import here to avoid circular imports
+    from app.services.mcp_handler import execute_capability_api
+    
+    # Get test parameters from request
+    test_params = data.get('params', {})
+    
+    # Execute the capability
+    try:
+        result = execute_capability_api(capability, test_params)
+        
+        # Return detailed response
+        if result.get('success'):
+            return jsonify({
+                'success': True,
+                'status_code': result.get('status_code'),
+                'data': result.get('data'),
+                'execution_time_ms': result.get('execution_time_ms', 0)
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Unknown error')
+            }), 500
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': {
+                'code': 'EXECUTION_ERROR',
+                'message': str(e),
+                'details': {
+                    'capability_id': capability_id,
+                    'capability_name': capability.name
+                }
+            }
+        }), 500
 
 
 # ============= Connection Account API =============
@@ -1509,6 +1569,18 @@ def connection_logs():
     is_success = request.args.get('is_success')
     if is_success is not None:
         query = query.filter(McpConnectionLog.is_success == (is_success.lower() == 'true'))
+    
+    # Full-text search in request_body and response_body
+    search = request.args.get('search')
+    if search:
+        search_pattern = f'%{search}%'
+        query = query.filter(
+            db.or_(
+                McpConnectionLog.request_body.ilike(search_pattern),
+                McpConnectionLog.response_body.ilike(search_pattern),
+                McpConnectionLog.mcp_method.ilike(search_pattern)
+            )
+        )
     
     # Filter by date range
     date_from = request.args.get('date_from')

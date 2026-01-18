@@ -38,22 +38,58 @@
         </div>
         
         <div class="form-group">
-            <label for="method"><span data-i18n="capability_http_method">HTTPメソッド</span> *</label>
-            <select id="method" name="method" required onchange="toggleBodyType()">
-                <option value="POST">POST</option>
-                <option value="GET">GET</option>
+            <label for="capability_type"><span data-i18n="capability_type_label">Capability種別</span> *</label>
+            <select id="capability_type" name="capability_type" required onchange="toggleCapabilityType()">
+                <option value="tool">Tool (API呼び出し)</option>
+                <option value="prompt">Prompt (テンプレート)</option>
             </select>
+            <small data-i18n="capability_type_hint" style="color: #6c757d;">Tool: 外部APIを呼び出す / Prompt: テンプレートテキストを返す</small>
         </div>
         
-        <div class="form-group">
-            <label for="url"><span data-i18n="capability_connection_url">接続先URL</span> *</label>
-            <input type="url" id="url" name="url" required placeholder="https://api.example.com/endpoint">
+        <!-- Tool-specific fields -->
+        <div id="tool-fields" style="display: block;">
+            <div class="form-group">
+                <label for="method"><span data-i18n="capability_http_method">HTTPメソッド</span> *</label>
+                <select id="method" name="method" onchange="toggleBodyType()">
+                    <option value="POST">POST</option>
+                    <option value="GET">GET</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="url"><span data-i18n="capability_connection_url">接続先URL</span> *</label>
+                <input type="url" id="url" name="url" placeholder="https://api.example.com/endpoint">
+            </div>
+        </div>
+        
+        <!-- Prompt-specific fields -->
+        <div id="prompt-fields" style="display: none;">
+            <div class="form-group">
+                <label for="template_content"><span data-i18n="capability_template_content_label">プロンプトテンプレート</span> *</label>
+                <textarea id="template_content" name="template_content" rows="8" placeholder="例: あなたは{{role}}です。{{task}}を実行してください。"></textarea>
+                <small data-i18n="capability_template_content_hint" style="color: #6c757d;">
+                    プロンプトのテンプレート。{{変数名}}の形式で変数を埋め込めます。<br>
+                    例: "あなたは{{role}}です。以下の{{topic}}について説明してください。"
+                </small>
+            </div>
         </div>
         
         <div class="form-group">
             <label for="description"><span data-i18n="capability_description_label">説明</span> *</label>
-            <textarea id="description" name="description" rows="3" required></textarea>
-            <small data-i18n="capability_description_hint" style="color: #6c757d;">LLMはこの説明を参考に、使用するtoolを選択します。具体的で分かりやすい説明を記載してください。</small>
+            <textarea id="description" name="description" rows="5" required></textarea>
+            <small data-i18n="capability_description_hint" style="color: #6c757d;">
+                LLMはこの説明を参考に、使用するtoolを選択します。以下を含めた詳細な説明を記載してください：<br>
+                • 機能の概要と目的<br>
+                • 主なパラメータの説明<br>
+                • 実行に必要な前提条件や権限<br>
+                • 期待される結果や副作用
+            </small>
+        </div>
+        
+        <div class="form-group">
+            <label for="timeout_seconds"><span data-i18n="capability_timeout_label">タイムアウト (秒)</span></label>
+            <input type="number" id="timeout_seconds" name="timeout_seconds" min="1" max="300" value="30">
+            <small data-i18n="capability_timeout_hint" style="color: #6c757d;">API呼び出しのタイムアウト時間。デフォルト30秒。大量データや処理時間が長いAPIは大きめに設定してください。</small>
         </div>
         
         <div class="form-group">

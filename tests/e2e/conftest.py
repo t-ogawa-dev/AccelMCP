@@ -9,10 +9,11 @@ import os
 def base_url():
     """Base URL for E2E tests"""
     # When running in Docker, use service name 'web'
-    # When running locally, use localhost
+    # When running locally, use localhost with configurable port
     if os.getenv('DOCKER_ENV'):
         return "http://web:5000"
-    return "http://localhost:5000"
+    port = os.getenv('FLASK_PORT', os.getenv('PORT', '5000'))
+    return f"http://localhost:{port}"
 
 
 @pytest.fixture

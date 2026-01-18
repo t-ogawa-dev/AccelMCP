@@ -18,12 +18,12 @@
 
 {% block content %}
 <div class="page-title">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
+    <div class="page-header-responsive">
+        <div class="page-header-text">
             <h2 data-i18n="app_detail_title">アプリ詳細</h2>
             <p data-i18n="app_detail_desc">アプリの詳細情報</p>
         </div>
-        <div style="display: flex; gap: 10px;">
+        <div class="page-header-actions">
             <a href="/mcp-services/{{ mcp_service_id }}/apps/{{ service_id }}/capabilities" class="btn btn-primary" data-i18n="app_capabilities_manage">Capabilities管理</a>
             <a href="/mcp-services/{{ mcp_service_id }}/apps/{{ service_id }}/edit" class="btn btn-secondary" data-i18n="button_edit">編集</a>
         </div>

@@ -22,16 +22,46 @@
 
 {% block content %}
 <div class="page-title">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
+    <div class="page-header-responsive">
+        <div class="page-header-text">
             <h2 data-i18n="capability_detail_title">Capability 詳細</h2>
             <p data-i18n="capability_detail_desc">Capabilityの詳細情報</p>
         </div>
-        <a href="#" id="edit-link" class="btn btn-primary" data-i18n="button_edit">編集</a>
+        <div class="page-header-actions">
+            <a href="#" id="edit-link" class="btn btn-primary" data-i18n="button_edit">編集</a>
+        </div>
     </div>
 </div>
 
 <div id="capability-detail" class="detail-card"></div>
+
+<div class="detail-card" style="margin-top: 20px;">
+    <div class="detail-section">
+        <h3 data-i18n="capability_test_title">Capability テスト実行</h3>
+        <p data-i18n="capability_test_desc" style="color: #6c757d; margin-bottom: 15px;">
+            このCapabilityをテスト実行します。LLMパラメータで定義した値を入力してください。
+        </p>
+        
+        <div id="test-params-container">
+            <!-- Dynamic form fields will be generated here -->
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <button id="test-button" class="btn btn-primary" data-i18n="button_test_execute" onclick="executeTest()">
+                テスト実行
+            </button>
+            <button id="clear-button" class="btn btn-secondary" style="margin-left: 10px;" data-i18n="button_clear_result" onclick="clearTestResult()">
+                結果をクリア
+            </button>
+        </div>
+        
+        <div id="test-result" style="margin-top: 20px; display: none;">
+            <h4 data-i18n="capability_test_result_title">実行結果</h4>
+            <div id="test-result-status" style="padding: 10px; border-radius: 4px; margin-bottom: 10px; font-weight: 500;"></div>
+            <pre id="test-result-body" class="code-block" style="max-height: 500px; overflow-y: auto;"></pre>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
 
