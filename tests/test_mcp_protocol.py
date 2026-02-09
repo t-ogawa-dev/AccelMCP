@@ -532,7 +532,18 @@ class TestMcpProtocolResourcesList:
         db.session.add(mcp_service)
         db.session.commit()
         
-        # Create global resources
+        # Create service/app under this MCP service
+        app = Service(
+            name='Resource Test App',
+            mcp_service_id=mcp_service.id,
+            service_type='mcp_builtin',
+            description='Test app with resources',
+            is_enabled=True
+        )
+        db.session.add(app)
+        db.session.commit()
+        
+        # Create global resources in Resource table
         resource1 = Resource(
             resource_id=Resource.generate_resource_id(),
             name='test_document',
@@ -552,6 +563,30 @@ class TestMcpProtocolResourcesList:
             is_enabled=True
         )
         db.session.add_all([resource1, resource2])
+        db.session.commit()
+        
+        # Create resource-type capabilities that reference global resources
+        cap1 = Capability(
+            app_id=app.id,
+            name='test_document',
+            capability_type='resource',
+            global_resource_id=resource1.id,
+            description='Test document resource',
+            resource_mime_type='text/plain',
+            access_control='public',
+            is_enabled=True
+        )
+        cap2 = Capability(
+            app_id=app.id,
+            name='api_spec',
+            capability_type='resource',
+            global_resource_id=resource2.id,
+            description='API specification',
+            resource_mime_type='application/json',
+            access_control='public',
+            is_enabled=True
+        )
+        db.session.add_all([cap1, cap2])
         db.session.commit()
         
         # Send resources/list request
@@ -661,6 +696,17 @@ class TestMcpProtocolResourcesRead:
         db.session.add(mcp_service)
         db.session.commit()
         
+        # Create service/app under this MCP service
+        app = Service(
+            name='Resource Read Test App',
+            mcp_service_id=mcp_service.id,
+            service_type='mcp_builtin',
+            description='Test app for resource read',
+            is_enabled=True
+        )
+        db.session.add(app)
+        db.session.commit()
+        
         # Create global resource
         resource = Resource(
             resource_id=Resource.generate_resource_id(),
@@ -674,6 +720,23 @@ class TestMcpProtocolResourcesRead:
         db.session.add(resource)
         db.session.commit()
         
+        # Create resource-type capability that references the global resource
+        resource_uri = f'resource://public-mcp-read/test_doc'
+        cap = Capability(
+            app_id=app.id,
+            name='test_doc',
+            capability_type='resource',
+            global_resource_id=resource.id,
+            resource_uri=resource_uri,
+            template_content=resource.content,  # Copy content for resources/read
+            description='Test document',
+            resource_mime_type='text/plain',
+            access_control='public',
+            is_enabled=True
+        )
+        db.session.add(cap)
+        db.session.commit()
+        
         # Send resources/read request
         response = client.post(
             '/mcp?subdomain=public-mcp-read',
@@ -682,7 +745,7 @@ class TestMcpProtocolResourcesRead:
                 'id': 1,
                 'method': 'resources/read',
                 'params': {
-                    'uri': resource.get_uri()
+                    'uri': resource_uri
                 }
             }),
             content_type='application/json'
@@ -696,7 +759,7 @@ class TestMcpProtocolResourcesRead:
         assert len(data['result']['contents']) == 1
         
         content = data['result']['contents'][0]
-        assert content['uri'] == resource.get_uri()
+        assert content['uri'] == resource_uri  # Check capability resource_uri, not global resource URI
         assert content['mimeType'] == 'text/plain'
         assert content['text'] == 'Hello, World!'
     
@@ -1013,6 +1076,49 @@ class TestMcpProtocolInitialize:
             is_enabled=True
         )
         db.session.add(mcp_service)
+        db.session.commit()
+        
+        # Create service/app under this MCP service
+        app = Service(
+            name='Init Test App',
+            mcp_service_id=mcp_service.id,
+            service_type='api',
+            description='Test app for initialize',
+            is_enabled=True
+        )
+        db.session.add(app)
+        db.session.commit()
+        
+        # Create capabilities of different types to populate capabilities
+        tool_cap = Capability(
+            app_id=app.id,
+            name='test_tool',
+            capability_type='tool',
+            url='https://api.example.com/test',
+            description='Test tool capability',
+            access_control='public',
+            is_enabled=True
+        )
+        resource_cap = Capability(
+            app_id=app.id,
+            name='test_resource',
+            capability_type='resource',
+            description='Test resource capability',
+            template_content='Test content',
+            resource_mime_type='text/plain',
+            access_control='public',
+            is_enabled=True
+        )
+        prompt_cap = Capability(
+            app_id=app.id,
+            name='test_prompt',
+            capability_type='prompt',
+            description='Test prompt capability',
+            template_content='Test prompt template',
+            access_control='public',
+            is_enabled=True
+        )
+        db.session.add_all([tool_cap, resource_cap, prompt_cap])
         db.session.commit()
         
         # Send initialize request

@@ -128,6 +128,32 @@ TRANSLATIONS = {
         'button_save': '保存',
         'button_cancel': 'キャンセル',
         'button_register': '登録',
+        'btn_save': '保存',
+        'btn_back': '戻る',
+        
+        # 共通
+        'loading': '読み込み中...',
+        
+        # ログ検索
+        'log_filter_search': '検索',
+        'log_detail_title': 'ログ詳細',
+        
+        # リソース使用例
+        'resource_usage_feature_global': 'グローバルリソース参照',
+        'resource_usage_feature_global_desc': '登録済みのリソースを参照できます',
+        'resource_usage_feature_uri': 'リソースURI',
+        'resource_usage_feature_uri_desc': 'リソースを一意に識別するURIを設定します',
+        'resource_usage_feature_access': 'アクセス制御',
+        'resource_usage_feature_access_desc': 'リソースへのアクセス権限を設定できます',
+        'resource_usage_feature_mime': 'MIMEタイプ',
+        'resource_usage_feature_mime_desc': 'リソースのコンテンツタイプを指定します',
+        'resource_usage_example_policy': '利用規約・ポリシー',
+        'resource_usage_example_faq': 'FAQ・ナレッジベース',
+        'resource_usage_example_config': '設定ファイル・環境変数',
+        'resource_usage_example_template': 'プロンプトテンプレート',
+        
+        # Capability テンプレート
+        'capability_template_hint': 'プロンプトテンプレートの使用方法',
         
         # メッセージ
         'required_field': '必須',
@@ -255,6 +281,32 @@ TRANSLATIONS = {
         'button_save': 'Save',
         'button_cancel': 'Cancel',
         'button_register': 'Register',
+        'btn_save': 'Save',
+        'btn_back': 'Back',
+        
+        # Common
+        'loading': 'Loading...',
+        
+        # Log search
+        'log_filter_search': 'Search',
+        'log_detail_title': 'Log Detail',
+        
+        # Resource usage
+        'resource_usage_feature_global': 'Global Resource Reference',
+        'resource_usage_feature_global_desc': 'Reference registered resources',
+        'resource_usage_feature_uri': 'Resource URI',
+        'resource_usage_feature_uri_desc': 'Set a unique URI to identify the resource',
+        'resource_usage_feature_access': 'Access Control',
+        'resource_usage_feature_access_desc': 'Configure access permissions for the resource',
+        'resource_usage_feature_mime': 'MIME Type',
+        'resource_usage_feature_mime_desc': 'Specify the content type of the resource',
+        'resource_usage_example_policy': 'Terms & Policies',
+        'resource_usage_example_faq': 'FAQ & Knowledge Base',
+        'resource_usage_example_config': 'Config Files & Environment Variables',
+        'resource_usage_example_template': 'Prompt Templates',
+        
+        # Capability template
+        'capability_template_hint': 'How to use prompt templates',
         
         # Messages
         'required_field': 'Required',

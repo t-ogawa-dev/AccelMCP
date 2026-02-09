@@ -36,6 +36,11 @@ const translations = {
         button_check_env: '確認',
         button_validate_json: 'JSON構造チェック',
         button_format_json: '整形',
+        btn_save: '保存',
+        btn_back: '戻る',
+        
+        // 共通
+        loading: '読み込み中...',
         
         // Copy/Paste
         copy_failed: 'コピーに失敗しました',
@@ -103,6 +108,7 @@ const translations = {
         log_filter_account: 'アカウント',
         log_filter_method: 'メソッド',
         log_filter_status: 'ステータス',
+        log_filter_search: '検索',
         log_filter_all: 'すべて',
         log_filter_success: '成功のみ',
         log_filter_error: 'エラーのみ',
@@ -123,6 +129,7 @@ const translations = {
         log_error: 'エラー',
         
         // ログ詳細
+        log_detail_title: 'ログ詳細',
         log_detail_basic: '基本情報',
         log_detail_account_resource: 'アカウント・リソース',
         log_detail_client: 'クライアント情報',
@@ -485,6 +492,7 @@ const translations = {
         capability_prompt_args_description: 'プロンプトに渡す引数です。LLMがこのスキーマに基づいて値を設定します。',
         capability_template_args_label: 'テンプレート引数 (Arguments)',
         capability_template_args_hint: 'プロンプトテンプレート内で使用する変数を定義します。LLMがこれらの値を設定します。',
+        capability_template_hint: 'プロンプトとリソースの違い: プロンプトは引数を受け取ってテンプレートを生成。リソースは静的コンテンツを提供。',
         capability_no_template_content: 'テンプレートコンテンツが設定されていません',
         capability_delete_confirm: 'このCapabilityを削除してもよろしいですか?',
         capability_empty: 'Capabilitiesが登録されていません',
@@ -494,6 +502,18 @@ const translations = {
         status_disabled: '無効',
         
         // Resource関連
+        resource_usage_feature_global: 'グローバルリソース',
+        resource_usage_feature_global_desc: 'すべてのアカウントで共有される静的リソース',
+        resource_usage_feature_uri: 'URIベース',
+        resource_usage_feature_uri_desc: 'resource://スキームでリソースを識別',
+        resource_usage_feature_access: 'アクセス制御',
+        resource_usage_feature_access_desc: 'リソースへのアクセス権限を管理',
+        resource_usage_feature_mime: 'MIMEタイプ',
+        resource_usage_feature_mime_desc: 'text/plain, application/jsonなど',
+        resource_usage_example_policy: 'ポリシードキュメント',
+        resource_usage_example_faq: 'FAQ・ヘルプ',
+        resource_usage_example_config: '設定ファイル',
+        resource_usage_example_template: 'テンプレート',
         capability_resource_source_label: 'リソースソース',
         capability_resource_existing: '登録済みResourceから選択',
         capability_resource_new: '新規登録',
@@ -1329,6 +1349,7 @@ const translations = {
         capability_prompt_args_description: 'Arguments to pass to the prompt. LLM sets values based on this schema.',
         capability_template_args_label: 'Template Arguments',
         capability_template_args_hint: 'Define variables used in the prompt template. LLM will set these values.',
+        capability_template_hint: 'Difference between prompt and resource: Prompt receives arguments and generates templates. Resource provides static content.',
         capability_no_template_content: 'No template content configured',
         capability_delete_confirm: 'Are you sure you want to delete this capability?',
         capability_empty: 'No capabilities registered',
@@ -1338,6 +1359,18 @@ const translations = {
         status_disabled: 'Disabled',
         
         // Resource related
+        resource_usage_feature_global: 'Global Resource',
+        resource_usage_feature_global_desc: 'Static resources shared across all accounts',
+        resource_usage_feature_uri: 'URI Based',
+        resource_usage_feature_uri_desc: 'Identify resources with resource:// scheme',
+        resource_usage_feature_access: 'Access Control',
+        resource_usage_feature_access_desc: 'Manage access permissions to resources',
+        resource_usage_feature_mime: 'MIME Type',
+        resource_usage_feature_mime_desc: 'text/plain, application/json, etc.',
+        resource_usage_example_policy: 'Policy Document',
+        resource_usage_example_faq: 'FAQ & Help',
+        resource_usage_example_config: 'Configuration File',
+        resource_usage_example_template: 'Template',
         capability_resource_source_label: 'Resource Source',
         capability_resource_existing: 'Select from registered Resources',
         capability_resource_new: 'Create new',

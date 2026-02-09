@@ -297,7 +297,7 @@ def test_update_capability_type(db, tool_capability):
     db.session.commit()
     
     # Verify update
-    capability = Capability.query.get(tool_capability.id)
+    capability = db.session.get(Capability, tool_capability.id)
     assert capability.capability_type == 'prompt'
     assert capability.template_content is not None
 

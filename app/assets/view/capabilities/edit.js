@@ -1585,19 +1585,12 @@ async function loadCapability() {
     
     // Handle different capability types
     const capabilityType = cap.capability_type || 'tool';
-    console.log('[DEBUG] Capability Type:', capabilityType);
-    console.log('[DEBUG] Capability Data:', cap);
     
     // Load Prompt type specific fields if applicable
     if (capabilityType === 'prompt') {
-        console.log('[DEBUG] Detected prompt type - showing prompt fields');
-        
         const promptFieldsSection = document.getElementById('prompt-fields-section');
         if (promptFieldsSection) {
             promptFieldsSection.style.display = 'block';
-            console.log('[DEBUG] prompt-fields-section displayed');
-        } else {
-            console.error('[DEBUG] prompt-fields-section not found!');
         }
         
         // Load template content
@@ -1605,24 +1598,17 @@ async function loadCapability() {
         if (templateContentEdit) {
             templateContentEdit.value = cap.template_content || '';
             generatePromptPreviewEdit();
-            console.log('[DEBUG] Template content loaded:', cap.template_content);
         }
         
         // Hide tool-specific sections
         const toolFieldsSection = document.getElementById('tool-fields-section');
         if (toolFieldsSection) {
             toolFieldsSection.style.display = 'none';
-            console.log('[DEBUG] tool-fields-section hidden');
-        } else {
-            console.error('[DEBUG] tool-fields-section not found!');
         }
         
         const timeoutFieldSection = document.getElementById('timeout-field-section');
         if (timeoutFieldSection) {
             timeoutFieldSection.style.display = 'none';
-            console.log('[DEBUG] timeout-field-section hidden');
-        } else {
-            console.error('[DEBUG] timeout-field-section not found!');
         }
         
         // Remove required attribute from URL and method fields
@@ -1631,7 +1617,6 @@ async function loadCapability() {
         const methodField = document.getElementById('method');
         if (methodField) methodField.removeAttribute('required');
         
-        console.log('[DEBUG] Prompt type setup complete');
         // Promptタイプは後続の処理をスキップして、body_paramsのロードまでジャンプ
         // (body_paramsは引数定義として使用)
     }
