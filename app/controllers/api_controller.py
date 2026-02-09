@@ -629,9 +629,10 @@ def capabilities(service_id):
         resource_mime_type = data.get('resource_mime_type')
         template_content = data.get('template_content')
         resource_name = data.get('resource_name')  # New field for resource name
+        capability_type = data['capability_type']
         
-        # If resource data is provided but no global_resource_id, create a new Resource
-        if not global_resource_id and (resource_uri or template_content):
+        # Only create Resource record for 'resource' type (not for 'prompt' type)
+        if capability_type == 'resource' and not global_resource_id and (resource_uri or template_content):
             # Create new Resource record with auto-generated resource_id
             new_resource = Resource(
                 resource_id=Resource.generate_resource_id(),
@@ -711,9 +712,10 @@ def capability_detail(capability_id):
         resource_mime_type = data.get('resource_mime_type', capability.resource_mime_type)
         template_content = data.get('template_content', capability.template_content)
         resource_name = data.get('resource_name')  # New field for resource name
+        new_capability_type = data.get('capability_type', capability.capability_type)
         
-        # If new resource data is provided but no global_resource_id, create a new Resource
-        if not global_resource_id and (resource_uri or template_content):
+        # Only create Resource record for 'resource' type (not for 'prompt' type)
+        if new_capability_type == 'resource' and not global_resource_id and (resource_uri or template_content):
             # Create new Resource record with auto-generated resource_id
             new_resource = Resource(
                 resource_id=Resource.generate_resource_id(),

@@ -38,24 +38,104 @@
             <small style="color: #6b7280;">使用可能文字: a-z A-Z 0-9 _ . : + -</small>
         </div>
         
-        <div class="form-group">
-            <label for="method"><span data-i18n="capability_http_method">HTTPメソッド</span> *</label>
-            <select id="method" name="method" required onchange="toggleBodyType()">
-                <option value="POST">POST</option>
-                <option value="GET">GET</option>
-            </select>
-        </div>
-        
-        <div class="form-group">
-            <label for="url">
-                <span data-i18n="capability_connection_url">接続先URL</span> *
-                <span class="variable-hint" title="Variablesが使用できます。例: https://api.example.com/&#123;&#123;API_KEY&#125;&#125;">
-                    <span class="variable-icon">🔐</span>
-                </span>
-            </label>
-            <input type="text" id="url" name="url" required>
-            <div id="url-preview" style="margin-top: 4px; font-size: 0.85em; color: #666; font-family: monospace;">
-                <span id="url-preview-base"></span><span id="url-preview-path"></span>
+        <!-- Tool-specific fields -->
+        <div id="tool-fields-section">
+            <div class="form-group">
+                <label for="method"><span data-i18n="capability_http_method">HTTPメソッド</span> *</label>
+                <select id="method" name="method" required onchange="toggleBodyType()">
+                    <option value="POST">POST</option>
+                    <option value="GET">GET</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="url">
+                    <span data-i18n="capability_connection_url">接続先URL</span> *
+                    <span class="variable-hint" title="Variablesが使用できます。例: https://api.example.com/&#123;&#123;API_KEY&#125;&#125;">
+                        <span class="variable-icon">🔐</span>
+                    </span>
+                </label>
+                <input type="text" id="url" name="url" required>
+                <div id="url-preview" style="margin-top: 4px; font-size: 0.85em; color: #666; font-family: monospace;">
+                    <span id="url-preview-base"></span><span id="url-preview-path"></span>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <span data-i18n="capability_headers_label">ヘッダーパラメータ</span>
+                    <span class="variable-hint" title="Variablesが使用できます。例: Bearer &#123;&#123;OPENAI_API_KEY&#125;&#125;">
+                        <span class="variable-icon">🔐</span>
+                    </span>
+                </label>
+                <div id="headers-container"></div>
+                <button type="button" onclick="addHeaderRow()" class="btn btn-sm btn-secondary" style="margin-top: 10px;" data-i18n="button_add_header">+ ヘッダーを追加</button>
+                <small data-i18n="capability_header_params_hint">個別のヘッダーパラメータ（サービス共通ヘッダーに追加されます）</small>
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <span data-i18n="capability_body_params_label">Bodyパラメータ</span>
+                    <span class="variable-hint" title="Variablesが使用できます。例: &#123;&#123;SERVICE_KEY&#125;&#125;">
+                        <span class="variable-icon">🔐</span>
+                    </span>
+                </label>
+                <small data-i18n="capability_body_json_hint" style="display:block; margin-bottom:6px; font-size:0.92em; color:#666;">JSON形式のリクエストボディ</small>
+                <div id="body-key-value" style="display: none;">
+                    <!-- Fixed Parameters Section (for GET query strings) -->
+                    <div style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 4px;">
+                        <h4 style="margin-top: 0; font-size: 0.95rem; color: #495057;">固定パラメータ (Fixed Parameters)</h4>
+                        <small style="display: block; margin-bottom: 10px; color: #6c757d;">クエリ文字列に常に含まれる固定値(API Key等)。変数 {{VARIABLE_NAME}} も利用可能。</small>
+                        <div id="fixed-params-container"></div>
+                        <button type="button" onclick="addFixedParamRow()" class="btn btn-sm btn-secondary" style="margin-top: 10px;">+ 固定パラメータを追加</button>
+                    </div>
+                    
+                    <!-- LLM Parameters Section (JSON Schema) -->
+                    <div style="padding: 15px; background-color: #e7f3ff; border-radius: 4px;">
+                        <h4 style="margin-top: 0; font-size: 0.95rem; color: #004085;">LLMパラメータ (LLM Parameters)</h4>
+                        <small style="display: block; margin-bottom: 10px; color: #004085;">LLMが値を設定するパラメータ。JSON Schemaで定義されます。</small>
+                        <div id="llm-params-container"></div>
+                        <button type="button" onclick="addLlmParamRow()" class="btn btn-sm btn-primary" style="margin-top: 10px;">+ LLMパラメータを追加</button>
+                    </div>
+                    
+                    <!-- Request Sample (GET) -->
+                    <div id="request-sample-get" style="margin-top: 20px; padding: 15px; background-color: #fff3cd; border-radius: 4px; border-left: 4px solid #ffc107;">
+                        <h4 style="margin-top: 0; font-size: 0.95rem; color: #856404; display: flex; align-items: center; gap: 8px;">
+                            <span>📤</span> <span id="request-sample-get-title" data-i18n="capability_request_to_api">APIに送信されるリクエスト</span>
+                        </h4>
+                        <small style="display: block; margin-bottom: 10px; color: #856404;">クエリパラメータの形式</small>
+                        <pre id="request-sample-output-get" style="background: white; padding: 12px; border-radius: 4px; border: 1px solid #ffc107; font-size: 0.85rem; overflow-x: auto; margin: 0;"></pre>
+                    </div>
+                </div>
+                <div id="body-json">
+                    <!-- ビジュアルエディタ（階層構造） -->
+                    <div id="visual-editor" style="display: block;">
+                        <!-- 固定パラメータ -->
+                        <div style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 4px;">
+                            <h4 style="margin-top: 0; font-size: 0.95rem; color: #495057;">固定パラメータ (Fixed Parameters)</h4>
+                            <small style="display: block; margin-bottom: 10px; color: #6c757d;">リクエストボディに常に含まれる固定値（API Key等）。変数 {{VARIABLE_NAME}} も利用可能。</small>
+                            <div id="fixed-params-post-container"></div>
+                            <button type="button" onclick="addFixedParamPostRow(null, 0)" class="btn btn-sm btn-secondary" style="margin-top: 10px;">+ 固定パラメータを追加</button>
+                        </div>
+                        
+                        <!-- LLMパラメータ（階層構造） -->
+                        <div style="padding: 15px; background-color: #e7f3ff; border-radius: 4px;">
+                            <h4 style="margin-top: 0; font-size: 0.95rem; color: #004085;">LLMパラメータ (LLM Parameters)</h4>
+                            <small style="display: block; margin-bottom: 10px; color: #004085;">LLMが値を設定するパラメータ。階層構造で定義できます。</small>
+                            <div id="llm-params-tree-container"></div>
+                            <button type="button" onclick="addLlmParamTreeRow(null, 0)" class="btn btn-sm btn-primary" style="margin-top: 10px;">+ LLMパラメータを追加</button>
+                        </div>
+                        
+                        <!-- Request Sample (POST Visual) -->
+                        <div id="request-sample-post" style="margin-top: 20px; padding: 15px; background-color: #fff3cd; border-radius: 4px; border-left: 4px solid #ffc107;">
+                            <h4 style="margin-top: 0; font-size: 0.95rem; color: #856404; display: flex; align-items: center; gap: 8px;">
+                                <span>📤</span> <span id="request-sample-post-title" data-i18n="capability_request_body_to_api">APIに送信されるリクエストボディ</span>
+                            </h4>
+                            <small style="display: block; margin-bottom: 10px; color: #856404;">JSONボディの形式</small>
+                            <pre id="request-sample-output-post" style="background: white; padding: 12px; border-radius: 4px; border: 1px solid #ffc107; font-size: 0.85rem; overflow-x: auto; margin: 0;"></pre>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -71,10 +151,41 @@
             </small>
         </div>
         
-        <div class="form-group">
+        <div class="form-group" id="timeout-field-section">
             <label for="timeout_seconds"><span data-i18n="capability_timeout_label">タイムアウト (秒)</span></label>
             <input type="number" id="timeout_seconds" name="timeout_seconds" min="1" max="300" value="30">
             <small data-i18n="capability_timeout_hint" style="color: #6c757d;">API呼び出しのタイムアウト時間。デフォルト30秒。大量データや処理時間が長いAPIは大きめに設定してください。</small>
+        </div>
+        
+        <!-- Prompt Type Fields -->
+        <div id="prompt-fields-section" style="display: none;">
+            <div class="form-group">
+                <label for="template_content_edit"><span data-i18n="capability_template_content_label">プロンプトテンプレート</span> *</label>
+                <textarea id="template_content_edit" name="template_content" rows="8" placeholder="例: あなたは&#123;&#123;role&#125;&#125;です。&#123;&#123;task&#125;&#125;を実行してください。" oninput="generatePromptPreviewEdit()"></textarea>
+                <small data-i18n="capability_template_content_hint" style="color: #6c757d;">
+                    プロンプトのテンプレート。&#123;&#123;変数名&#125;&#125;の形式で変数を埋め込めます。<br>
+                    例: "あなたは&#123;&#123;role&#125;&#125;です。以下の&#123;&#123;topic&#125;&#125;について説明してください。"
+                </small>
+            </div>
+            
+            <!-- Prompt Preview -->
+            <div id="prompt-preview-section-edit" style="margin-top: 20px; padding: 15px; background-color: #d4edda; border-radius: 4px; border-left: 4px solid #28a745;">
+                <h4 style="margin-top: 0; font-size: 0.95rem; color: #155724; display: flex; align-items: center; gap: 8px;">
+                    <span>📝</span> <span data-i18n="prompt_preview_title">LLMに返されるプロンプト</span>
+                </h4>
+                <small style="display: block; margin-bottom: 10px; color: #155724;" data-i18n="prompt_preview_hint">テンプレート変数に値が設定されると、以下の形式でLLMに返されます</small>
+                <pre id="prompt-preview-output-edit" style="background: white; padding: 12px; border-radius: 4px; border: 1px solid #28a745; font-size: 0.85rem; overflow-x: auto; margin: 0; white-space: pre-wrap; word-wrap: break-word;"></pre>
+                
+                <!-- Detected Variables -->
+                <div id="prompt-variables-section-edit" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #c3e6cb;">
+                    <h5 style="margin: 0 0 10px 0; font-size: 0.9rem; color: #155724; display: flex; align-items: center; gap: 6px;">
+                        <span>🔤</span> <span data-i18n="prompt_detected_variables">検出された変数</span>
+                    </h5>
+                    <div id="prompt-variables-list-edit" style="font-size: 0.85rem; color: #155724;">
+                        <em data-i18n="prompt_no_variables">(変数が検出されていません)</em>
+                    </div>
+                </div>
+            </div>
         </div>
         
         <!-- Resource Type Fields -->
@@ -200,83 +311,6 @@
                     </h4>
                     <small style="display: block; margin-bottom: 10px; color: #004085;" data-i18n="resource_preview_hint">LLMがこのリソースを読み取ると、以下のコンテンツが返されます</small>
                     <pre id="resource-preview-output-edit" style="background: white; padding: 12px; border-radius: 4px; border: 1px solid #007bff; font-size: 0.85rem; overflow-x: auto; margin: 0; white-space: pre-wrap; word-wrap: break-word; max-height: 300px;"></pre>
-                </div>
-            </div>
-        </div>
-        
-        <div class="form-group">
-            <label>
-                <span data-i18n="capability_headers_label">ヘッダーパラメータ</span>
-                <span class="variable-hint" title="Variablesが使用できます。例: Bearer &#123;&#123;OPENAI_API_KEY&#125;&#125;">
-                    <span class="variable-icon">🔐</span>
-                </span>
-            </label>
-            <div id="headers-container"></div>
-            <button type="button" onclick="addHeaderRow()" class="btn btn-sm btn-secondary" style="margin-top: 10px;" data-i18n="button_add_header">+ ヘッダーを追加</button>
-            <small data-i18n="capability_header_params_hint">個別のヘッダーパラメータ（サービス共通ヘッダーに追加されます）</small>
-        </div>
-        
-        <div class="form-group">
-            <label>
-                <span data-i18n="capability_body_params_label">Bodyパラメータ</span>
-                <span class="variable-hint" title="Variablesが使用できます。例: &#123;&#123;SERVICE_KEY&#125;&#125;">
-                    <span class="variable-icon">🔐</span>
-                </span>
-            </label>
-            <small data-i18n="capability_body_json_hint" style="display:block; margin-bottom:6px; font-size:0.92em; color:#666;">JSON形式のリクエストボディ</small>
-            <div id="body-key-value" style="display: none;">
-                <!-- Fixed Parameters Section (for GET query strings) -->
-                <div style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 4px;">
-                    <h4 style="margin-top: 0; font-size: 0.95rem; color: #495057;">固定パラメータ (Fixed Parameters)</h4>
-                    <small style="display: block; margin-bottom: 10px; color: #6c757d;">クエリ文字列に常に含まれる固定値(API Key等)。変数 {{VARIABLE_NAME}} も利用可能。</small>
-                    <div id="fixed-params-container"></div>
-                    <button type="button" onclick="addFixedParamRow()" class="btn btn-sm btn-secondary" style="margin-top: 10px;">+ 固定パラメータを追加</button>
-                </div>
-                
-                <!-- LLM Parameters Section (JSON Schema) -->
-                <div style="padding: 15px; background-color: #e7f3ff; border-radius: 4px;">
-                    <h4 style="margin-top: 0; font-size: 0.95rem; color: #004085;">LLMパラメータ (LLM Parameters)</h4>
-                    <small style="display: block; margin-bottom: 10px; color: #004085;">LLMが値を設定するパラメータ。JSON Schemaで定義されます。</small>
-                    <div id="llm-params-container"></div>
-                    <button type="button" onclick="addLlmParamRow()" class="btn btn-sm btn-primary" style="margin-top: 10px;">+ LLMパラメータを追加</button>
-                </div>
-                
-                <!-- Request Sample (GET) -->
-                <div id="request-sample-get" style="margin-top: 20px; padding: 15px; background-color: #fff3cd; border-radius: 4px; border-left: 4px solid #ffc107;">
-                    <h4 style="margin-top: 0; font-size: 0.95rem; color: #856404; display: flex; align-items: center; gap: 8px;">
-                        <span>📤</span> <span id="request-sample-get-title" data-i18n="capability_request_to_api">APIに送信されるリクエスト</span>
-                    </h4>
-                    <small style="display: block; margin-bottom: 10px; color: #856404;">クエリパラメータの形式</small>
-                    <pre id="request-sample-output-get" style="background: white; padding: 12px; border-radius: 4px; border: 1px solid #ffc107; font-size: 0.85rem; overflow-x: auto; margin: 0;"></pre>
-                </div>
-            </div>
-            <div id="body-json">
-                <!-- ビジュアルエディタ（階層構造） -->
-                <div id="visual-editor" style="display: block;">
-                    <!-- 固定パラメータ -->
-                    <div style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 4px;">
-                        <h4 style="margin-top: 0; font-size: 0.95rem; color: #495057;">固定パラメータ (Fixed Parameters)</h4>
-                        <small style="display: block; margin-bottom: 10px; color: #6c757d;">リクエストボディに常に含まれる固定値（API Key等）。変数 {{VARIABLE_NAME}} も利用可能。</small>
-                        <div id="fixed-params-post-container"></div>
-                        <button type="button" onclick="addFixedParamPostRow(null, 0)" class="btn btn-sm btn-secondary" style="margin-top: 10px;">+ 固定パラメータを追加</button>
-                    </div>
-                    
-                    <!-- LLMパラメータ（階層構造） -->
-                    <div style="padding: 15px; background-color: #e7f3ff; border-radius: 4px;">
-                        <h4 style="margin-top: 0; font-size: 0.95rem; color: #004085;">LLMパラメータ (LLM Parameters)</h4>
-                        <small style="display: block; margin-bottom: 10px; color: #004085;">LLMが値を設定するパラメータ。階層構造で定義できます。</small>
-                        <div id="llm-params-tree-container"></div>
-                        <button type="button" onclick="addLlmParamTreeRow(null, 0)" class="btn btn-sm btn-primary" style="margin-top: 10px;">+ LLMパラメータを追加</button>
-                    </div>
-                    
-                    <!-- Request Sample (POST Visual) -->
-                    <div id="request-sample-post" style="margin-top: 20px; padding: 15px; background-color: #fff3cd; border-radius: 4px; border-left: 4px solid #ffc107;">
-                        <h4 style="margin-top: 0; font-size: 0.95rem; color: #856404; display: flex; align-items: center; gap: 8px;">
-                            <span>📤</span> <span id="request-sample-post-title" data-i18n="capability_request_body_to_api">APIに送信されるリクエストボディ</span>
-                        </h4>
-                        <small style="display: block; margin-bottom: 10px; color: #856404;">JSONボディの形式</small>
-                        <pre id="request-sample-output-post" style="background: white; padding: 12px; border-radius: 4px; border: 1px solid #ffc107; font-size: 0.85rem; overflow-x: auto; margin: 0;"></pre>
-                    </div>
                 </div>
             </div>
         </div>

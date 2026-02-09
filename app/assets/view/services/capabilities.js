@@ -41,24 +41,15 @@ async function loadCapabilities() {
     }
     
     container.innerHTML = capabilities.map(cap => {
-        // Build full URL display: baseUrl + endpoint_path
-        let urlDisplay = cap.url || 'N/A';
-        if (baseUrl && cap.url && !cap.url.startsWith('http')) {
-            // If cap.url is a relative path, combine with baseUrl
-            const separator = baseUrl.endsWith('/') || cap.url.startsWith('/') ? '' : '/';
-            urlDisplay = `<span style="color: #666;">${baseUrl}</span>${separator}<span style="font-weight: 600;">${cap.url}</span>`;
-        }
-        
-        // Resource URI display - separate from endpoint URL
-        let resourceDisplay = '';
-        if (cap.capability_type === 'resources' || cap.capability_type === 'prompts') {
-            const resourceUri = cap.resource_uri || 'N/A';
-            resourceDisplay = `
-                <div class="list-item-meta" style="margin-top: 4px;">
-                    <span style="color: #6c757d; font-size: 12px;">RESOURCE: </span>
-                    <code style="font-size: 12px;">${resourceUri}</code>
-                </div>
-            `;
+        // Build full URL display: baseUrl + endpoint_path (only for tool types)
+        let urlDisplay = '';
+        if (cap.capability_type === 'tool' || cap.capability_type === 'mcp_tool') {
+            urlDisplay = cap.url || 'N/A';
+            if (baseUrl && cap.url && !cap.url.startsWith('http')) {
+                // If cap.url is a relative path, combine with baseUrl
+                const separator = baseUrl.endsWith('/') || cap.url.startsWith('/') ? '' : '/';
+                urlDisplay = `<span style="color: #666;">${baseUrl}</span>${separator}<span style="font-weight: 600;">${cap.url}</span>`;
+            }
         }
         
         return `
@@ -69,9 +60,8 @@ async function loadCapabilities() {
                     <span class="badge badge-${cap.capability_type}">${cap.capability_type.toUpperCase()}</span>
                     ${!cap.is_enabled ? `<span class="status-badge disabled">${t('status_disabled')}</span>` : `<span class="status-badge enabled">${t('status_enabled')}</span>`}
                     ${(cap.access_control === 'restricted') ? `<span class="badge badge-access-restricted">${t('access_control_restricted')}</span>` : `<span class="badge badge-access-public">${t('access_control_public')}</span>`}
-                    <span class="text-muted" style="font-family: monospace; font-size: 0.9em;">${urlDisplay}</span>
+                    ${urlDisplay ? `<span class="text-muted" style="font-family: monospace; font-size: 0.9em;">${urlDisplay}</span>` : ''}
                 </div>
-                ${resourceDisplay}
                 ${cap.description ? `<p class="text-muted">${cap.description}</p>` : ''}
             </div>
             <div class="list-item-actions">
