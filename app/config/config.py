@@ -24,6 +24,8 @@ class Config:
     SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False').lower() == 'true'
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
+    # Allow cookies to work across localhost and lvh.me (development only)
+    SESSION_COOKIE_DOMAIN = os.getenv('SESSION_COOKIE_DOMAIN', None)
     
     # Template Repository Configuration
     TEMPLATE_REPOSITORY_URL = os.getenv('TEMPLATE_REPOSITORY_URL', 

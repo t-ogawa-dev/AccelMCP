@@ -44,6 +44,141 @@ function updateAccessControlUI(isRestricted) {
     }
 }
 
+// Toggle resource source selection (existing vs new) - for edit page
+window.toggleResourceSourceEdit = function() {
+    const sourceValue = document.querySelector('input[name="resource_source"]:checked')?.value || 'existing';
+    const existingSection = document.getElementById('existing-resource-section-edit');
+    const newSection = document.getElementById('new-resource-section-edit');
+    
+    if (sourceValue === 'existing') {
+        // Show existing resource selection, hide new resource fields
+        if (existingSection) existingSection.style.display = 'block';
+        if (newSection) newSection.style.display = 'none';
+    } else {
+        // Hide existing resource selection, show new resource fields
+        if (existingSection) existingSection.style.display = 'none';
+        if (newSection) newSection.style.display = 'block';
+    }
+};
+
+// Toggle resource input type (text vs file) - for edit page
+function toggleResourceInputTypeEdit() {
+    const inputType = document.querySelector('input[name="resource_input_type"]:checked')?.value || 'text';
+    const textInput = document.getElementById('resource-text-input-edit');
+    const fileInput = document.getElementById('resource-file-input-edit');
+    
+    if (inputType === 'file') {
+        if (textInput) textInput.style.display = 'none';
+        if (fileInput) fileInput.style.display = 'block';
+    } else {
+        if (textInput) textInput.style.display = 'block';
+        if (fileInput) fileInput.style.display = 'none';
+    }
+}
+
+// ファイルアップロード処理 - for edit page
+let uploadedResourceContentEdit = null;
+function handleResourceFileUploadEdit(file) {
+    // 引数がない場合はinputから取得
+    if (!file) {
+        const fileInput = document.getElementById('resource_file_edit');
+        file = fileInput?.files[0];
+    }
+    
+    if (!file) return;
+    
+    // ファイルサイズチェック (1MB)
+    if (file.size > 1024 * 1024) {
+        modal.error(t('resource_file_too_large') || 'ファイルサイズが1MBを超えています');
+        const fileInput = document.getElementById('resource_file_edit');
+        if (fileInput) fileInput.value = '';
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        uploadedResourceContentEdit = e.target.result;
+        
+        // プレビュー表示
+        const previewDiv = document.getElementById('resource-file-preview-edit');
+        const fileNameSpan = document.getElementById('resource-file-name-edit');
+        const fileSizeSpan = document.getElementById('resource-file-size-edit');
+        
+        if (previewDiv) previewDiv.style.display = 'block';
+        if (fileNameSpan) fileNameSpan.textContent = file.name;
+        if (fileSizeSpan) fileSizeSpan.textContent = `${(file.size / 1024).toFixed(1)} KB`;
+        
+        // MIMEタイプ自動設定
+        const mimeTypeSelect = document.getElementById('resource_mime_type');
+        if (mimeTypeSelect) {
+            const ext = file.name.split('.').pop().toLowerCase();
+            const mimeMap = {
+                'txt': 'text/plain',
+                'md': 'text/markdown',
+                'json': 'application/json',
+                'html': 'text/html',
+                'csv': 'text/csv',
+                'xml': 'application/xml',
+                'yaml': 'text/yaml',
+                'yml': 'text/yaml'
+            };
+            if (mimeMap[ext]) {
+                mimeTypeSelect.value = mimeMap[ext];
+            }
+        }
+        
+        generateResourcePreviewEdit();
+    };
+    reader.readAsText(file);
+}
+
+// ファイルクリア - for edit page
+function clearResourceFileEdit() {
+    const fileInput = document.getElementById('resource_file_edit');
+    const previewDiv = document.getElementById('resource-file-preview-edit');
+    
+    if (fileInput) fileInput.value = '';
+    if (previewDiv) previewDiv.style.display = 'none';
+    uploadedResourceContentEdit = null;
+    generateResourcePreviewEdit();
+}
+
+// リソースプレビュー生成 - for edit page
+function generateResourcePreviewEdit() {
+    const inputType = document.querySelector('input[name="resource_input_type"]:checked')?.value || 'text';
+    const previewOutput = document.getElementById('resource-preview-output-edit');
+    
+    if (!previewOutput) return;
+    
+    let content = '';
+    if (inputType === 'file' && uploadedResourceContentEdit) {
+        content = uploadedResourceContentEdit;
+    } else {
+        content = document.getElementById('resource_content')?.value || '';
+    }
+    
+    if (content) {
+        // 最大500文字でトランケート
+        if (content.length > 500) {
+            previewOutput.textContent = content.substring(0, 500) + '\n...(省略)';
+        } else {
+            previewOutput.textContent = content;
+        }
+    } else {
+        previewOutput.textContent = t('resource_preview_empty') || '(空のリソース)';
+    }
+}
+
+// リソースコンテンツを取得（保存時に使用） - for edit page
+function getResourceContentEdit() {
+    const inputType = document.querySelector('input[name="resource_input_type"]:checked')?.value || 'text';
+    
+    if (inputType === 'file' && uploadedResourceContentEdit) {
+        return uploadedResourceContentEdit;
+    }
+    return document.getElementById('resource_content')?.value || '';
+}
+
 // Show error message
 function showError(message) {
     const errorDiv = document.getElementById('form-error');
@@ -1430,16 +1565,17 @@ async function loadCapability() {
     document.getElementById('cancel-link').href = `/capabilities/${capabilityId}`;
     
     document.getElementById('name').value = cap.name;
-    document.getElementById('url').value = cap.url;
+    document.getElementById('url').value = cap.url || '';
     document.getElementById('description').value = cap.description || '';
     document.getElementById('timeout_seconds').value = cap.timeout_seconds || 30;
     
     // Add input event listener for URL preview
     const urlInput = document.getElementById('url');
-    urlInput.addEventListener('input', updateUrlPreview);
-    
-    // Initial URL preview update
-    updateUrlPreview();
+    if (urlInput) {
+        urlInput.addEventListener('input', updateUrlPreview);
+        // Initial URL preview update
+        updateUrlPreview();
+    }
     
     // Set access control (default: public for capabilities)
     currentAccessControl = cap.access_control || 'public';
@@ -1447,9 +1583,119 @@ async function loadCapability() {
     document.getElementById('access-control-toggle').checked = isRestricted;
     updateAccessControlUI(isRestricted);
     
+    // Load Resource type specific fields if applicable
+    if (cap.capability_type === 'resource') {
+        const resourceFieldsSection = document.getElementById('resource-fields-section');
+        if (resourceFieldsSection) {
+            resourceFieldsSection.style.display = 'block';
+        }
+        
+        // Load available resources for selection
+        const globalResourceSelect = document.getElementById('global_resource_id');
+        if (globalResourceSelect) {
+            const resourcesResponse = await fetch('/api/resources');
+            const resources = await resourcesResponse.json();
+            
+            globalResourceSelect.innerHTML = resources.map(r => 
+                `<option value="${r.id}" ${cap.global_resource_id === r.id ? 'selected' : ''}>
+                    ${r.name} (${r.mime_type})
+                </option>`
+            ).join('');
+            
+            // Add change listener to load resource info
+            globalResourceSelect.addEventListener('change', async (e) => {
+                if (e.target.value) {
+                    const selectedResource = resources.find(r => r.id == e.target.value);
+                    if (selectedResource) {
+                        // Update resource info display
+                        document.getElementById('selected-resource-name-edit').textContent = selectedResource.name;
+                        document.getElementById('selected-resource-uri-edit').textContent = selectedResource.resource_id || '';
+                        document.getElementById('selected-resource-mime-edit').textContent = selectedResource.mime_type;
+                        document.getElementById('selected-resource-desc-edit').textContent = selectedResource.description || '';
+                        document.getElementById('selected-resource-content-edit').textContent = selectedResource.content || '';
+                        document.getElementById('selected-resource-info-edit').style.display = 'block';
+                    }
+                } else {
+                    document.getElementById('selected-resource-info-edit').style.display = 'none';
+                }
+            });
+        }
+        
+        // Determine if using existing or new resource
+        if (cap.global_resource_id) {
+            // Using existing global resource
+            document.querySelector('input[name="resource_source"][value="existing"]').checked = true;
+            
+            // Fetch and display resource info
+            const resourceResponse = await fetch(`/api/resources/${cap.global_resource_id}`);
+            const resource = await resourceResponse.json();
+            
+            document.getElementById('selected-resource-name-edit').textContent = resource.name;
+            document.getElementById('selected-resource-uri-edit').textContent = resource.resource_id || '';
+            document.getElementById('selected-resource-mime-edit').textContent = resource.mime_type;
+            document.getElementById('selected-resource-desc-edit').textContent = resource.description || '';
+            document.getElementById('selected-resource-content-edit').textContent = resource.content || '';
+            document.getElementById('selected-resource-info-edit').style.display = 'block';
+        } else {
+            // Using inline resource (new)
+            document.querySelector('input[name="resource_source"][value="new"]').checked = true;
+            
+            // Populate new resource fields
+            document.getElementById('resource_name_edit').value = cap.name || '';
+            document.getElementById('resource_mime_type').value = cap.resource_mime_type || 'text/plain';
+            document.getElementById('resource_content').value = cap.template_content || '';
+            
+            // Generate initial preview
+            generateResourcePreviewEdit();
+        }
+        
+        // Initialize toggle
+        window.toggleResourceSourceEdit();
+    }
+    
+    // Skip method and params loading for resource type
+    if (cap.capability_type === 'resource') {
+        // Resource type doesn't need method, headers, or body params
+        // Remove required attribute from URL and method fields
+        const urlField = document.getElementById('url');
+        if (urlField) urlField.removeAttribute('required');
+        const methodField = document.getElementById('method');
+        if (methodField) methodField.removeAttribute('required');
+        
+        // Hide these sections
+        const methodFormGroup = document.getElementById('method')?.closest('.form-group');
+        if (methodFormGroup) methodFormGroup.style.display = 'none';
+        
+        const urlFormGroup = document.getElementById('url')?.closest('.form-group');
+        if (urlFormGroup) urlFormGroup.style.display = 'none';
+        
+        const headersFormGroup = document.getElementById('headers-container')?.closest('.form-group');
+        if (headersFormGroup) headersFormGroup.style.display = 'none';
+        
+        const bodyFormGroup = document.getElementById('body-key-value')?.closest('.form-group');
+        if (bodyFormGroup) bodyFormGroup.style.display = 'none';
+        
+        const fixedParamsFormGroup = document.getElementById('fixed-params-container')?.closest('.form-group');
+        if (fixedParamsFormGroup) fixedParamsFormGroup.style.display = 'none';
+        
+        const llmParamsFormGroup = document.getElementById('llm-params-container')?.closest('.form-group');
+        if (llmParamsFormGroup) llmParamsFormGroup.style.display = 'none';
+        
+        const postFixedParamsFormGroup = document.getElementById('fixed-params-post-container')?.closest('.form-group');
+        if (postFixedParamsFormGroup) postFixedParamsFormGroup.style.display = 'none';
+        
+        const llmParamsTreeFormGroup = document.getElementById('llm-params-tree-container')?.closest('.form-group');
+        if (llmParamsTreeFormGroup) llmParamsTreeFormGroup.style.display = 'none';
+        
+        return isMcpType;
+    }
+    
     // Get HTTP method from headers
     const method = cap.headers['X-HTTP-Method'] || 'POST';
-    document.getElementById('method').value = method;
+    const methodElem = document.getElementById('method');
+    if (methodElem) {
+        methodElem.value = method;
+    }
     
     // If MCP type, make fields read-only and hide URL/method fields
     if (isMcpType) {
@@ -1705,6 +1951,49 @@ async function loadCapability() {
     const isMcpType = await loadCapability();
     await loadPermissions();
     
+    // Setup drag and drop for resource file upload
+    const dropZoneEdit = document.getElementById('resource-drop-zone-edit');
+    if (dropZoneEdit) {
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZoneEdit.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+        
+        // Highlight drop zone when dragging over
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZoneEdit.addEventListener(eventName, () => {
+                dropZoneEdit.style.backgroundColor = '#e6f7ff';
+                dropZoneEdit.style.borderColor = '#1890ff';
+            });
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZoneEdit.addEventListener(eventName, () => {
+                dropZoneEdit.style.backgroundColor = '#f7fafc';
+                dropZoneEdit.style.borderColor = '#cbd5e0';
+            });
+        });
+        
+        // Handle dropped files
+        dropZoneEdit.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleResourceFileUploadEdit(files[0]);
+            }
+        });
+        
+        // Click to select file
+        dropZoneEdit.addEventListener('click', (e) => {
+            // ボタンクリックでない場合のみ
+            if (e.target.tagName !== 'BUTTON') {
+                document.getElementById('resource_file_edit')?.click();
+            }
+        });
+    }
+    
     // Setup auto-update for request sample (debounced)
     let sampleUpdateTimer;
     function scheduleRequestSampleUpdate() {
@@ -1758,124 +2047,183 @@ async function loadCapability() {
         hideError();
         
         const formData = new FormData(e.target);
-        const method = formData.get('method');
         
-        // Collect headers
-        const headers = {};
-        const headerRows = document.querySelectorAll('#headers-container .key-value-row');
-        headerRows.forEach(row => {
-            const inputs = row.querySelectorAll('input[type="text"]');
-            const key = inputs[0].value.trim();
-            const value = inputs[1].value.trim();
-            if (key) {
-                headers[key] = value;
-            }
-        });
+        // Check if this is a resource type capability
+        const resourceFieldsSection = document.getElementById('resource-fields-section');
+        const isResourceType = resourceFieldsSection && resourceFieldsSection.style.display !== 'none';
         
-        // Add HTTP method to headers
-        headers['X-HTTP-Method'] = method;
+        let data = {};
         
-        // Collect body parameters
-        let bodyParams = {};
-        if (method === 'GET') {
-            const properties = {};
-            const required = [];
+        if (isResourceType) {
+            // Resource type capability
+            const resourceSource = document.querySelector('input[name="resource_source"]:checked')?.value || 'existing';
             
-            // 固定パラメータをconst制約付きでpropertiesに含める
-            const fixedRows = document.querySelectorAll('#fixed-params-container .key-value-row');
-            fixedRows.forEach(row => {
+            data = {
+                name: formData.get('name'),
+                capability_type: 'resource',
+                description: formData.get('description') || '',
+                timeout_seconds: parseInt(formData.get('timeout_seconds')) || 30
+            };
+            
+            if (resourceSource === 'existing') {
+                // Using existing global resource
+                const globalResourceId = document.getElementById('global_resource_id')?.value;
+                if (!globalResourceId) {
+                    showError(t('capability_resource_not_selected') || 'Resourceを選択してください');
+                    return;
+                }
+                data.global_resource_id = parseInt(globalResourceId);
+                // Clear inline resource fields when using global resource
+                data.resource_mime_type = null;
+                data.resource_uri = null;
+                data.template_content = null;
+            } else {
+                // New inline resource data
+                const resourceName = formData.get('resource_name')?.trim();
+                if (!resourceName) {
+                    showError(t('resource_name_required') || 'Resource名を入力してください');
+                    document.getElementById('resource_name_edit')?.focus();
+                    return;
+                }
+                
+                // Get resource content from either text input or file upload
+                const resourceContent = getResourceContentEdit();
+                if (!resourceContent) {
+                    showError(t('resource_content_required') || 'リソースコンテンツを入力してください');
+                    return;
+                }
+                
+                // Generate Resource URI automatically from resource name
+                const resourceUri = `resource://${resourceName}`;
+                
+                data.name = resourceName;
+                data.resource_uri = resourceUri;
+                data.resource_mime_type = formData.get('resource_mime_type') || 'text/plain';
+                data.template_content = resourceContent;
+                // Clear global_resource_id when using inline data
+                data.global_resource_id = null;
+            }
+        } else {
+            // Tool type capability (existing logic)
+            const method = formData.get('method');
+            
+            // Collect headers
+            const headers = {};
+            const headerRows = document.querySelectorAll('#headers-container .key-value-row');
+            headerRows.forEach(row => {
                 const inputs = row.querySelectorAll('input[type="text"]');
                 const key = inputs[0].value.trim();
                 const value = inputs[1].value.trim();
                 if (key) {
-                    // GET固定パラメータはstring型のconst制約
-                    properties[key] = {
-                        type: 'string',
-                        const: value,
-                        default: value,
-                        description: '固定値パラメータ（変更不可）'
-                    };
-                    required.push(key);
+                    headers[key] = value;
                 }
             });
             
-            // Collect LLM parameters and build JSON Schema
-            const llmRows = document.querySelectorAll('#llm-params-container .llm-param-row');
+            // Add HTTP method to headers
+            headers['X-HTTP-Method'] = method;
             
-            llmRows.forEach(row => {
-                const name = row.querySelector('.llm-param-name').value.trim();
-                if (!name) return;
+            // Collect body parameters
+            let bodyParams = {};
+            if (method === 'GET') {
+                const properties = {};
+                const required = [];
                 
-                const type = row.querySelector('.llm-param-type').value;
-                const description = row.querySelector('.llm-param-description').value.trim();
-                const defaultValue = row.querySelector('.llm-param-default').value.trim();
-                const enumValue = row.querySelector('.llm-param-enum').value.trim();
-                const isRequired = row.querySelector('.llm-param-required').checked;
+                // 固定パラメータをconst制約付きでpropertiesに含める
+                const fixedRows = document.querySelectorAll('#fixed-params-container .key-value-row');
+                fixedRows.forEach(row => {
+                    const inputs = row.querySelectorAll('input[type="text"]');
+                    const key = inputs[0].value.trim();
+                    const value = inputs[1].value.trim();
+                    if (key) {
+                        // GET固定パラメータはstring型のconst制約
+                        properties[key] = {
+                            type: 'string',
+                            const: value,
+                            default: value,
+                            description: '固定値パラメータ（変更不可）'
+                        };
+                        required.push(key);
+                    }
+                });
                 
-                // For enum type, use string as the base type with enum constraint
-                const propDef = { type: type === 'enum' ? 'string' : type };
-                if (description) propDef.description = description;
+                // Collect LLM parameters and build JSON Schema
+                const llmRows = document.querySelectorAll('#llm-params-container .llm-param-row');
                 
-                if (type === 'enum' && enumValue) {
-                    propDef.enum = enumValue.split(',').map(v => v.trim()).filter(v => v);
+                llmRows.forEach(row => {
+                    const name = row.querySelector('.llm-param-name').value.trim();
+                    if (!name) return;
                     
-                    // Validate default value for enum
-                    if (defaultValue && !propDef.enum.includes(defaultValue)) {
-                        showError(`パラメータ "${name}": デフォルト値 "${defaultValue}" はEnum値 [${propDef.enum.join(', ')}] の中に存在しません。`);
-                        row.querySelector('.llm-param-default').focus();
-                        throw new Error('Invalid enum default value');
+                    const type = row.querySelector('.llm-param-type').value;
+                    const description = row.querySelector('.llm-param-description').value.trim();
+                    const defaultValue = row.querySelector('.llm-param-default').value.trim();
+                    const enumValue = row.querySelector('.llm-param-enum').value.trim();
+                    const isRequired = row.querySelector('.llm-param-required').checked;
+                    
+                    // For enum type, use string as the base type with enum constraint
+                    const propDef = { type: type === 'enum' ? 'string' : type };
+                    if (description) propDef.description = description;
+                    
+                    if (type === 'enum' && enumValue) {
+                        propDef.enum = enumValue.split(',').map(v => v.trim()).filter(v => v);
+                        
+                        // Validate default value for enum
+                        if (defaultValue && !propDef.enum.includes(defaultValue)) {
+                            showError(`パラメータ "${name}": デフォルト値 "${defaultValue}" はEnum値 [${propDef.enum.join(', ')}] の中に存在しません。`);
+                            row.querySelector('.llm-param-default').focus();
+                            throw new Error('Invalid enum default value');
+                        }
                     }
-                }
-                
-                if (defaultValue) {
-                    // Try to parse as JSON for proper type conversion
-                    try {
-                        propDef.default = JSON.parse(defaultValue);
-                    } catch {
-                        propDef.default = defaultValue;
+                    
+                    if (defaultValue) {
+                        // Try to parse as JSON for proper type conversion
+                        try {
+                            propDef.default = JSON.parse(defaultValue);
+                        } catch {
+                            propDef.default = defaultValue;
+                        }
                     }
-                }
+                    
+                    properties[name] = propDef;
+                    if (isRequired) {
+                        required.push(name);
+                    }
+                });
                 
-                properties[name] = propDef;
-                if (isRequired) {
-                    required.push(name);
+                // Build final body_params structure
+                if (Object.keys(properties).length > 0) {
+                    // MCP JSON Schema format (固定パラメータもpropertiesに含まれている)
+                    bodyParams = {
+                        type: 'object',
+                        properties: properties,
+                        required: required
+                    };
                 }
-            });
+            } else {
+                // POST method: always use visual editor mode
+                bodyParams = buildSchemaFromTree();
+            }
             
-            // Build final body_params structure
-            if (Object.keys(properties).length > 0) {
-                // MCP JSON Schema format (固定パラメータもpropertiesに含まれている)
-                bodyParams = {
-                    type: 'object',
-                    properties: properties,
-                    required: required
-                };
+            // URL validation: skip if baseUrl exists (relative paths are valid)
+            // Skip for resource type
+            const urlValue = formData.get('url')?.trim() || '';
+            if (!isResourceType && !baseUrl && urlValue) {
+                // No baseUrl - must be absolute URL
+                if (!urlValue.startsWith('http://') && !urlValue.startsWith('https://')) {
+                    showError(t('error_invalid_url') || 'URLを入力してください');
+                    document.getElementById('url').focus();
+                    return;
+                }
             }
-        } else {
-            // POST method: always use visual editor mode
-            bodyParams = buildSchemaFromTree();
+            
+            // Build data object for tool type
+            data.name = formData.get('name');
+            data.capability_type = 'tool';
+            data.url = urlValue;
+            data.description = formData.get('description');
+            data.timeout_seconds = parseInt(formData.get('timeout_seconds')) || 30;
+            data.headers = headers;
+            data.body_params = bodyParams;
         }
-        
-        // URL validation: skip if baseUrl exists (relative paths are valid)
-        const urlValue = formData.get('url').trim();
-        if (!baseUrl && urlValue) {
-            // No baseUrl - must be absolute URL
-            if (!urlValue.startsWith('http://') && !urlValue.startsWith('https://')) {
-                showError(t('error_invalid_url') || 'URLを入力してください');
-                document.getElementById('url').focus();
-                return;
-            }
-        }
-        
-        const data = {
-            name: formData.get('name'),
-            capability_type: 'tool',
-            url: urlValue,
-            description: formData.get('description'),
-            timeout_seconds: parseInt(formData.get('timeout_seconds')) || 30,
-            headers: headers,
-            body_params: bodyParams
-        };
         
         const response = await fetch(`/api/capabilities/${capabilityId}`, {
             method: 'PUT',

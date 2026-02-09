@@ -10,7 +10,7 @@ from werkzeug.exceptions import NotFound
 from app.controllers.auth_controller import login_required
 from app.services.audit_logger import audit_log
 
-from app.models.models import db, ConnectionAccount, McpService, Service, Capability, AccountPermission, AdminSettings, Variable, McpServiceTemplate, McpCapabilityTemplate, get_or_404
+from app.models.models import db, ConnectionAccount, McpService, Service, Capability, AccountPermission, AdminSettings, Variable, McpServiceTemplate, McpCapabilityTemplate, Resource, ResourceAccountAccess, get_or_404
 
 # Service is now mapped to 'apps' table, but keep the class name for compatibility
 
@@ -623,6 +623,35 @@ def capabilities(service_id):
         if existing:
             return jsonify({'error': '同じ名前のCapabilityが既に存在します'}), 409
         
+        # Handle global resource ID or create new Resource record
+        global_resource_id = data.get('global_resource_id')
+        resource_uri = data.get('resource_uri')
+        resource_mime_type = data.get('resource_mime_type')
+        template_content = data.get('template_content')
+        resource_name = data.get('resource_name')  # New field for resource name
+        
+        # If resource data is provided but no global_resource_id, create a new Resource
+        if not global_resource_id and (resource_uri or template_content):
+            # Create new Resource record with auto-generated resource_id
+            new_resource = Resource(
+                resource_id=Resource.generate_resource_id(),
+                name=resource_name or data['name'],  # Use provided resource name or fall back to capability name
+                mime_type=resource_mime_type or 'text/plain',
+                content=template_content or '',
+                description=data.get('description', ''),
+                access_control='public',  # Resources have public access by default
+                is_enabled=True
+            )
+            db.session.add(new_resource)
+            db.session.flush()  # Get the resource ID
+            
+            # Use the new resource ID
+            global_resource_id = new_resource.id
+            # Clear inline fields since we're using global resource
+            resource_uri = None
+            resource_mime_type = None
+            template_content = None
+        
         capability = Capability(
             app_id=service_id,
             name=data['name'],
@@ -630,7 +659,10 @@ def capabilities(service_id):
             url=data.get('url'),
             headers=json.dumps(data.get('headers', {})),
             body_params=json.dumps(data.get('body_params', {})),
-            template_content=data.get('template_content'),
+            template_content=template_content,
+            resource_uri=resource_uri,
+            resource_mime_type=resource_mime_type,
+            global_resource_id=global_resource_id,
             description=data.get('description', ''),
             timeout_seconds=data.get('timeout_seconds', 30)
         )
@@ -673,12 +705,42 @@ def capability_detail(capability_id):
             if existing:
                 return jsonify({'error': '同じ名前のCapabilityが既に存在します'}), 409
         
+        # Handle resource updates
+        global_resource_id = data.get('global_resource_id', capability.global_resource_id)
+        resource_uri = data.get('resource_uri', capability.resource_uri)
+        resource_mime_type = data.get('resource_mime_type', capability.resource_mime_type)
+        template_content = data.get('template_content', capability.template_content)
+        resource_name = data.get('resource_name')  # New field for resource name
+        
+        # If new resource data is provided but no global_resource_id, create a new Resource
+        if not global_resource_id and (resource_uri or template_content):
+            # Create new Resource record with auto-generated resource_id
+            new_resource = Resource(
+                resource_id=Resource.generate_resource_id(),
+                name=resource_name or new_name,  # Use provided resource name or fall back to capability name
+                mime_type=resource_mime_type or 'text/plain',
+                content=template_content or '',
+                description=data.get('description', capability.description),
+                access_control='public',
+                is_enabled=True
+            )
+            db.session.add(new_resource)
+            db.session.flush()
+            
+            global_resource_id = new_resource.id
+            resource_uri = None
+            resource_mime_type = None
+            template_content = None
+        
         capability.name = new_name
         capability.capability_type = data.get('capability_type', capability.capability_type)
         capability.url = data.get('url', capability.url)
         capability.headers = json.dumps(data.get('headers', {}))
         capability.body_params = json.dumps(data.get('body_params', {}))
-        capability.template_content = data.get('template_content', capability.template_content)
+        capability.template_content = template_content
+        capability.resource_uri = resource_uri
+        capability.resource_mime_type = resource_mime_type
+        capability.global_resource_id = global_resource_id
         capability.description = data.get('description', capability.description)
         capability.timeout_seconds = data.get('timeout_seconds', capability.timeout_seconds)
         
@@ -2097,3 +2159,133 @@ def sync_templates():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': f'Template sync failed: {str(e)}', 'type': 'unknown'}), 500
+
+
+# ============= Resource Management API =============
+
+@api_bp.route('/resources', methods=['GET', 'POST'])
+@login_required
+@audit_log('resource', action_type='create', get_resource_name=lambda d: d.get('name'))
+def resources():
+    """Get all resources or create new resource"""
+    if request.method == 'GET':
+        resources = Resource.query.all()
+        return jsonify([r.to_dict(include_usage=True) for r in resources])
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        
+        # Generate unique resource_id
+        resource_id = Resource.generate_resource_id()
+        
+        resource = Resource(
+            resource_id=resource_id,
+            name=data['name'],
+            description=data.get('description', ''),
+            mime_type=data.get('mime_type', 'text/plain'),
+            content=data.get('content', ''),
+            access_control=data.get('access_control', 'restricted'),
+            is_enabled=data.get('is_enabled', True)
+        )
+        
+        db.session.add(resource)
+        db.session.commit()
+        
+        # Add account permissions if restricted
+        if resource.access_control == 'restricted' and 'account_ids' in data:
+            for account_id in data['account_ids']:
+                access = ResourceAccountAccess(
+                    resource_id=resource.id,
+                    account_id=account_id
+                )
+                db.session.add(access)
+            db.session.commit()
+        
+        return jsonify(resource.to_dict()), 201
+
+
+@api_bp.route('/resources/<int:resource_id>', methods=['GET', 'PUT', 'DELETE'])
+@login_required
+@audit_log('resource', get_resource_name=lambda d: d.get('name'))
+def resource_detail(resource_id):
+    """Get, update, or delete a specific resource"""
+    resource = get_or_404(Resource, resource_id)
+    
+    if request.method == 'GET':
+        result = resource.to_dict(include_usage=True)
+        # Include account access list
+        result['account_ids'] = [access.account_id for access in resource.resource_account_access]
+        return jsonify(result)
+    
+    elif request.method == 'PUT':
+        data = request.get_json()
+        
+        resource.name = data.get('name', resource.name)
+        resource.description = data.get('description', resource.description)
+        resource.mime_type = data.get('mime_type', resource.mime_type)
+        resource.content = data.get('content', resource.content)
+        resource.access_control = data.get('access_control', resource.access_control)
+        resource.is_enabled = data.get('is_enabled', resource.is_enabled)
+        
+        # Update account permissions
+        if 'account_ids' in data:
+            # Remove existing permissions
+            ResourceAccountAccess.query.filter_by(resource_id=resource.id).delete()
+            
+            # Add new permissions if restricted
+            if resource.access_control == 'restricted':
+                for account_id in data['account_ids']:
+                    access = ResourceAccountAccess(
+                        resource_id=resource.id,
+                        account_id=account_id
+                    )
+                    db.session.add(access)
+        
+        db.session.commit()
+        return jsonify(resource.to_dict())
+    
+    elif request.method == 'DELETE':
+        # Check if resource is being used by any capability
+        usage_count = resource.get_usage_count()
+        if usage_count > 0:
+            return jsonify({
+                'error': f'このResourceは{usage_count}個のCapabilityで使用されています。削除する前に、参照しているCapabilityを削除または別のResourceに変更してください。'
+            }), 409
+        
+        db.session.delete(resource)
+        db.session.commit()
+        return '', 204
+
+
+@api_bp.route('/resources/<int:resource_id>/toggle', methods=['POST'])
+@login_required
+@audit_log('resource', action_type='update')
+def toggle_resource(resource_id):
+    """Toggle resource enabled/disabled status"""
+    resource = get_or_404(Resource, resource_id)
+    resource.is_enabled = not resource.is_enabled
+    db.session.commit()
+    return jsonify(resource.to_dict())
+
+
+@api_bp.route('/resources/<int:resource_id>/access-control', methods=['PUT'])
+@login_required
+@audit_log('resource', action_type='update')
+def resource_access_control(resource_id):
+    """Update resource access control"""
+    resource = get_or_404(Resource, resource_id)
+    
+    data = request.get_json()
+    access_control = data.get('access_control')
+    
+    if access_control not in ['public', 'restricted']:
+        return jsonify({'error': 'Invalid access control value'}), 400
+    
+    resource.access_control = access_control
+    
+    # If changing to public, remove all account permissions
+    if access_control == 'public':
+        ResourceAccountAccess.query.filter_by(resource_id=resource.id).delete()
+    
+    db.session.commit()
+    return jsonify(resource.to_dict())

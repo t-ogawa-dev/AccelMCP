@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Resources一覧 - Accel MCP{% endblock %}
+
+{% block breadcrumb %}
+<nav class="breadcrumb">
+    <a href="/dashboard" data-i18n="breadcrumb_home">ホーム</a>
+    <span class="breadcrumb-separator">›</span>
+    <span class="breadcrumb-current" data-i18n="resource_list_title">Resources一覧</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h2 data-i18n="resource_list_title">Resources一覧</h2>
+            <p data-i18n="resource_list_desc">グローバルリソースプールの管理</p>
+        </div>
+        <a href="/resources/new" class="btn btn-primary" data-i18n="resource_new_button">新規Resource登録</a>
+    </div>
+</div>
+
+<!-- Usage Instructions Accordion -->
+<div class="accordion">
+    <div class="accordion-header" onclick="toggleAccordion()">
+        <span data-i18n="resource_usage_title">💡 Resourcesの使用方法</span>
+        <span class="accordion-icon">▼</span>
+    </div>
+    <div class="accordion-content" id="usage-accordion">
+        <div class="usage-box">
+            <p style="margin-bottom: 16px;" data-i18n="resource_usage_intro">
+                Resourcesは、ポリシー文書、設定ファイル、FAQ等の静的コンテンツをLLMに提供するためのグローバルプールです
+            </p>
+            
+            <strong data-i18n="resource_usage_features_title">🔑 主な特徴:</strong>
+            <ul style="margin: 8px 0 16px 20px; line-height: 1.8;">
+                <li><strong data-i18n="resource_usage_feature_global">グローバル管理</strong>: <span data-i18n="resource_usage_feature_global_desc">アプリやMCPサービスに紐付かず、全体で共有</span></li>
+                <li><strong data-i18n="resource_usage_feature_uri">一意なURI</strong>: <span data-i18n="resource_usage_feature_uri_desc">accel://&lt;server-id&gt;/resources/&lt;resource-id&gt; 形式</span></li>
+                <li><strong data-i18n="resource_usage_feature_access">アクセス制御</strong>: <span data-i18n="resource_usage_feature_access_desc">Public（全体公開）/ Restricted（アカウント制限）</span></li>
+                <li><strong data-i18n="resource_usage_feature_mime">MIMEタイプ対応</strong>: <span data-i18n="resource_usage_feature_mime_desc">text/plain, text/markdown, application/json等</span></li>
+            </ul>
+            
+            <strong data-i18n="resource_usage_mcp_title">📡 MCPプロトコル:</strong>
+            <div style="background: #f5f5f5; border-radius: 4px; padding: 12px; margin-top: 8px; font-family: monospace; font-size: 13px;">
+                <div style="margin-bottom: 8px;">
+                    <span style="color: #666;" data-i18n="resource_usage_mcp_list">// リソース一覧取得</span><br>
+                    <code style="color: #388e3c;">resources/list</code>
+                </div>
+                <div>
+                    <span style="color: #666;" data-i18n="resource_usage_mcp_read">// リソース内容取得</span><br>
+                    <code style="color: #388e3c;">resources/read</code> → <code style="color: #d32f2f;">"uri": "accel://abc123ef/resources/xyz789ab"</code>
+                </div>
+            </div>
+
+            <strong style="display: block; margin-top: 16px;" data-i18n="resource_usage_examples_title">✏️ 使用例:</strong>
+            <ul style="margin: 8px 0 0 20px; line-height: 1.8;">
+                <li data-i18n="resource_usage_example_policy">会社ポリシー文書（社内規定、コンプライアンスルール）</li>
+                <li data-i18n="resource_usage_example_faq">FAQ集（よくある質問と回答）</li>
+                <li data-i18n="resource_usage_example_config">設定ファイル（JSON/YAML形式のconfiguration）</li>
+                <li data-i18n="resource_usage_example_template">テンプレート（メールテンプレート、レポート雛形）</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div id="resources-list"></div>
+
+<style>
+.accordion {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    overflow: hidden;
+}
+
+.accordion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    cursor: pointer;
+    background: #f8f9fa;
+    font-weight: 500;
+    color: #333;
+    transition: background 0.2s;
+    user-select: none;
+}
+
+.accordion-header:hover {
+    background: #e9ecef;
+}
+
+.accordion-icon {
+    font-size: 12px;
+    transition: transform 0.3s;
+}
+
+.accordion-icon.rotate {
+    transform: rotate(180deg);
+}
+
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+.usage-box {
+    padding: 20px;
+    line-height: 1.6;
+}
+
+.usage-box code {
+    background: #e3f2fd;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.9em;
+}
+</style>
+
+<script>
+function toggleAccordion() {
+    const content = document.getElementById('usage-accordion');
+    const icon = document.querySelector('.accordion-icon');
+    
+    if (content.style.maxHeight) {
+        content.style.maxHeight = null;
+        icon.classList.remove('rotate');
+    } else {
+        content.style.maxHeight = content.scrollHeight + 'px';
+        icon.classList.add('rotate');
+    }
+}
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="/assets/view/resources/list.js"></script>
+{% endblock %}

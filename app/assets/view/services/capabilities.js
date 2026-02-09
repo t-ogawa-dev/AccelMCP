@@ -49,6 +49,18 @@ async function loadCapabilities() {
             urlDisplay = `<span style="color: #666;">${baseUrl}</span>${separator}<span style="font-weight: 600;">${cap.url}</span>`;
         }
         
+        // Resource URI display - separate from endpoint URL
+        let resourceDisplay = '';
+        if (cap.capability_type === 'resources' || cap.capability_type === 'prompts') {
+            const resourceUri = cap.resource_uri || 'N/A';
+            resourceDisplay = `
+                <div class="list-item-meta" style="margin-top: 4px;">
+                    <span style="color: #6c757d; font-size: 12px;">RESOURCE: </span>
+                    <code style="font-size: 12px;">${resourceUri}</code>
+                </div>
+            `;
+        }
+        
         return `
         <div class="list-item ${!cap.is_enabled ? 'disabled' : ''}">
             <div class="list-item-main">
@@ -59,6 +71,7 @@ async function loadCapabilities() {
                     ${(cap.access_control === 'restricted') ? `<span class="badge badge-access-restricted">${t('access_control_restricted')}</span>` : `<span class="badge badge-access-public">${t('access_control_public')}</span>`}
                     <span class="text-muted" style="font-family: monospace; font-size: 0.9em;">${urlDisplay}</span>
                 </div>
+                ${resourceDisplay}
                 ${cap.description ? `<p class="text-muted">${cap.description}</p>` : ''}
             </div>
             <div class="list-item-actions">

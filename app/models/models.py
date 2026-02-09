@@ -142,7 +142,10 @@ class Capability(db.Model):
     url = db.Column(db.String(500))  # endpoint (for tool/resource)
     headers = db.Column(db.Text)  # JSON string (for tool)
     body_params = db.Column(db.Text)  # JSON string (for tool)
-    template_content = db.Column(db.Text)  # prompt template (for prompt)
+    template_content = db.Column(db.Text)  # prompt template (for prompt) or static content (for resource)
+    resource_uri = db.Column(db.String(500))  # Resource URI (for resource type, e.g., resource://docs/policy)
+    resource_mime_type = db.Column(db.String(100))  # MIME type (for resource type, e.g., text/plain, application/json)
+    global_resource_id = db.Column(db.Integer, db.ForeignKey('resources.id'), nullable=True)  # Link to global Resource
     description = db.Column(db.Text)
     access_control = db.Column(db.String(20), nullable=False, default='public')  # 'public' or 'restricted'
     is_enabled = db.Column(db.Boolean, default=True, nullable=False)  # 有効/無効フラグ
@@ -153,6 +156,7 @@ class Capability(db.Model):
     # Relationships
     service = db.relationship('Service', back_populates='capabilities')
     permissions = db.relationship('AccountPermission', back_populates='capability', cascade='all, delete-orphan')
+    global_resource = db.relationship('Resource', foreign_keys=[global_resource_id])
     
     def to_dict(self):
         result = {
@@ -165,6 +169,9 @@ class Capability(db.Model):
             'headers': json.loads(self.headers) if self.headers else {},
             'body_params': json.loads(self.body_params) if self.body_params else {},
             'template_content': self.template_content,
+            'resource_uri': self.resource_uri,
+            'resource_mime_type': self.resource_mime_type,
+            'global_resource_id': self.global_resource_id,
             'description': self.description,
             'access_control': self.access_control,
             'is_enabled': self.is_enabled,
@@ -175,6 +182,12 @@ class Capability(db.Model):
         # Include mcp_service_id from parent service
         if self.service and self.service.mcp_service_id:
             result['mcp_service_id'] = self.service.mcp_service_id
+        # Include global resource data if linked
+        if self.global_resource_id and self.global_resource:
+            result['resource_uri'] = self.global_resource.get_uri()
+            result['resource_mime_type'] = self.global_resource.mime_type
+            # Include resource content for display in UI
+            result['template_content'] = self.global_resource.content
         return result
 
 
@@ -692,6 +705,161 @@ class LoginLockStatus(db.Model):
             'last_attempt_at': self.last_attempt_at.isoformat() if self.last_attempt_at else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
+class ServerSetting(db.Model):
+    """サーバー設定 - サーバーID等のグローバル設定を管理"""
+    __tablename__ = 'server_settings'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(50), nullable=False, unique=True, index=True)
+    value = db.Column(db.String(500), nullable=False)
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+    
+    @staticmethod
+    def get_server_id():
+        """サーバーIDを取得（存在しない場合は生成）"""
+        import os
+        import secrets
+        import string
+        
+        # 環境変数でオーバーライド可能
+        env_server_id = os.getenv('ACCEL_MCP_SERVER_ID')
+        if env_server_id:
+            return env_server_id
+        
+        # DBから取得
+        setting = ServerSetting.query.filter_by(key='server_id').first()
+        if setting:
+            return setting.value
+        
+        # 新規生成（8文字のランダム文字列）
+        chars = string.ascii_lowercase + string.digits
+        new_server_id = ''.join(secrets.choice(chars) for _ in range(8))
+        
+        # DBに保存
+        new_setting = ServerSetting(
+            key='server_id',
+            value=new_server_id,
+            description='Unique server identifier for resource URI generation'
+        )
+        db.session.add(new_setting)
+        db.session.commit()
+        
+        return new_server_id
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'key': self.key,
+            'value': self.value,
+            'description': self.description,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
+class Resource(db.Model):
+    """リソース管理 - アプリ全体で共有できるリソースプール"""
+    __tablename__ = 'resources'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    resource_id = db.Column(db.String(8), nullable=False, unique=True, index=True)  # 8文字のランダム文字列
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    mime_type = db.Column(db.String(100), nullable=False, default='text/plain')
+    content = db.Column(db.Text, nullable=False)
+    access_control = db.Column(db.String(20), nullable=False, default='restricted')  # 'public' or 'restricted'
+    is_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+    
+    # Relationships
+    resource_account_access = db.relationship('ResourceAccountAccess', back_populates='resource', cascade='all, delete-orphan')
+    
+    @staticmethod
+    def generate_resource_id():
+        """8文字のランダムリソースIDを生成"""
+        import secrets
+        import string
+        chars = string.ascii_lowercase + string.digits
+        while True:
+            new_id = ''.join(secrets.choice(chars) for _ in range(8))
+            # 重複チェック
+            if not Resource.query.filter_by(resource_id=new_id).first():
+                return new_id
+    
+    def get_uri(self):
+        """リソースURIを生成（accel://<server-id>/resources/<resource-id>）"""
+        server_id = ServerSetting.get_server_id()
+        return f'accel://{server_id}/resources/{self.resource_id}'
+    
+    def get_usage_count(self):
+        """このResourceを参照しているCapabilityの数を取得"""
+        from app.models.models import Capability
+        return Capability.query.filter_by(global_resource_id=self.id).count()
+    
+    def get_referencing_capabilities(self):
+        """このResourceを参照しているCapabilityのリストを取得"""
+        from app.models.models import Capability
+        return Capability.query.filter_by(global_resource_id=self.id).all()
+    
+    def to_dict(self, include_usage=False):
+        result = {
+            'id': self.id,
+            'resource_id': self.resource_id,
+            'uri': self.get_uri(),
+            'name': self.name,
+            'description': self.description,
+            'mime_type': self.mime_type,
+            'content': self.content,
+            'access_control': self.access_control,
+            'is_enabled': self.is_enabled,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+        if include_usage:
+            result['usage_count'] = self.get_usage_count()
+            result['referencing_capabilities'] = [
+                {
+                    'id': cap.id,
+                    'name': cap.name,
+                    'app_id': cap.app_id,
+                    'mcp_service_id': cap.service.mcp_service_id if cap.service else None
+                }
+                for cap in self.get_referencing_capabilities()
+            ]
+        return result
+
+
+class ResourceAccountAccess(db.Model):
+    """リソースとアカウントのアクセス権限管理"""
+    __tablename__ = 'resource_account_access'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    resource_id = db.Column(db.Integer, db.ForeignKey('resources.id', ondelete='CASCADE'), nullable=False)
+    account_id = db.Column(db.Integer, db.ForeignKey('connection_accounts.id', ondelete='CASCADE'), nullable=False)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    
+    # Relationships
+    resource = db.relationship('Resource', back_populates='resource_account_access')
+    account = db.relationship('ConnectionAccount')
+    
+    # Unique constraint
+    __table_args__ = (
+        db.UniqueConstraint('resource_id', 'account_id', name='uq_resource_account'),
+    )
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'resource_id': self.resource_id,
+            'account_id': self.account_id,
+            'account_name': self.account.name if self.account else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None
         }
 
 

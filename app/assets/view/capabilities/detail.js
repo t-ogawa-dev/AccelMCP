@@ -165,8 +165,35 @@ async function loadCapability() {
             <pre class="code-block">${llmParamsJson}</pre>
         </div>
         `;
+    } else if (cap.capability_type === 'resource') {
+        // Resource type: show URI, MIME type, and content
+        const resourceUri = cap.resource_uri || t('capability_resource_no_uri');
+        const resourceMimeType = cap.resource_mime_type || 'text/plain';
+        const resourceContent = cap.template_content || t('capability_resource_no_content');
+        
+        typeSpecificSections = `
+        <div class="detail-section">
+            <h3>${t("capability_resource_info_title")}</h3>
+            <table class="detail-table">
+                <tr>
+                    <th>${t("capability_resource_uri_label")}</th>
+                    <td><code style="font-size: 0.9em;">${escapeHtml(resourceUri)}</code></td>
+                </tr>
+                <tr>
+                    <th>${t("capability_resource_mime_type_label")}</th>
+                    <td><span class="badge badge-method">${escapeHtml(resourceMimeType)}</span></td>
+                </tr>
+            </table>
+        </div>
+        
+        <div class="detail-section">
+            <h3>${t("capability_resource_content_title")}</h3>
+            <p class="text-muted" style="font-size: 0.9em; margin-bottom: 0.5rem;">${t('capability_resource_content_description')}</p>
+            <pre class="code-block" style="white-space: pre-wrap; max-height: 400px; overflow-y: auto;">${escapeHtml(resourceContent)}</pre>
+        </div>
+        `;
     } else {
-        // Tool/Resource type: show URL, headers, params
+        // Tool type: show URL, headers, params
         typeSpecificSections = `
         <div class="detail-section">
             <h3>${t("capability_individual_headers")}</h3>
@@ -207,7 +234,7 @@ async function loadCapability() {
                         <span id="access-control-badge"></span>
                     </td>
                 </tr>
-                ${cap.capability_type !== 'prompt' ? `
+                ${cap.capability_type !== 'prompt' && cap.capability_type !== 'resource' ? `
                 <tr>
                     <th>${t("capability_method_label")}</th>
                     <td><span class="badge badge-method">${cap.headers['X-HTTP-Method'] || 'POST'}</span></td>
@@ -253,21 +280,28 @@ async function loadCapability() {
     generateTestParamsForm();
 }
 
-// Update test section UI based on capability type (tool vs prompt)
+// Update test section UI based on capability type (tool vs prompt vs resource)
 function updateTestSectionForType() {
+    const testSection = document.getElementById('test-section');
     const testSectionTitle = document.getElementById('test-section-title');
     const testSectionDesc = document.getElementById('test-section-desc');
     const testButton = document.getElementById('test-button');
     const testResultHeader = document.getElementById('test-result-header');
+    const testParamsContainer = document.getElementById('test-params-container');
     
     if (currentCapabilityType === 'prompt') {
         // Prompt type: Preview mode
+        testSection.style.display = 'block';
         testSectionTitle.textContent = t('capability_preview_title');
         testSectionDesc.textContent = t('capability_preview_desc');
         testButton.textContent = t('button_preview');
         testResultHeader.textContent = t('capability_preview_result_title');
+    } else if (currentCapabilityType === 'resource') {
+        // Resource type: Content is already shown in resource content section, hide test section
+        testSection.style.display = 'none';
     } else {
-        // Tool/Resource type: Test mode
+        // Tool type: Test mode
+        testSection.style.display = 'block';
         testSectionTitle.textContent = t('capability_test_title');
         testSectionDesc.textContent = t('capability_test_desc');
         testButton.textContent = t('button_test_execute');
@@ -467,7 +501,8 @@ async function executeTest() {
         }
     } else {
         // Tool/Resource type: Call API test endpoint
-        testButton.textContent = t('capability_test_running');
+        const isResource = currentCapabilityType === 'resource';
+        testButton.textContent = isResource ? t('capability_resource_fetching') : t('capability_test_running');
         resultDiv.style.display = 'none';
         
         try {
@@ -483,7 +518,7 @@ async function executeTest() {
             resultDiv.style.display = 'block';
             
             if (result.success) {
-                statusDiv.textContent = `✓ ${t('capability_test_success')} (HTTP ${result.status_code})`;
+                statusDiv.textContent = `✓ ${isResource ? t('capability_resource_fetch_success') : t('capability_test_success')} (HTTP ${result.status_code})`;
                 statusDiv.style.backgroundColor = '#d1fae5';
                 statusDiv.style.color = '#065f46';
                 bodyPre.textContent = JSON.stringify(result.data, null, 2);
@@ -501,7 +536,7 @@ async function executeTest() {
             bodyPre.textContent = e.message;
         } finally {
             testButton.disabled = false;
-            testButton.textContent = t('button_test_execute');
+            testButton.textContent = isResource ? t('button_resource_fetch') : t('button_test_execute');
         }
     }
 }

@@ -103,52 +103,69 @@ function toggleCapabilityType() {
     const capabilityType = document.getElementById('capability_type').value;
     const toolFields = document.getElementById('tool-fields');
     const promptFields = document.getElementById('prompt-fields');
+    const resourceFields = document.getElementById('resource-fields');
     const headersGroup = document.querySelector('[data-i18n="capability_header_params"]')?.closest('.form-group');
     const bodyParamsGroup = document.getElementById('body-params-group');
     const bodyParamsLabel = document.getElementById('body-params-label');
     const bodyParamsHint = document.getElementById('body-params-hint');
     const fixedParamsSection = document.getElementById('fixed-params-section');
     const requestSamplePost = document.getElementById('request-sample-post');
+    const timeoutGroup = document.getElementById('timeout_seconds')?.closest('.form-group');
+    
+    // Hide all type-specific fields first
+    if (toolFields) toolFields.style.display = 'none';
+    if (promptFields) promptFields.style.display = 'none';
+    if (resourceFields) resourceFields.style.display = 'none';
+    
+    // Reset required fields
+    const urlField = document.getElementById('url');
+    const methodField = document.getElementById('method');
+    const templateContentField = document.getElementById('template_content');
+    const resourceUriField = document.getElementById('resource_uri');
+    const resourceContentField = document.getElementById('resource_content');
+    
+    if (urlField) urlField.required = false;
+    if (methodField) methodField.required = false;
+    if (templateContentField) templateContentField.required = false;
+    if (resourceUriField) resourceUriField.required = false;
+    if (resourceContentField) resourceContentField.required = false;
     
     if (capabilityType === 'prompt') {
-        // Show prompt fields, hide tool fields
-        if (toolFields) toolFields.style.display = 'none';
+        // Show prompt fields
         if (promptFields) promptFields.style.display = 'block';
         if (headersGroup) headersGroup.style.display = 'none';
         if (bodyParamsGroup) {
-            // For prompts, body_params defines template variables (JSON Schema)
             bodyParamsGroup.style.display = 'block';
-            // Change labels for prompt type
             if (bodyParamsLabel) bodyParamsLabel.textContent = t('capability_template_args_label');
             if (bodyParamsHint) bodyParamsHint.textContent = t('capability_template_args_hint');
         }
-        // Hide fixed params section and request sample for prompts (only LLM params needed)
         if (fixedParamsSection) fixedParamsSection.style.display = 'none';
         if (requestSamplePost) requestSamplePost.style.display = 'none';
-        // Make URL and method optional for prompts
-        document.getElementById('url').required = false;
-        document.getElementById('method').required = false;
-        document.getElementById('template_content').required = true;
-        // Generate initial prompt preview
+        if (timeoutGroup) timeoutGroup.style.display = 'none';
+        if (templateContentField) templateContentField.required = true;
         generatePromptPreview();
+    } else if (capabilityType === 'resource') {
+        // Show resource fields
+        if (resourceFields) resourceFields.style.display = 'block';
+        if (headersGroup) headersGroup.style.display = 'none';
+        if (bodyParamsGroup) bodyParamsGroup.style.display = 'none';
+        if (timeoutGroup) timeoutGroup.style.display = 'none';
+        if (resourceUriField) resourceUriField.required = true;
+        generateResourcePreview();
     } else {
-        // Show tool fields, hide prompt fields
+        // Show tool fields (default)
         if (toolFields) toolFields.style.display = 'block';
-        if (promptFields) promptFields.style.display = 'none';
         if (headersGroup) headersGroup.style.display = 'block';
         if (bodyParamsGroup) {
             bodyParamsGroup.style.display = 'block';
-            // Restore labels for tool type
             if (bodyParamsLabel) bodyParamsLabel.textContent = t('capability_body_params');
             if (bodyParamsHint) bodyParamsHint.textContent = t('capability_body_json_hint');
         }
-        // Show fixed params section and request sample for tools
         if (fixedParamsSection) fixedParamsSection.style.display = 'block';
         if (requestSamplePost) requestSamplePost.style.display = 'block';
-        // Make URL and method required for tools
-        document.getElementById('url').required = true;
-        document.getElementById('method').required = true;
-        document.getElementById('template_content').required = false;
+        if (timeoutGroup) timeoutGroup.style.display = 'block';
+        if (urlField) urlField.required = true;
+        if (methodField) methodField.required = true;
     }
 }
 
@@ -1332,6 +1349,52 @@ function generateSampleValue(node) {
     // Load accounts
     await loadAccounts();
     
+    // Load existing resources for selection
+    await loadExistingResources();
+    
+    // Setup drag and drop for resource file upload
+    const dropZone = document.getElementById('resource-drop-zone');
+    if (dropZone) {
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+        
+        // Highlight drop zone when dragging over
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.style.backgroundColor = '#e6f7ff';
+                dropZone.style.borderColor = '#1890ff';
+            });
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.style.backgroundColor = '#f7fafc';
+                dropZone.style.borderColor = '#cbd5e0';
+            });
+        });
+        
+        // Handle dropped files
+        dropZone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleResourceFileUpload(files[0]);
+            }
+        });
+        
+        // Click to select file
+        dropZone.addEventListener('click', (e) => {
+            // ボタンクリックでない場合のみ
+            if (e.target.tagName !== 'BUTTON') {
+                document.getElementById('resource_file')?.click();
+            }
+        });
+    }
+    
     // Setup auto-update for request sample (debounced)
     let sampleUpdateTimer;
     function scheduleRequestSampleUpdate() {
@@ -1484,8 +1547,40 @@ function generateSampleValue(node) {
             body_params: bodyParams
         };
         
-        // Add HTTP method to headers
-        data.headers['X-HTTP-Method'] = method;
+        // Resource type specific fields
+        const capabilityType = formData.get('capability_type');
+        if (capabilityType === 'resource') {
+            const resourceSource = document.querySelector('input[name="resource_source"]:checked')?.value || 'existing';
+            
+            if (resourceSource === 'existing') {
+                // Use existing resource
+                const existingResourceId = document.getElementById('existing_resource_id')?.value;
+                if (!existingResourceId) {
+                    showError(t('capability_resource_not_selected') || 'Resourceを選択してください');
+                    return;
+                }
+                // Store the global resource ID
+                data.global_resource_id = parseInt(existingResourceId);
+            } else {
+                // Create new resource inline
+                const newResourceName = formData.get('new_resource_name')?.trim();
+                if (!newResourceName) {
+                    showError(t('resource_name_required') || 'Resource名を入力してください');
+                    document.getElementById('new_resource_name')?.focus();
+                    return;
+                }
+                data.resource_name = newResourceName;
+                data.resource_uri = formData.get('resource_uri');
+                data.resource_mime_type = formData.get('resource_mime_type');
+                // Get content from text input or uploaded file
+                data.template_content = getResourceContent();
+            }
+        }
+        
+        // Add HTTP method to headers (only for tool type)
+        if (capabilityType === 'tool') {
+            data.headers['X-HTTP-Method'] = method;
+        }
         
         // Collect enabled account IDs
         const enabledSelect = document.getElementById('enabled-accounts');
@@ -1625,4 +1720,182 @@ function generatePromptPreview() {
         }
     }
 }
-// Cache bust: 2025-12-05T00:00:00
+
+// ========== Resource機能 ==========
+
+// Resource入力タイプ切り替え（テキスト/ファイル）
+function toggleResourceInputType() {
+    const inputType = document.querySelector('input[name="resource_input_type"]:checked')?.value || 'text';
+    const textInput = document.getElementById('resource-text-input');
+    const fileInput = document.getElementById('resource-file-input');
+    
+    if (inputType === 'file') {
+        if (textInput) textInput.style.display = 'none';
+        if (fileInput) fileInput.style.display = 'block';
+    } else {
+        if (textInput) textInput.style.display = 'block';
+        if (fileInput) fileInput.style.display = 'none';
+    }
+}
+
+// Resource source toggle (existing vs new)
+function toggleResourceSource() {
+    const resourceSource = document.querySelector('input[name="resource_source"]:checked')?.value || 'existing';
+    const existingSection = document.getElementById('existing-resource-section');
+    const newSection = document.getElementById('new-resource-section');
+    
+    if (resourceSource === 'existing') {
+        if (existingSection) existingSection.style.display = 'block';
+        if (newSection) newSection.style.display = 'none';
+    } else {
+        if (existingSection) existingSection.style.display = 'none';
+        if (newSection) newSection.style.display = 'block';
+    }
+}
+
+// Load existing resources into select
+let globalResources = [];
+async function loadExistingResources() {
+    try {
+        const response = await fetch('/api/resources');
+        globalResources = await response.json();
+        
+        const selectElement = document.getElementById('existing_resource_id');
+        if (selectElement) {
+            // Keep placeholder option
+            selectElement.innerHTML = `<option value="" data-i18n="capability_select_resource_placeholder">-- Resourceを選択してください --</option>` +
+                globalResources.filter(r => r.is_enabled).map(resource => 
+                    `<option value="${resource.id}">${resource.name} (${resource.mime_type})</option>`
+                ).join('');
+        }
+    } catch (e) {
+        console.error('Failed to load resources:', e);
+    }
+}
+
+// Load and preview selected existing resource
+async function loadExistingResourcePreview() {
+    const selectElement = document.getElementById('existing_resource_id');
+    const resourceId = selectElement?.value;
+    const previewDiv = document.getElementById('selected-resource-preview');
+    
+    if (!resourceId) {
+        if (previewDiv) previewDiv.style.display = 'none';
+        return;
+    }
+    
+    const selectedResource = globalResources.find(r => r.id === parseInt(resourceId));
+    if (!selectedResource) return;
+    
+    // Display resource info
+    document.getElementById('selected-resource-name').textContent = selectedResource.name;
+    document.getElementById('selected-resource-uri').textContent = selectedResource.uri;
+    document.getElementById('selected-resource-mime').textContent = selectedResource.mime_type;
+    document.getElementById('selected-resource-desc').textContent = selectedResource.description || '-';
+    
+    if (previewDiv) previewDiv.style.display = 'block';
+}
+
+// ファイルアップロード処理
+let uploadedResourceContent = null;
+function handleResourceFileUpload(file) {
+    // 引数がない場合はinputから取得
+    if (!file) {
+        const fileInput = document.getElementById('resource_file');
+        file = fileInput?.files[0];
+    }
+    
+    if (!file) return;
+    
+    // ファイルサイズチェック (1MB)
+    if (file.size > 1024 * 1024) {
+        modal.error(t('resource_file_too_large') || 'ファイルサイズが1MBを超えています');
+        const fileInput = document.getElementById('resource_file');
+        if (fileInput) fileInput.value = '';
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        uploadedResourceContent = e.target.result;
+        
+        // プレビュー表示
+        const previewDiv = document.getElementById('resource-file-preview');
+        const fileNameSpan = document.getElementById('resource-file-name');
+        const fileSizeSpan = document.getElementById('resource-file-size');
+        
+        if (previewDiv) previewDiv.style.display = 'block';
+        if (fileNameSpan) fileNameSpan.textContent = file.name;
+        if (fileSizeSpan) fileSizeSpan.textContent = `${(file.size / 1024).toFixed(1)} KB`;
+        
+        // MIMEタイプ自動設定
+        const mimeTypeSelect = document.getElementById('resource_mime_type');
+        if (mimeTypeSelect) {
+            const ext = file.name.split('.').pop().toLowerCase();
+            const mimeMap = {
+                'txt': 'text/plain',
+                'md': 'text/markdown',
+                'json': 'application/json',
+                'html': 'text/html',
+                'csv': 'text/csv',
+                'xml': 'application/xml',
+                'yaml': 'text/yaml',
+                'yml': 'text/yaml'
+            };
+            if (mimeMap[ext]) {
+                mimeTypeSelect.value = mimeMap[ext];
+            }
+        }
+        
+        generateResourcePreview();
+    };
+    reader.readAsText(file);
+}
+
+// ファイルクリア
+function clearResourceFile() {
+    const fileInput = document.getElementById('resource_file');
+    const previewDiv = document.getElementById('resource-file-preview');
+    
+    if (fileInput) fileInput.value = '';
+    if (previewDiv) previewDiv.style.display = 'none';
+    uploadedResourceContent = null;
+    generateResourcePreview();
+}
+
+// リソースプレビュー生成
+function generateResourcePreview() {
+    const inputType = document.querySelector('input[name="resource_input_type"]:checked')?.value || 'text';
+    const previewOutput = document.getElementById('resource-preview-output');
+    
+    if (!previewOutput) return;
+    
+    let content = '';
+    if (inputType === 'file' && uploadedResourceContent) {
+        content = uploadedResourceContent;
+    } else {
+        content = document.getElementById('resource_content')?.value || '';
+    }
+    
+    if (content) {
+        // 最大500文字でトランケート
+        if (content.length > 500) {
+            previewOutput.textContent = content.substring(0, 500) + '\n...(省略)';
+        } else {
+            previewOutput.textContent = content;
+        }
+    } else {
+        previewOutput.textContent = t('resource_preview_empty');
+    }
+}
+
+// リソースコンテンツを取得（保存時に使用）
+function getResourceContent() {
+    const inputType = document.querySelector('input[name="resource_input_type"]:checked')?.value || 'text';
+    
+    if (inputType === 'file' && uploadedResourceContent) {
+        return uploadedResourceContent;
+    }
+    return document.getElementById('resource_content')?.value || '';
+}
+// Cache bust: 2026-01-21T00:00:00

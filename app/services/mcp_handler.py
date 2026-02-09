@@ -115,7 +115,10 @@ class MCPHandler:
             return self._handle_tool_call_for_mcp_service(account, mcp_service, mcp_request)
         
         elif method == 'resources/list':
-            return self._handle_resources_list(mcp_request)
+            return self._handle_resources_list_for_mcp_service(account, mcp_service, mcp_request)
+        
+        elif method == 'resources/read':
+            return self._handle_resources_read(account, mcp_request)
         
         elif method == 'prompts/list':
             return self._handle_prompts_list(mcp_request)
@@ -394,7 +397,10 @@ class MCPHandler:
             return self._handle_tool_call(account, service, mcp_request)
         
         elif method == 'resources/list':
-            return self._handle_resources_list(mcp_request)
+            return self._handle_resources_list_for_service(account, service, mcp_request)
+        
+        elif method == 'resources/read':
+            return self._handle_resources_read(account, mcp_request)
         
         elif method == 'prompts/list':
             return self._handle_prompts_list(mcp_request)
@@ -415,17 +421,47 @@ class MCPHandler:
     def _handle_initialize_for_mcp_service(self, account, mcp_service, mcp_request: Dict[str, Any]) -> Dict[str, Any]:
         """Handle MCP initialize request at MCP Service level"""
         import uuid
+        from app.models.models import Service, Capability
+        
+        # Check which capability types are actually registered
+        apps = self.db.session.query(Service).filter(
+            Service.mcp_service_id == mcp_service.id,
+            Service.is_enabled == True
+        ).all()
+        
+        has_tools = False
+        has_resources = False
+        has_prompts = False
+        
+        for app in apps:
+            capability_types = self.db.session.query(Capability.capability_type).filter(
+                Capability.app_id == app.id,
+                Capability.is_enabled == True
+            ).distinct().all()
+            
+            for (cap_type,) in capability_types:
+                if cap_type in ['tool', 'mcp_tool']:
+                    has_tools = True
+                elif cap_type == 'resource':
+                    has_resources = True
+                elif cap_type == 'prompt':
+                    has_prompts = True
+        
+        # Build capabilities dynamically based on what's registered
+        capabilities = {}
+        if has_tools:
+            capabilities['tools'] = {}
+        if has_resources:
+            capabilities['resources'] = {}
+        if has_prompts:
+            capabilities['prompts'] = {}
         
         return {
             'jsonrpc': '2.0',
             'id': mcp_request.get('id') or 0,
             'result': {
                 'protocolVersion': '2024-11-05',
-                'capabilities': {
-                    'tools': {},
-                    'resources': {},
-                    'prompts': {}
-                },
+                'capabilities': capabilities,
                 'serverInfo': {
                     'name': f'AccelMCP - {mcp_service.name}',
                     'version': '1.0.0'
@@ -460,9 +496,11 @@ class MCPHandler:
             if not self._check_hierarchical_access(account, mcp_service, app=app):
                 continue
             
-            # Get all capabilities for this app
+            # Get all tool-type capabilities for this app (exclude resource and prompt types)
             capabilities = self.db.session.query(Capability).filter(
-                Capability.app_id == app.id
+                Capability.app_id == app.id,
+                Capability.capability_type.in_(['tool', 'mcp_tool']),
+                Capability.is_enabled == True
             ).all()
             
             for cap in capabilities:
@@ -470,10 +508,14 @@ class MCPHandler:
                 if not self._check_hierarchical_access(account, mcp_service, app=app, capability=cap):
                     continue
                 
-                # Use namespace: app_name:capability_name (sanitized for Google API)
-                sanitized_app_name = self._sanitize_tool_name(app.name)
+                # Use namespace: mcp_identifier_app_name:capability_name (sanitized for Google API)
+                mcp_prefix = self._sanitize_tool_name(mcp_service.identifier) if mcp_service.identifier else 'mcp'
+                sanitized_app_name = self._sanitize_tool_name(app.name) if app.name else 'app'
                 sanitized_cap_name = self._sanitize_tool_name(cap.name)
-                tool_name = f"{sanitized_app_name}:{sanitized_cap_name}"
+                # Fallback if sanitized name is empty or only special characters
+                if not sanitized_app_name or sanitized_app_name.replace('_', '').replace(':', '').replace('-', '').replace('+', '').replace('.', '') == '':
+                    sanitized_app_name = 'app'
+                tool_name = f"{mcp_prefix}_{sanitized_app_name}:{sanitized_cap_name}"
                 
                 tool = {
                     'name': tool_name,
@@ -503,6 +545,9 @@ class MCPHandler:
                                 }
                     except json.JSONDecodeError:
                         pass
+                
+                # Add tool to list
+                all_tools.append(tool)
         
         return {
             'jsonrpc': '2.0',
@@ -520,21 +565,47 @@ class MCPHandler:
         tool_name = params.get('name')
         arguments = params.get('arguments', {})
         
+        # Validate tool name
+        if not tool_name:
+            return {
+                'jsonrpc': '2.0',
+                'id': mcp_request.get('id') or 0,
+                'error': {
+                    'code': -32602,
+                    'message': 'Missing tool name'
+                }
+            }
+        
         app = None
         capability = None
         
-        # Parse tool name: app_name:capability_name or simple capability_name
+        # Parse tool name: mcp_identifier_app_name:capability_name or simple capability_name
         if ':' in tool_name:
-            # Namespaced format
-            sanitized_app_name, sanitized_cap_name = tool_name.split(':', 1)
+            # Namespaced format: mcp_prefix_app_name:capability_name
+            prefix_and_app, sanitized_cap_name = tool_name.split(':', 1)
             
-            # Find app by matching sanitized name
+            # Extract mcp_prefix and app_name from prefix_and_app
+            mcp_prefix = self._sanitize_tool_name(mcp_service.identifier) if mcp_service.identifier else 'mcp'
+            
+            # Remove mcp_prefix from prefix_and_app to get sanitized_app_name
+            if prefix_and_app.startswith(f"{mcp_prefix}_"):
+                sanitized_app_name = prefix_and_app[len(mcp_prefix) + 1:]  # +1 for underscore
+            else:
+                # Fallback: treat entire prefix as app name (for backward compatibility)
+                sanitized_app_name = prefix_and_app
+            
+            # Find app by matching sanitized name (apply same fallback logic as tools/list)
             all_apps = self.db.session.query(Service).filter(
                 Service.mcp_service_id == mcp_service.id
             ).all()
             
             for a in all_apps:
-                if self._sanitize_tool_name(a.name) == sanitized_app_name:
+                # Apply same sanitization and fallback logic as in tools/list
+                app_sanitized_name = self._sanitize_tool_name(a.name) if a.name else 'app'
+                if not app_sanitized_name or app_sanitized_name.replace('_', '').replace(':', '').replace('-', '').replace('+', '').replace('.', '') == '':
+                    app_sanitized_name = 'app'
+                
+                if app_sanitized_name == sanitized_app_name:
                     app = a
                     # Find capability by matching sanitized name
                     all_caps = self.db.session.query(Capability).filter(
@@ -583,7 +654,7 @@ class MCPHandler:
             }
         
         # Execute capability
-        if capability.capability_type == 'api':
+        if capability.capability_type in ('api', 'tool'):
             result = self._execute_api_call(app, capability, arguments)
         elif capability.capability_type in ('mcp', 'mcp_tool'):
             result = self._execute_mcp_call(app, capability, arguments)
@@ -613,17 +684,41 @@ class MCPHandler:
     def _handle_initialize(self, account, service, mcp_request: Dict[str, Any]) -> Dict[str, Any]:
         """Handle MCP initialize request"""
         import uuid
+        from app.models.models import Capability
+        
+        # Check which capability types are actually registered for this service
+        capability_types = self.db.session.query(Capability.capability_type).filter(
+            Capability.app_id == service.id,
+            Capability.is_enabled == True
+        ).distinct().all()
+        
+        has_tools = False
+        has_resources = False
+        has_prompts = False
+        
+        for (cap_type,) in capability_types:
+            if cap_type in ['tool', 'mcp_tool']:
+                has_tools = True
+            elif cap_type == 'resource':
+                has_resources = True
+            elif cap_type == 'prompt':
+                has_prompts = True
+        
+        # Build capabilities dynamically based on what's registered
+        capabilities = {}
+        if has_tools:
+            capabilities['tools'] = {}
+        if has_resources:
+            capabilities['resources'] = {}
+        if has_prompts:
+            capabilities['prompts'] = {}
         
         return {
             'jsonrpc': '2.0',
             'id': mcp_request.get('id') or 0,
             'result': {
                 'protocolVersion': '2024-11-05',
-                'capabilities': {
-                    'tools': {},
-                    'resources': {},
-                    'prompts': {}
-                },
+                'capabilities': capabilities,
                 'serverInfo': {
                     'name': f'AccelMCP - {service.name}',
                     'version': '1.0.0'
@@ -648,9 +743,11 @@ class MCPHandler:
                 }
             }
         
-        # Get all capabilities for this service
+        # Get all tool-type capabilities for this service (exclude resource and prompt types)
         all_capabilities = self.db.session.query(Capability).filter(
-            Capability.app_id == service.id
+            Capability.app_id == service.id,
+            Capability.capability_type.in_(['tool', 'mcp_tool']),
+            Capability.is_enabled == True
         ).all()
         
         # Filter capabilities based on hierarchical access
@@ -696,13 +793,197 @@ class MCPHandler:
             }
         }
     
-    def _handle_resources_list(self, mcp_request: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle resources/list request (stub implementation)"""
+    def _handle_resources_list_for_mcp_service(self, account, mcp_service, mcp_request: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle resources/list request - return resource-type capabilities from MCP service"""
+        from app.models.models import Capability, Service
+        
+        # Check hierarchical access at MCP service level
+        if not self._check_hierarchical_access(account, mcp_service):
+            return {
+                'jsonrpc': '2.0',
+                'id': mcp_request.get('id') or 0,
+                'result': {
+                    'resources': []  # Return empty if no access to MCP service
+                }
+            }
+        
+        # Get all apps under this MCP service
+        apps = self.db.session.query(Service).filter(
+            Service.mcp_service_id == mcp_service.id,
+            Service.is_enabled == True
+        ).all()
+        
+        # Aggregate resource-type capabilities from all apps
+        resource_list = []
+        for app in apps:
+            # Check app-level access
+            if not self._check_hierarchical_access(account, mcp_service, app=app):
+                continue
+            
+            # Get all resource-type capabilities for this app
+            capabilities = self.db.session.query(Capability).filter(
+                Capability.app_id == app.id,
+                Capability.capability_type == 'resource',
+                Capability.is_enabled == True
+            ).all()
+            
+            for resource in capabilities:
+                # Check capability-level access
+                if not self._check_hierarchical_access(account, mcp_service, app=app, capability=resource):
+                    continue
+                
+                # Get identifier from the MCP service
+                identifier = mcp_service.identifier
+                resource_item = {
+                    'uri': resource.resource_uri or f'resource://{identifier}/{resource.name}',
+                    'name': resource.name,
+                    'description': resource.description or ''
+                }
+                if resource.resource_mime_type:
+                    resource_item['mimeType'] = resource.resource_mime_type
+                resource_list.append(resource_item)
+        
         return {
             'jsonrpc': '2.0',
             'id': mcp_request.get('id') or 0,
             'result': {
-                'resources': []
+                'resources': resource_list
+            }
+        }
+    
+    def _handle_resources_list_for_service(self, account, service, mcp_request: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle resources/list request - return resource-type capabilities from single service"""
+        from app.models.models import Capability
+        
+        # Get resource-type capabilities for this service
+        capabilities = self.db.session.query(Capability).filter(
+            Capability.app_id == service.id,
+            Capability.capability_type == 'resource',
+            Capability.is_enabled == True
+        ).all()
+        
+        account_id = account.id if account else None
+        
+        # Filter by access control
+        resource_list = []
+        for resource in capabilities:
+            # Check access control
+            if resource.access_control == 'restricted':
+                if not account_id:
+                    continue
+                has_access = any(
+                    caa.account_id == account_id 
+                    for caa in resource.capability_account_access
+                )
+                if not has_access:
+                    continue
+            
+            # Get identifier from the service's MCP service
+            identifier = service.mcp_service.identifier if service.mcp_service else 'default'
+            resource_item = {
+                'uri': resource.resource_uri or f'resource://{identifier}/{resource.name}',
+                'name': resource.name,
+                'description': resource.description or ''
+            }
+            if resource.resource_mime_type:
+                resource_item['mimeType'] = resource.resource_mime_type
+            resource_list.append(resource_item)
+        
+        return {
+            'jsonrpc': '2.0',
+            'id': mcp_request.get('id') or 0,
+            'result': {
+                'resources': resource_list
+            }
+        }
+    
+    def _handle_resources_read(self, account, mcp_request: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle resources/read request - return content for capability resource"""
+        from app.models.models import Capability, Service
+        
+        params = mcp_request.get('params', {})
+        uri = params.get('uri', '')
+        
+        if not uri:
+            return {
+                'jsonrpc': '2.0',
+                'id': mcp_request.get('id') or 0,
+                'error': {
+                    'code': -32602,
+                    'message': 'Missing required parameter: uri'
+                }
+            }
+        
+        account_id = account.id if account else None
+        
+        # Get capability resources
+        resources = self.db.session.query(Capability).join(Service).filter(
+            Capability.capability_type == 'resource',
+            Capability.is_enabled == True,
+            Service.is_enabled == True
+        ).all()
+        
+        target_resource = None
+        for resource in resources:
+            identifier = resource.service.mcp_service.identifier if resource.service.mcp_service else 'default'
+            stored_uri = resource.resource_uri or f'resource://{identifier}/{resource.name}'
+            if stored_uri == uri or resource.name == uri:
+                target_resource = resource
+                break
+        
+        if not target_resource:
+            return {
+                'jsonrpc': '2.0',
+                'id': mcp_request.get('id') or 0,
+                'error': {
+                    'code': -32602,
+                    'message': f'Resource not found: {uri}'
+                }
+            }
+        
+        # Check access control for capability resource
+        if target_resource.access_control == 'restricted':
+            if not account_id:
+                return {
+                    'jsonrpc': '2.0',
+                    'id': mcp_request.get('id') or 0,
+                    'error': {
+                        'code': -32600,
+                        'message': 'Access denied to this resource'
+                    }
+                }
+            
+            has_access = any(
+                caa.account_id == account_id 
+                for caa in target_resource.capability_account_access
+            )
+            if not has_access:
+                return {
+                    'jsonrpc': '2.0',
+                    'id': mcp_request.get('id') or 0,
+                    'error': {
+                        'code': -32600,
+                        'message': 'Access denied to this resource'
+                    }
+                }
+        
+        # Return the capability resource content
+        content = target_resource.template_content or ''
+        mime_type = target_resource.resource_mime_type or 'text/plain'
+        identifier = target_resource.service.mcp_service.identifier if target_resource.service.mcp_service else 'default'
+        resource_uri = target_resource.resource_uri or f'resource://{identifier}/{target_resource.name}'
+        
+        return {
+            'jsonrpc': '2.0',
+            'id': mcp_request.get('id') or 0,
+            'result': {
+                'contents': [
+                    {
+                        'uri': resource_uri,
+                        'mimeType': mime_type,
+                        'text': content
+                    }
+                ]
             }
         }
     
@@ -755,7 +1036,7 @@ class MCPHandler:
     
     def _handle_prompts_get(self, mcp_request: Dict[str, Any]) -> Dict[str, Any]:
         """Handle prompts/get request - return specific prompt with filled template"""
-        from app.models.models import Capability
+        from app.models.models import Capability, Resource
         
         params = mcp_request.get('params', {})
         prompt_name = params.get('name')
@@ -788,8 +1069,18 @@ class MCPHandler:
                 }
             }
         
-        # Replace variables in template_content
-        template = prompt.template_content or ''
+        # Get template content from either template_content field or global Resource
+        template = ''
+        if prompt.template_content:
+            template = prompt.template_content
+        elif prompt.global_resource_id:
+            # Get template from Resource table
+            resource = self.db.session.query(Resource).filter(
+                Resource.id == prompt.global_resource_id,
+                Resource.is_enabled == True
+            ).first()
+            if resource:
+                template = resource.content or ''
         
         # Simple variable replacement: {{variable_name}}
         for key, value in arguments.items():
@@ -1289,6 +1580,26 @@ def execute_capability_api(capability, params: Dict[str, Any] = None):
     
     start_time = time.time()
     params = params or {}
+    
+    # Handle Resource type: simply return the stored content
+    if capability.capability_type == 'resource':
+        end_time = time.time()
+        execution_time_ms = int((end_time - start_time) * 1000)
+        
+        resource_content = capability.template_content or ''
+        resource_uri = capability.resource_uri or ''
+        resource_mime_type = capability.resource_mime_type or 'text/plain'
+        
+        return {
+            'success': True,
+            'status_code': 200,
+            'data': {
+                'uri': resource_uri,
+                'mimeType': resource_mime_type,
+                'text': resource_content
+            },
+            'execution_time_ms': execution_time_ms
+        }
     
     # Get the service (app) from capability
     service = capability.service

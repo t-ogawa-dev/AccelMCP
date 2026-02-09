@@ -149,6 +149,36 @@ def variable_edit(variable_id):
     return render_template('variables/edit.html', variable_id=variable_id)
 
 
+# ============= Resources Management Routes =============
+
+@admin_bp.route('/resources')
+@login_required
+def resources_list():
+    """Resources list page"""
+    return render_template('resources/list.html')
+
+
+@admin_bp.route('/resources/new')
+@login_required
+def resource_new():
+    """New resource page"""
+    return render_template('resources/new.html')
+
+
+@admin_bp.route('/resources/<int:resource_id>')
+@login_required
+def resource_detail(resource_id):
+    """Resource detail page"""
+    return render_template('resources/detail.html', resource_id=resource_id)
+
+
+@admin_bp.route('/resources/<int:resource_id>/edit')
+@login_required
+def resource_edit(resource_id):
+    """Edit resource page"""
+    return render_template('resources/edit.html', resource_id=resource_id)
+
+
 # ============= Template Management Routes =============
 
 @admin_bp.route('/mcp-templates')

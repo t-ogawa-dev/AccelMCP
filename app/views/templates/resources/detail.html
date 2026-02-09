@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Resource詳細 - Accel MCP{% endblock %}
+
+{% block breadcrumb %}
+<nav class="breadcrumb">
+    <a href="/dashboard" data-i18n="breadcrumb_home">ホーム</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="/resources" data-i18n="resource_list_title">Resources一覧</a>
+    <span class="breadcrumb-separator">›</span>
+    <span class="breadcrumb-current" id="resource-name-breadcrumb">...</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div id="resource-detail"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const resourceId = {{ resource_id }};
+</script>
+<script src="/assets/view/resources/detail.js"></script>
+{% endblock %}
