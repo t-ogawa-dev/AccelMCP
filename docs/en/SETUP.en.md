@@ -1,3 +1,5 @@
+[日本語](../SETUP.md) | English
+
 # MCP Server Setup Guide
 
 ## Startup Procedure
@@ -13,7 +15,7 @@ cp .env.example .env
 ### 2. Start Docker Containers
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 On first startup, the image will be built and the database will be initialized.
@@ -21,7 +23,7 @@ On first startup, the image will be built and the database will be initialized.
 ### 3. Check Logs
 
 ```bash
-docker-compose logs -f web
+docker compose logs -f web
 ```
 
 Once startup is complete, the default administrator's Bearer token will be displayed in the logs.
@@ -208,12 +210,10 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 Example of using a weather API via MCP:
 
 1. Register Service:
-
    - Name: Weather Service
    - Subdomain: weather
 
 2. Register Capability:
-
    - Name: get_current_weather
    - Type: API
    - URL: https://api.openweathermap.org/data/2.5/weather
@@ -245,10 +245,10 @@ Example of integrating database MCP server and filesystem MCP server:
 
 ```bash
 # Check MySQL container logs
-docker-compose logs db
+docker compose logs db
 
 # Wait for database to start
-docker-compose restart web
+docker compose restart web
 ```
 
 ### Port Conflict
@@ -276,11 +276,9 @@ Click "Regenerate Token" on the account details screen to issue a new token.
    ```
 
 2. **Change Administrator Password**
-
    - After login, change password on the account details screen
 
 3. **Use HTTPS**
-
    - SSL/TLS termination with reverse proxy (Nginx, Traefik)
 
 4. **Change Database Password**
@@ -290,10 +288,10 @@ Click "Regenerate Token" on the account details screen to issue a new token.
 
 ```bash
 # Backup database
-docker-compose exec db mysqldump -u mcpuser -pmcppassword mcpdb > backup.sql
+docker compose exec db mysqldump -u mcpuser -pmcppassword mcpdb > backup.sql
 
 # Restore database
-docker-compose exec -T db mysql -u mcpuser -pmcppassword mcpdb < backup.sql
+docker compose exec -T db mysql -u mcpuser -pmcppassword mcpdb < backup.sql
 ```
 
 ## Development Mode
@@ -310,7 +308,7 @@ pip install -r requirements.txt
 
 # Start development server
 export DATABASE_URL=mysql+pymysql://mcpuser:mcppassword@localhost:3306/mcpdb
-python app.py
+python run.py
 ```
 
 ## API Reference

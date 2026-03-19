@@ -1,3 +1,5 @@
+[English](en/TESTING.en.md) | 日本語
+
 # MCP Server - Testing Guide
 
 ## テスト概要
@@ -8,25 +10,61 @@
 
 ```
 tests/
-├── __init__.py                 # テストパッケージ初期化
-├── conftest.py                 # pytest設定とフィクスチャ
-├── conftest_playwright.py      # Playwright設定
-├── test_models.py              # モデルのテスト
-├── test_api.py                 # API エンドポイントのテスト
-├── test_views.py               # ビュー（HTMLページ）のテスト
-├── test_integration.py         # 統合テスト
-└── e2e/                        # E2Eテスト（Playwright）
-    ├── __init__.py
-    ├── test_login.py           # ログインページ
-    ├── test_dashboard.py       # ダッシュボード
-    ├── accounts/
-    │   └── test_accounts.py    # アカウント管理
-    ├── capabilities/
-    │   └── test_capabilities.py # Capabilities管理
-    ├── services/
-    │   └── test_services.py    # サービス管理
-    └── templates/
-        └── test_templates.py   # テンプレート管理
+├── __init__.py                     # テストパッケージ初期化
+├── conftest.py                     # pytest設定とフィクスチャ
+├── conftest_playwright.py          # Playwright設定
+├── README.md                       # テストドキュメント（日本語）
+├── README.en.md                    # テストドキュメント（英語）
+├── unit/                           # ユニット・統合テスト
+│   ├── admin/
+│   │   └── test_admin_settings.py  # 管理設定テスト
+│   ├── infrastructure/
+│   │   ├── test_database_schema.py # DBスキーマテスト
+│   │   ├── test_error_responses.py # エラーレスポンステスト
+│   │   ├── test_i18n.py            # 国際化テスト
+│   │   └── test_timeout_feature.py # タイムアウト機能テスト
+│   ├── logging/
+│   │   ├── test_connection_logs.py # 接続ログテスト
+│   │   └── test_log_search.py      # ログ検索テスト
+│   ├── mcp/
+│   │   ├── test_capability_integration.py  # Capability統合テスト
+│   │   ├── test_capability_testing.py      # Capabilityテスト機能
+│   │   ├── test_mcp_protocol.py            # MCPプロトコルテスト
+│   │   ├── test_mcp_services.py            # MCPサービステスト
+│   │   ├── test_prompt_and_resource_capability.py # プロンプト・リソーステスト
+│   │   └── test_stdio_mcp.py               # stdio MCPテスト
+│   ├── security/
+│   │   ├── test_permissions.py     # 権限テスト
+│   │   └── test_security.py        # セキュリティテスト
+│   ├── templates/
+│   │   ├── test_prompt_templates.py        # プロンプトテンプレートテスト
+│   │   ├── test_template_import_export.py  # テンプレートインポート/エクスポート
+│   │   └── test_variables.py               # 変数テスト
+│   └── ui/
+│       ├── test_javascript_static.py  # JavaScript静的ファイルテスト
+│       └── test_modal_and_sync.py     # モーダル・同期テスト
+├── e2e/                            # E2Eテスト（Playwright）
+│   ├── __init__.py
+│   ├── conftest.py
+│   ├── test_login.py               # ログインページ
+│   ├── test_dashboard.py           # ダッシュボード
+│   ├── test_javascript_errors.py   # JavaScriptエラーチェック
+│   ├── accounts/
+│   │   └── test_accounts.py        # アカウント管理
+│   ├── capabilities/
+│   │   ├── test_capabilities.py
+│   │   └── test_capabilities_page.py
+│   ├── mcp_services/
+│   │   └── test_mcp_services.py    # MCPサービス管理
+│   ├── mcp_templates/
+│   │   └── test_templates.py       # テンプレート管理
+│   ├── security/
+│   │   └── test_security.py        # セキュリティE2Eテスト
+│   ├── services/
+│   │   └── test_services.py        # サービス管理
+│   └── variables/
+│       └── test_variables.py       # 変数管理
+└── reports/                        # テストレポート（自動生成）
 ```
 
 ## セットアップ
@@ -79,19 +117,19 @@ pytest
 ### 特定のファイルのテストを実行
 
 ```bash
-pytest tests/test_models.py
+pytest tests/unit/mcp/test_mcp_protocol.py
 ```
 
 ### 特定のクラスのテストを実行
 
 ```bash
-pytest tests/test_models.py::TestServiceModel
+pytest tests/unit/mcp/test_mcp_protocol.py::TestMcpProtocol
 ```
 
 ### 特定のテストケースを実行
 
 ```bash
-pytest tests/test_models.py::TestServiceModel::test_create_service
+pytest tests/unit/mcp/test_mcp_protocol.py::TestMcpProtocol::test_tools_list_public_access
 ```
 
 ### 詳細表示で実行
@@ -116,74 +154,61 @@ pytest --cov=app --cov-report=html
 
 ## テストの種類
 
-### 1. モデルテスト (`test_models.py`)
+### 1. MCPプロトコルテスト (`unit/mcp/`)
 
-データベースモデルの基本的な CRUD 操作とメソッドをテストします。
+MCPプロトコルの各エンドポイント、Capabilityの登録・実行、stdio接続などをテストします。
 
 ```python
-def test_create_service(self, db):
-    """サービスの作成テスト"""
-    service = Service(
-        subdomain='test',
-        name='Test Service',
-        service_type='api'
+def test_tools_list_public_access(self, client, db):
+    """公開サービスのtools/listを認証なしで取得できる"""
+    response = client.post(
+        '/mcp',
+        json={'jsonrpc': '2.0', 'id': 1, 'method': 'tools/list'},
+        headers={'X-Subdomain': 'myservice'}
     )
-    db.session.add(service)
-    db.session.commit()
-
-    assert service.id is not None
-```
-
-### 2. API テスト (`test_api.py`)
-
-RESTful API エンドポイントのリクエスト/レスポンスをテストします。
-
-```python
-def test_get_services(self, auth_client):
-    """サービス一覧取得のテスト"""
-    response = auth_client.get('/api/services')
-
-    assert response.status_code == 200
-    data = json.loads(response.data)
-    assert len(data) >= 0
-```
-
-### 3. ビューテスト (`test_views.py`)
-
-HTML ページのレンダリングと画面遷移をテストします。
-
-```python
-def test_service_list(self, auth_client):
-    """サービス一覧画面のテスト"""
-    response = auth_client.get('/services')
-
     assert response.status_code == 200
 ```
 
-### 4. 統合テスト (`test_integration.py`)
+### 2. セキュリティテスト (`unit/security/`)
 
-複数のコンポーネントを組み合わせた動作をテストします。
+権限管理、認証、ブルートフォース対策などをテストします。
 
-### 5. E2E テスト (`e2e/`) - Playwright
+### 3. テンプレートテスト (`unit/templates/`)
 
-実際のブラウザを使用したエンドツーエンドテスト（Capybara 相当）。
+ビルトインテンプレートのインポート/エクスポート、変数機能、プロンプトテンプレートをテストします。
+
+### 4. ログテスト (`unit/logging/`)
+
+MCP接続ログの記録、検索、CSVエクスポート機能をテストします。
+
+### 5. インフラストラクチャテスト (`unit/infrastructure/`)
+
+DBスキーマ、エラーレスポンス、i18n、タイムアウト機能などをテストします。
+
+### 6. E2E テスト (`e2e/`) - Playwright
+
+実際のブラウザを使用したエンドツーエンドテスト（Capybara相当）。
 
 **ファイル構成:**
 
 - `e2e/test_login.py` - ログイン/ログアウト
 - `e2e/test_dashboard.py` - ダッシュボード
-- `e2e/services/test_services.py` - サービス管理（一覧/新規/編集/削除）
-- `e2e/capabilities/test_capabilities.py` - Capabilities 管理（一覧/編集/トグル）
-- `e2e/accounts/test_accounts.py` - アカウント管理（一覧/新規/編集/削除）
-- `e2e/templates/test_templates.py` - テンプレート管理（一覧/新規/編集/使用）
+- `e2e/test_javascript_errors.py` - JavaScriptエラー検出
+- `e2e/services/test_services.py` - サービス管理
+- `e2e/capabilities/test_capabilities.py` - Capabilities 管理
+- `e2e/accounts/test_accounts.py` - アカウント管理
+- `e2e/mcp_services/test_mcp_services.py` - MCPサービス管理
+- `e2e/mcp_templates/test_templates.py` - テンプレート管理
+- `e2e/security/test_security.py` - セキュリティE2Eテスト
+- `e2e/variables/test_variables.py` - 変数管理
 
 ```python
 def test_login_with_valid_credentials(self, page: Page):
     """正しい認証情報でログインできる"""
     page.goto("http://localhost:5000/login")
 
-    page.fill('input[name="username"]', "admin")
-    page.fill('input[name="password"]', "admin123")
+    page.fill('input[name="username"]', "accel")
+    page.fill('input[name="password"]', "universe")
     page.click('button[type="submit"]')
 
     page.wait_for_url("http://localhost:5000/")
@@ -202,7 +227,7 @@ pytest tests/e2e/
 # 特定のページのテスト実行
 pytest tests/e2e/test_login.py
 pytest tests/e2e/services/test_services.py
-pytest tests/e2e/templates/test_templates.py
+pytest tests/e2e/mcp_templates/test_templates.py
 
 # マーカーで実行
 pytest -m e2e
@@ -250,7 +275,7 @@ def test_something(self, auth_client, sample_service):
 def test_e2e_example(self, page: Page):
     """E2Eテストの例"""
     page.goto("http://localhost:5000/login")
-    page.fill('input[name="username"]', "admin")
+    page.fill('input[name="username"]', "accel")
     page.click('button[type="submit"]')
 ```
 
@@ -276,12 +301,12 @@ GitHub Actions などの CI 環境でテストを実行する例:
 
 - name: Run unit tests
   run: |
-    pytest tests/ --ignore=tests/test_e2e.py --cov=app --cov-report=xml
+    pytest tests/unit/ --cov=app --cov-report=xml
 
 - name: Run E2E tests
   run: |
     docker compose up -d
-    pytest tests/test_e2e.py
+    pytest tests/e2e/
     docker compose down
 
 - name: Upload coverage
@@ -324,7 +349,7 @@ python -m playwright install
 ### ブラウザを表示して実行
 
 ```bash
-pytest tests/test_e2e.py --headed
+pytest tests/e2e/ --headed
 ```
 
 ### スローモーション実行

@@ -432,7 +432,7 @@ python app.py
 **すべてのチェックを実行:**
 
 ```bash
-./check.sh
+./run_check.sh
 ```
 
 このスクリプトは以下を実行します：
@@ -444,7 +444,7 @@ python app.py
 **自動修正とフォーマット:**
 
 ```bash
-./format.sh
+./run_format.sh
 ```
 
 このスクリプトは以下を実行します：
@@ -474,3 +474,19 @@ ruff check app/ tests/ --fix
 **設定ファイル:**
 
 - `pyproject.toml` - Ruff と mypy の設定
+
+> **注意:** `check.sh` と `format.sh` は `run_check.sh` と `run_format.sh` にリネームされています。
+
+## ドキュメント
+
+詳細なドキュメントは `docs/` ディレクトリにあります。
+
+| ドキュメント                                                                             | 説明                                                 |
+| ---------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| [クイックスタート](docs/QUICKSTART.md) / [English](docs/en/QUICKSTART.en.md)             | 5 分で MCP サーバーを起動・テストする最短手順        |
+| [セットアップガイド](docs/SETUP.md) / [English](docs/en/SETUP.en.md)                     | 詳細なセットアップ・起動手順                         |
+| [MCP エンドポイント詳細](docs/MCP_ENDPOINTS.md) / [English](docs/en/MCP_ENDPOINTS.en.md) | 各 MCP エンドポイントの詳細な使用方法                |
+| [ディレクトリ構造](docs/STRUCTURE.md) / [English](docs/en/STRUCTURE.en.md)               | MVC パターンに基づくプロジェクト構成の説明           |
+| [テストガイド](docs/TESTING.md) / [English](docs/en/TESTING.en.md)                       | ユニットテスト・統合テストの実行方法と構成           |
+| [E2E テスト](docs/E2E_TESTING.md) / [English](docs/en/E2E_TESTING.en.md)                 | Playwright を使った E2E テストの実行方法             |
+| [データベースマイグレーション](docs/MIGRATION.md) / [English](docs/en/MIGRATION.en.md)   | Flask-Migrate (Alembic) を使ったマイグレーション管理 |

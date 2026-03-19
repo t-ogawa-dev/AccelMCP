@@ -1,3 +1,5 @@
+[日本語](../MCP_ENDPOINTS.md) | English
+
 # MCP Endpoint Detailed Guide
 
 This document explains the detailed usage of each MCP server endpoint.

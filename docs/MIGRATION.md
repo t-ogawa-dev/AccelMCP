@@ -1,21 +1,21 @@
+[English](en/MIGRATION.en.md) | 日本語
+
 # Database Migration Guide
 
 AccelMCP は Flask-Migrate (Alembic)を使用してデータベースマイグレーションを管理しています。
 
-マイグレーションファイルは`db/migrate/`ディレクトリに配置され、テーブルグループごとに分けて管理されます。
+マイグレーションファイルは`db/migrations/`ディレクトリに配置されます。
 
 ## ディレクトリ構成
 
 ```
 db/
-└── migrate/                    # マイグレーションディレクトリ
-    ├── alembic.ini            # Alembic設定
-    ├── env.py                 # マイグレーション環境設定
-    ├── script.py.mako         # マイグレーションテンプレート
-    └── versions/              # マイグレーションファイル
-        ├── 20251117_xxxxxx_001_core_tables_create_core_tables.py
-        ├── 20251117_xxxxxx_002_template_tables_create_template_tables.py
-        └── 20251117_xxxxxx_003_builtin_templates_load_builtin_service_templates.py
+├── migrate.py              # マイグレーション管理スクリプト
+└── migrations/             # Alembicポイント
+    ├── alembic.ini          # Alembic設定
+    ├── env.py               # マイグレーション環境設定
+    ├── script.py.mako       # マイグレーションテンプレート
+    └── versions/            # マイグレーションファイル
 ```
 
 ## セットアップ
@@ -28,23 +28,9 @@ db/
    pip install -r requirements.txt
    ```
 
-2. **自動セットアップスクリプトを実行**
-
+2. **マイグレーションの適用**
    ```bash
-   python setup_migrations.py
-   ```
-
-   このスクリプトは以下を自動実行します：
-
-   - `db/migrate/`ディレクトリの初期化
-   - テーブルグループごとの個別マイグレーションファイルの生成
-     - 001_core_tables: 基本テーブル（connection_accounts, services, capabilities 等）
-     - 002_template_tables: テンプレートテーブル（mcp_service_templates, mcp_capability_templates）
-     - 003_builtin_templates: ビルトインテンプレートデータのロード
-
-3. **マイグレーションの適用**
-   ```bash
-   python migrate.py upgrade
+   python db/migrate.py upgrade
    ```
 
 ## マイグレーションコマンド
@@ -52,31 +38,31 @@ db/
 ### 新しいマイグレーションを作成
 
 ```bash
-python migrate.py migrate "Description of changes"
+python db/migrate.py migrate "Description of changes"
 ```
 
 ### マイグレーションを適用（アップグレード）
 
 ```bash
-python migrate.py upgrade
+python db/migrate.py upgrade
 ```
 
 ### マイグレーションをロールバック（ダウングレード）
 
 ```bash
-python migrate.py downgrade
+python db/migrate.py downgrade
 ```
 
 ### 現在のリビジョンを確認
 
 ```bash
-python migrate.py current
+python db/migrate.py current
 ```
 
 ### マイグレーション履歴を表示
 
 ```bash
-python migrate.py history
+python db/migrate.py history
 ```
 
 ## Docker での使用
@@ -84,29 +70,29 @@ python migrate.py history
 ### 初回起動
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
-コンテナ起動時に自動的に`python migrate.py upgrade`が実行されます。
+コンテナ起動時に自動的に`python db/migrate.py upgrade`が実行されます。
 
 ### 新しいマイグレーションを作成（ローカル環境で）
 
 ```bash
 # ローカルでモデルを変更後
-python migrate.py migrate "Add new field"
+python db/migrate.py migrate "Add new field"
 
 # マイグレーションファイルを確認
-git add migrations/versions/
+git add db/migrations/versions/
 git commit -m "Add migration: Add new field"
 
 # コンテナを再起動してマイグレーション適用
-docker-compose restart web
+docker compose restart web
 ```
 
 ### マイグレーションのロールバック
 
 ```bash
-docker-compose exec web python migrate.py downgrade
+docker compose exec web python db/migrate.py downgrade
 ```
 
 ## サービステンプレートの追加
@@ -145,7 +131,7 @@ docker-compose exec web python migrate.py downgrade
 2. **マイグレーションを作成**
 
    ```bash
-   python migrate.py migrate "Add MS Office template"
+   python db/migrate.py migrate "Add MS Office template"
    ```
 
 3. **マイグレーションファイルを編集（必要に応じて）**
@@ -177,11 +163,7 @@ docker-compose exec web python migrate.py downgrade
 4. **マイグレーションを適用**
 
    ```bash
-   python migrate.py upgrade
-   ```
-
-   ```
-
+   python db/migrate.py upgrade
    ```
 
 ## トラブルシューティング
@@ -189,15 +171,15 @@ docker-compose exec web python migrate.py downgrade
 ### データベースをリセットしたい
 
 ```bash
-docker-compose down -v  # ボリュームを削除
-docker-compose up -d    # 再起動してマイグレーション適用
+docker compose down -v  # ボリュームを削除
+docker compose up -d    # 再起動してマイグレーション適用
 ```
 
 ### マイグレーション履歴が壊れた場合
 
 ```bash
 # データベースに直接接続
-docker-compose exec db mysql -u mcpuser -p mcpdb
+docker compose exec db mysql -u mcpuser -p mcpdb
 
 # alembic_versionテーブルを確認
 SELECT * FROM alembic_version;
@@ -210,22 +192,19 @@ DELETE FROM alembic_version;
 
 ```bash
 # マイグレーションを統合
-python migrate.py merge heads -m "Merge migrations"
+python db/migrate.py merge heads -m "Merge migrations"
 ```
 
 ## ベストプラクティス
 
 1. **モデル変更後は必ずマイグレーションを作成**
-
-   - `app/models/models.py`を変更したら`migrate.py migrate`を実行
+   - `app/models/models.py`を変更したら`python db/migrate.py migrate`を実行
 
 2. **マイグレーションファイルをレビュー**
-
    - 自動生成されたマイグレーションファイルを確認
    - 必要に応じて手動で調整
 
 3. **本番環境でのマイグレーション**
-
    - 必ずバックアップを取得
    - ステージング環境でテスト
    - ダウンタイムを考慮

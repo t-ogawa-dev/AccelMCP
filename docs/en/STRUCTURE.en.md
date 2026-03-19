@@ -1,3 +1,5 @@
+[日本語](../STRUCTURE.md) | English
+
 # MVC Directory Structure
 
 This project follows the MVC (Model-View-Controller) pattern.
@@ -5,7 +7,7 @@ This project follows the MVC (Model-View-Controller) pattern.
 ## Directory Structure
 
 ```
-test2/
+AccelMCP/
 ├── app/                          # Main application package
 │   ├── __init__.py              # Application factory
 │   ├── controllers/             # Controller layer
@@ -16,34 +18,43 @@ test2/
 │   │   └── mcp_controller.py    # MCP protocol endpoints
 │   ├── models/                  # Model layer
 │   │   ├── __init__.py
-│   │   └── models.py            # Database models (User, Service, Capability, etc.)
+│   │   └── models.py            # DB models (McpService, Service, Capability, etc.)
 │   ├── views/                   # View layer
 │   │   ├── __init__.py
 │   │   └── templates/           # HTML templates
-│   │       ├── login.html
-│   │       ├── dashboard.html
-│   │       ├── services/        # Service management screens
-│   │       ├── capabilities/    # Capability management screens
-│   │       └── users/          # Account management screens
-│   ├── assets/                  # Static files (formerly static)
-│   │   └── style.css           # CSS styles
+│   ├── assets/                  # Static files (CSS, JS)
 │   ├── services/                # Business logic layer
 │   │   ├── __init__.py
-│   │   └── mcp_handler.py      # MCP processing logic
-│   └── config/                  # Configuration files
-│       ├── __init__.py
-│       └── config.py            # Application configuration
+│   │   ├── mcp_handler.py      # MCP request handling & relay
+│   │   ├── mcp_logger.py       # Structured JSON connection logging
+│   │   ├── mcp_discovery.py    # MCP service type detection
+│   │   ├── audit_logger.py     # Admin audit & access logging
+│   │   ├── template_sync.py    # Builtin template GitHub sync
+│   │   └── variable_replacer.py # Variable expansion in URLs/headers
+│   ├── config/                  # Configuration
+│   │   ├── __init__.py
+│   │   └── config.py            # Application configuration
+│   └── utils/                   # Utilities
+│       └── i18n.py              # Internationalization helper
+├── db/                          # Database management
+│   ├── migrate.py              # Migration management script
+│   ├── migrations/             # Alembic migrations
+│   └── seeds/                  # Initial data seeds
+├── data/
+│   └── builtin_templates/      # Builtin template definitions
+├── tests/                       # Test suite
+│   ├── unit/                   # Unit tests
+│   └── e2e/                    # E2E tests (Playwright)
+├── docs/                        # Documentation
 ├── run.py                       # Application startup script
-├── stdio_server.py             # stdio MCP server
+├── run_check.sh                 # Code quality check script
+├── run_format.sh               # Code format script
+├── run_tests.sh                # Test runner script
+├── setup_playwright.sh         # Playwright initial setup
 ├── requirements.txt            # Python dependencies
+├── pyproject.toml              # Ruff/mypy configuration
 ├── Dockerfile                  # Docker image definition
-├── compose.yaml                # Docker Compose configuration
-├── init.sql                    # DB initialization script
-└── docs/                       # Documentation
-    ├── README.md
-    ├── SETUP.md
-    ├── QUICKSTART.md
-    └── MCP_ENDPOINTS.md
+└── compose.yaml                # Docker Compose configuration
 ```
 
 ## Role of Each Layer
@@ -62,10 +73,13 @@ Receive requests, call appropriate services or models, and return responses.
 Handle database interactions. Define data structures.
 
 - **models.py**:
-  - User - User information
-  - Service - Service definitions
-  - Capability - Tool definitions
-  - UserPermission - User permissions
+  - `McpService` - MCP service definition
+  - `Service` - Apps (mapped to apps table)
+  - `Capability` - Tool definitions
+  - `ConnectionAccount` - User accounts
+  - `AccountPermission` - Account permissions
+  - `McpConnectionLog` - MCP connection logs
+  - `McpServiceTemplate` / `McpCapabilityTemplate` - Templates
 
 ### Views
 
@@ -78,10 +92,12 @@ Screens displayed to users. HTML templates and CSS.
 
 Implement business logic. Processing between controllers and models.
 
-- **mcp_handler.py**:
-  - MCP request processing
-  - API/MCP relay
-  - Permission checking
+- **mcp_handler.py**: MCP request processing, API/MCP relay, permission checking
+- **mcp_logger.py**: Structured JSON output for MCP connection logs
+- **mcp_discovery.py**: MCP service type auto-detection
+- **audit_logger.py**: Admin operation audit log, login history
+- **template_sync.py**: Builtin template sync from GitHub
+- **variable_replacer.py**: Variable expansion in URLs and headers
 
 ### Config
 
@@ -103,7 +119,7 @@ python run.py
 ### Docker
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 ## Import Paths
@@ -112,7 +128,7 @@ With the new structure, import as follows:
 
 ```python
 # Models
-from app.models.models import db, User, Service, Capability, UserPermission
+from app.models.models import db, McpService, Service, Capability, ConnectionAccount, AccountPermission
 
 # Services
 from app.services.mcp_handler import MCPHandler
@@ -123,24 +139,12 @@ from app.config.config import Config
 
 ## Changes from Old Structure
 
-### Before
-
-```
-test2/
-├── app.py              # All route definitions
-├── models.py           # Model definitions
-├── mcp_handler.py      # MCP processing
-├── templates/          # Templates
-└── static/             # Static files
-```
-
-### After (MVC Structure)
-
 - `app.py` → Split: `app/__init__.py` + `app/controllers/*`
 - `models.py` → `app/models/models.py`
 - `mcp_handler.py` → `app/services/mcp_handler.py`
 - `templates/` → `app/views/templates/`
 - `static/` → `app/assets/`
+- DB management: SQL files → Flask-Migrate (Alembic) (`db/migrations/`)
 
 ## Advantages
 
@@ -155,17 +159,14 @@ test2/
 ### Adding New Features
 
 1. **Adding New Endpoints**
-
    - Admin interface: `app/controllers/admin_controller.py`
    - API: `app/controllers/api_controller.py`
    - MCP: `app/controllers/mcp_controller.py`
 
 2. **Adding New Models**
-
    - Add to `app/models/models.py`
 
 3. **Adding New Business Logic**
-
    - Create a new service class in `app/services/`
 
 4. **Adding New Configuration**

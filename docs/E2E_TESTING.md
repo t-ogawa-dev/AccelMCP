@@ -1,3 +1,5 @@
+[English](en/E2E_TESTING.en.md) | 日本語
+
 # E2E Testing with Playwright
 
 このプロジェクトでは、E2E テスト用に専用のコンテナを使用しています。

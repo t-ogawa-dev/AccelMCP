@@ -1,3 +1,5 @@
+[English](en/SETUP.en.md) | 日本語
+
 # MCP Server セットアップガイド
 
 ## 起動手順
@@ -13,7 +15,7 @@ cp .env.example .env
 ### 2. Docker コンテナの起動
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 初回起動時は、イメージのビルドとデータベースの初期化が行われます。
@@ -21,7 +23,7 @@ docker-compose up -d
 ### 3. ログの確認
 
 ```bash
-docker-compose logs -f web
+docker compose logs -f web
 ```
 
 起動が完了すると、デフォルト管理者の Bearer トークンがログに表示されます。
@@ -208,12 +210,10 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 天気 API を MCP 経由で利用する例:
 
 1. サービス登録:
-
    - 名前: Weather Service
    - サブドメイン: weather
 
 2. Capability 登録:
-
    - 名前: get_current_weather
    - タイプ: API
    - URL: https://api.openweathermap.org/data/2.5/weather
@@ -245,10 +245,10 @@ AI: (get_current_weather ツールを使用して天気情報を取得)
 
 ```bash
 # MySQLコンテナのログを確認
-docker-compose logs db
+docker compose logs db
 
 # データベースが起動するまで待機
-docker-compose restart web
+docker compose restart web
 ```
 
 ### ポート競合
@@ -276,11 +276,9 @@ ports:
    ```
 
 2. **管理者パスワードの変更**
-
    - ログイン後、ユーザー詳細画面でパスワードを変更
 
 3. **HTTPS の使用**
-
    - リバースプロキシ (Nginx, Traefik) で SSL/TLS 終端
 
 4. **データベースパスワードの変更**
@@ -290,10 +288,10 @@ ports:
 
 ```bash
 # データベースのバックアップ
-docker-compose exec db mysqldump -u mcpuser -pmcppassword mcpdb > backup.sql
+docker compose exec db mysqldump -u mcpuser -pmcppassword mcpdb > backup.sql
 
 # データベースのリストア
-docker-compose exec -T db mysql -u mcpuser -pmcppassword mcpdb < backup.sql
+docker compose exec -T db mysql -u mcpuser -pmcppassword mcpdb < backup.sql
 ```
 
 ## 開発モード
@@ -310,7 +308,7 @@ pip install -r requirements.txt
 
 # 開発サーバーの起動
 export DATABASE_URL=mysql+pymysql://mcpuser:mcppassword@localhost:3306/mcpdb
-python app.py
+python run.py
 ```
 
 ## API リファレンス

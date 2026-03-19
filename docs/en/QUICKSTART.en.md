@@ -1,18 +1,17 @@
-# Quick Start - Try the MCP Server in 5 Minutes
+[日本語](../QUICKSTART.md) | English
 
 This guide explains the quickest way to start and test the MCP server.
 
 ## 1. Start Server (1 minute)
 
 ```bash
-cd /Users/takahisaogawa/test/test2
-docker-compose up -d
+docker compose up -d
 ```
 
 Wait for startup:
 
 ```bash
-docker-compose logs -f web
+docker compose logs -f web
 ```
 
 Once you see `Default admin user created`, the server is ready.
@@ -128,18 +127,6 @@ curl -X POST \
 }
 ```
 
-## 5. Run Test Script
-
-If you have a test script available:
-
-```bash
-# Edit and set your token
-# Change BEARER_TOKEN = "YOUR_BEARER_TOKEN_HERE"
-# Set SUBDOMAIN = "weather"
-
-python3 test_mcp.py
-```
-
 ## Done! 🎉
 
 You can now:
@@ -192,15 +179,15 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ```bash
 # Restart containers
-docker-compose restart
+docker compose restart
 
 # Or fully rebuild
-docker-compose down
-docker-compose up -d --build
+docker compose down
+docker compose up -d --build
 ```
 
 ## Additional Documentation
 
-- **Detailed Setup**: `SETUP.en.md`
-- **MCP Endpoint Details**: `MCP_ENDPOINTS.en.md`
-- **Project Overview**: `README.en.md`
+- **Detailed Setup**: [SETUP.md](SETUP.md)
+- **MCP Endpoint Details**: [MCP_ENDPOINTS.md](MCP_ENDPOINTS.md)
+- **Project Overview**: [README.en.md](../../README.en.md)

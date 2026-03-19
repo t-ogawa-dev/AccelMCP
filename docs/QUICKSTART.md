@@ -1,3 +1,5 @@
+[English](en/QUICKSTART.en.md) | 日本語
+
 # クイックスタート - 5 分で MCP サーバーを試す
 
 このガイドでは、MCP サーバーを起動してテストするまでの最短手順を説明します。
@@ -5,14 +7,13 @@
 ## 1. サーバー起動 (1 分)
 
 ```bash
-cd /Users/takahisaogawa/test/test2
-docker-compose up -d
+docker compose up -d
 ```
 
 起動を待つ:
 
 ```bash
-docker-compose logs -f web
+docker compose logs -f web
 ```
 
 `Default admin user created` が表示されたら起動完了です。
@@ -21,8 +22,8 @@ docker-compose logs -f web
 
 1. ブラウザで http://localhost:5000 を開く
 2. ログイン:
-   - ID: `admin`
-   - パスワード: `admin123`
+   - ID: `accel`
+   - パスワード: `universe`
 
 ## 3. テストサービスを作成 (2 分)
 
@@ -130,16 +131,6 @@ curl -X POST \
 }
 ```
 
-## 5. テストスクリプトを実行
-
-```bash
-# test_mcp.py を編集してトークンを設定
-# BEARER_TOKEN = "YOUR_BEARER_TOKEN_HERE" の行を変更
-# SUBDOMAIN = "weather" に変更
-
-python3 test_mcp.py
-```
-
 ## 完了! 🎉
 
 これで以下ができるようになりました:
@@ -192,11 +183,11 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ```bash
 # コンテナを再起動
-docker-compose restart
+docker compose restart
 
 # または完全に再ビルド
-docker-compose down
-docker-compose up -d --build
+docker compose down
+docker compose up -d --build
 ```
 
 ## その他のドキュメント

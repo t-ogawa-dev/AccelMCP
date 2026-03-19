@@ -1,3 +1,5 @@
+[English](en/STRUCTURE.en.md) | 日本語
+
 # MVC ディレクトリ構造
 
 このプロジェクトは MVC（Model-View-Controller）パターンに従って構成されています。
@@ -5,7 +7,7 @@
 ## ディレクトリ構造
 
 ```
-test2/
+AccelMCP/
 ├── app/                          # メインアプリケーションパッケージ
 │   ├── __init__.py              # アプリケーションファクトリ
 │   ├── controllers/             # コントローラー層
@@ -16,34 +18,43 @@ test2/
 │   │   └── mcp_controller.py    # MCPプロトコルエンドポイント
 │   ├── models/                  # モデル層
 │   │   ├── __init__.py
-│   │   └── models.py            # データベースモデル (User, Service, Capability, etc.)
+│   │   └── models.py            # DBモデル (McpService, Service, Capability, 等)
 │   ├── views/                   # ビュー層
 │   │   ├── __init__.py
 │   │   └── templates/           # HTMLテンプレート
-│   │       ├── login.html
-│   │       ├── dashboard.html
-│   │       ├── services/        # サービス管理画面
-│   │       ├── capabilities/    # Capability管理画面
-│   │       └── users/          # ユーザー管理画面
-│   ├── assets/                  # 静的ファイル (旧static)
-│   │   └── style.css           # CSSスタイル
+│   ├── assets/                  # 静的ファイル (CSS, JS)
 │   ├── services/                # ビジネスロジック層
 │   │   ├── __init__.py
-│   │   └── mcp_handler.py      # MCP処理ロジック
-│   └── config/                  # 設定ファイル
-│       ├── __init__.py
-│       └── config.py            # アプリケーション設定
+│   │   ├── mcp_handler.py      # MCPリクエスト処理・中継
+│   │   ├── mcp_logger.py       # MCP接続ログの構造化出力
+│   │   ├── mcp_discovery.py    # MCPサービスのタイプ検出
+│   │   ├── audit_logger.py     # 監査ログ・アクセスログ
+│   │   ├── template_sync.py    # ビルトインテンプレートの同期
+│   │   └── variable_replacer.py # 変数展開
+│   ├── config/                  # 設定ファイル
+│   │   ├── __init__.py
+│   │   └── config.py            # アプリケーション設定
+│   └── utils/                   # ユーティリティ
+│       └── i18n.py              # 国際化ヘルパー
+├── db/                          # データベース管理
+│   ├── migrate.py              # マイグレーション管理スクリプト
+│   ├── migrations/             # Alembicマイグレーション
+│   └── seeds/                  # 初期データシード
+├── data/
+│   └── builtin_templates/      # ビルトインテンプレート定義
+├── tests/                       # テストスイート
+│   ├── unit/                   # ユニットテスト
+│   └── e2e/                    # E2Eテスト (Playwright)
+├── docs/                        # ドキュメント
 ├── run.py                       # アプリケーション起動スクリプト
-├── stdio_server.py             # stdio MCPサーバー
+├── run_check.sh                 # コード品質チェックスクリプト
+├── run_format.sh               # コードフォーマットスクリプト
+├── run_tests.sh                # テスト実行スクリプト
+├── setup_playwright.sh         # Playwright初期セットアップ
 ├── requirements.txt            # Python依存関係
+├── pyproject.toml              # Ruff/mypy設定
 ├── Dockerfile                  # Dockerイメージ定義
-├── compose.yaml                # Docker Compose設定
-├── init.sql                    # DB初期化スクリプト
-└── docs/                       # ドキュメント
-    ├── README.md
-    ├── SETUP.md
-    ├── QUICKSTART.md
-    └── MCP_ENDPOINTS.md
+└── compose.yaml                # Docker Compose設定
 ```
 
 ## 各層の役割
@@ -62,10 +73,13 @@ test2/
 データベースとのやり取りを担当。データ構造を定義。
 
 - **models.py**:
-  - User - ユーザー情報
-  - Service - サービス定義
-  - Capability - Tool 定義
-  - UserPermission - ユーザー権限
+  - `McpService` - MCPサービス定義
+  - `Service` - アプリ（appsテーブルにマッピング）
+  - `Capability` - Tool 定義
+  - `ConnectionAccount` - 接続アカウント（ユーザー）
+  - `AccountPermission` - アカウント権限
+  - `McpConnectionLog` - MCP接続ログ
+  - `McpServiceTemplate` / `McpCapabilityTemplate` - テンプレート
 
 ### Views (ビュー)
 
@@ -78,10 +92,12 @@ test2/
 
 ビジネスロジックを実装。コントローラーとモデルの間の処理。
 
-- **mcp_handler.py**:
-  - MCP リクエスト処理
-  - API/MCP 中継
-  - 権限チェック
+- **mcp_handler.py**: MCPリクエスト処理、API/MCP中継、権限チェック
+- **mcp_logger.py**: MCP接続ログの構造化JSON出力
+- **mcp_discovery.py**: MCPサービスのタイプ自動検出
+- **audit_logger.py**: 管理操作監査ログ、ログイン履歴
+- **template_sync.py**: ビルトインテンプレートのGitHub同期
+- **variable_replacer.py**: URL・ヘッダー内の変数展開
 
 ### Config (設定)
 
@@ -103,7 +119,7 @@ python run.py
 ### Docker
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 ## インポートパス
@@ -112,7 +128,7 @@ docker-compose up -d
 
 ```python
 # モデル
-from app.models.models import db, User, Service, Capability, UserPermission
+from app.models.models import db, McpService, Service, Capability, ConnectionAccount, AccountPermission
 
 # サービス
 from app.services.mcp_handler import MCPHandler
@@ -123,24 +139,14 @@ from app.config.config import Config
 
 ## 旧構造からの変更点
 
-### 変更前
-
-```
-test2/
-├── app.py              # すべてのルート定義
-├── models.py           # モデル定義
-├── mcp_handler.py      # MCP処理
-├── templates/          # テンプレート
-└── static/             # 静的ファイル
-```
-
-### 変更後 (MVC 構造)
+### 変更内容
 
 - `app.py` → 分割: `app/__init__.py` + `app/controllers/*`
 - `models.py` → `app/models/models.py`
 - `mcp_handler.py` → `app/services/mcp_handler.py`
 - `templates/` → `app/views/templates/`
 - `static/` → `app/assets/`
+- DB管理: SQLファイル → Flask-Migrate (Alembic) (`db/migrations/`)
 
 ## 利点
 
@@ -155,17 +161,14 @@ test2/
 ### 新機能追加時
 
 1. **新しいエンドポイント追加**
-
    - 管理画面: `app/controllers/admin_controller.py`
    - API: `app/controllers/api_controller.py`
    - MCP: `app/controllers/mcp_controller.py`
 
 2. **新しいモデル追加**
-
    - `app/models/models.py` に追加
 
 3. **新しいビジネスロジック追加**
-
    - `app/services/` に新しいサービスクラスを作成
 
 4. **新しい設定追加**

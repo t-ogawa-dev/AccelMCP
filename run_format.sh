@@ -12,4 +12,4 @@ ruff format app/ tests/ --config pyproject.toml
 
 echo ""
 echo "✅ Auto-fix and formatting completed!"
-echo "💡 Run ./check.sh to verify the changes"
+echo "💡 Run ./run_check.sh to verify the changes"

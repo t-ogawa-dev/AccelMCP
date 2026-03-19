@@ -387,7 +387,7 @@ This project uses **Ruff** (linter & formatter) and **mypy** (type checker) for 
 **Run all checks:**
 
 ```bash
-./check.sh
+./run_check.sh
 ```
 
 This script runs:
@@ -399,7 +399,7 @@ This script runs:
 **Auto-fix and format:**
 
 ```bash
-./format.sh
+./run_format.sh
 ```
 
 This script runs:
@@ -429,3 +429,19 @@ ruff check app/ tests/ --fix
 **Configuration:**
 
 - `pyproject.toml` - Ruff and mypy configuration
+
+> **Note:** `check.sh` and `format.sh` have been renamed to `run_check.sh` and `run_format.sh`.
+
+## Documentation
+
+Detailed documentation is available in the `docs/` directory.
+
+| Document                                                                       | Description                                                |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| [Quick Start](docs/en/QUICKSTART.en.md) / [日本語](docs/QUICKSTART.md)         | Fastest way to start and test the MCP server in 5 minutes  |
+| [Setup Guide](docs/en/SETUP.en.md) / [日本語](docs/SETUP.md)                   | Detailed setup and startup instructions                    |
+| [MCP Endpoints](docs/en/MCP_ENDPOINTS.en.md) / [日本語](docs/MCP_ENDPOINTS.md) | Detailed usage of each MCP server endpoint                 |
+| [Directory Structure](docs/en/STRUCTURE.en.md) / [日本語](docs/STRUCTURE.md)   | Project structure based on MVC pattern                     |
+| [Testing Guide](docs/en/TESTING.en.md) / [日本語](docs/TESTING.md)             | How to run and configure unit and integration tests        |
+| [E2E Testing](docs/en/E2E_TESTING.en.md) / [日本語](docs/E2E_TESTING.md)       | How to run E2E tests with Playwright                       |
+| [Database Migration](docs/en/MIGRATION.en.md) / [日本語](docs/MIGRATION.md)    | Database migration management with Flask-Migrate (Alembic) |
