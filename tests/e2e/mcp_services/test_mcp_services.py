@@ -2,6 +2,7 @@
 E2E Tests for MCP Services Pages
 MCP Services画面の操作テスト
 """
+
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -9,321 +10,325 @@ from playwright.sync_api import Page, expect
 @pytest.fixture
 def logged_in_page(page: Page):
     """ログイン済みのページ"""
-    page.goto('http://localhost:5100/login')
-    page.fill('input[name="username"]', 'accel')
-    page.fill('input[name="password"]', 'universe')
+    page.goto("http://localhost:5100/login")
+    page.fill('input[name="username"]', "accel")
+    page.fill('input[name="password"]', "universe")
     page.click('button[type="submit"]')
-    page.wait_for_url('http://localhost:5100/')
+    page.wait_for_url("http://localhost:5100/")
     return page
 
 
 class TestMcpServiceListPage:
     """MCP Services一覧ページのテスト"""
-    
+
     def test_mcp_service_list_loads(self, logged_in_page: Page):
         """MCP Services一覧ページが表示される"""
-        logged_in_page.goto('http://localhost:5100/mcp-services')
-        expect(logged_in_page).to_have_url('http://localhost:5100/mcp-services')
-        
+        logged_in_page.goto("http://localhost:5100/mcp-services")
+        expect(logged_in_page).to_have_url("http://localhost:5100/mcp-services")
+
         # Check page title
-        heading = logged_in_page.locator('h1, h2').first
-        expect(heading).to_contain_text('MCP Services')
-    
+        heading = logged_in_page.locator("h1, h2").first
+        expect(heading).to_contain_text("MCP Services")
+
     def test_navigate_to_new_mcp_service(self, logged_in_page: Page):
         """新規MCP Service作成画面へ遷移"""
-        logged_in_page.goto('http://localhost:5100/mcp-services')
-        
-        new_button = logged_in_page.get_by_role('link', name='New MCP Service')
+        logged_in_page.goto("http://localhost:5100/mcp-services")
+
+        new_button = logged_in_page.get_by_role("link", name="New MCP Service")
         new_button.click()
-        
-        expect(logged_in_page).to_have_url('http://localhost:5100/mcp-services/new')
-    
+
+        expect(logged_in_page).to_have_url("http://localhost:5100/mcp-services/new")
+
     def test_mcp_service_list_displays_items(self, logged_in_page: Page):
         """MCP Service一覧にアイテムが表示される"""
-        logged_in_page.goto('http://localhost:5100/mcp-services')
-        
+        logged_in_page.goto("http://localhost:5100/mcp-services")
+
         # Wait for table or list to load
-        list_container = logged_in_page.locator('table, .mcp-service-list, .card')
+        list_container = logged_in_page.locator("table, .mcp-service-list, .card")
         expect(list_container).to_be_visible()
-    
+
     def test_filter_by_routing_type(self, logged_in_page: Page):
         """ルーティングタイプでフィルタリング"""
-        logged_in_page.goto('http://localhost:5100/mcp-services')
-        
+        logged_in_page.goto("http://localhost:5100/mcp-services")
+
         # Check if filter exists
         filter_select = logged_in_page.locator('select[name="routing_type"]')
         if filter_select.is_visible():
-            filter_select.select_option('subdomain')
-            
+            filter_select.select_option("subdomain")
+
             # Wait for filtered results
             logged_in_page.wait_for_timeout(500)
 
 
 class TestMcpServiceNewPage:
     """MCP Service新規作成ページのテスト"""
-    
+
     def test_new_mcp_service_page_loads(self, logged_in_page: Page):
         """新規作成ページが表示される"""
-        logged_in_page.goto('http://localhost:5100/mcp-services/new')
-        
-        form = logged_in_page.locator('form')
+        logged_in_page.goto("http://localhost:5100/mcp-services/new")
+
+        form = logged_in_page.locator("form")
         expect(form).to_be_visible()
-        
+
         # Check required fields
         expect(logged_in_page.locator('input[name="identifier"]')).to_be_visible()
         expect(logged_in_page.locator('input[name="name"]')).to_be_visible()
-    
+
     def test_create_subdomain_mcp_service(self, logged_in_page: Page):
         """サブドメイン型MCP Serviceの作成"""
-        logged_in_page.goto('http://localhost:5100/mcp-services/new')
-        
+        logged_in_page.goto("http://localhost:5100/mcp-services/new")
+
         # Fill form
-        logged_in_page.fill('input[name="identifier"]', 'test-subdomain-mcp')
-        logged_in_page.fill('input[name="name"]', 'Test Subdomain MCP')
-        
+        logged_in_page.fill('input[name="identifier"]', "test-subdomain-mcp")
+        logged_in_page.fill('input[name="name"]', "Test Subdomain MCP")
+
         # Select subdomain routing
         routing_select = logged_in_page.locator('select[name="routing_type"]')
-        routing_select.select_option('subdomain')
-        
-        logged_in_page.fill('input[name="subdomain"]', 'testmcp')
-        
+        routing_select.select_option("subdomain")
+
+        logged_in_page.fill('input[name="subdomain"]', "testmcp")
+
         # Select access control
         access_select = logged_in_page.locator('select[name="access_control"]')
         if access_select.is_visible():
-            access_select.select_option('public')
-        
+            access_select.select_option("public")
+
         # Submit
         logged_in_page.click('button[type="submit"]')
-        logged_in_page.wait_for_url('http://localhost:5100/mcp-services*')
-        
+        logged_in_page.wait_for_url("http://localhost:5100/mcp-services*")
+
         # Check success
-        success_message = logged_in_page.locator('.alert-success, .success')
+        success_message = logged_in_page.locator(".alert-success, .success")
         expect(success_message).to_be_visible(timeout=3000)
-    
+
     def test_create_path_mcp_service(self, logged_in_page: Page):
         """パス型MCP Serviceの作成"""
-        logged_in_page.goto('http://localhost:5100/mcp-services/new')
-        
-        logged_in_page.fill('input[name="identifier"]', 'test-path-mcp')
-        logged_in_page.fill('input[name="name"]', 'Test Path MCP')
-        
+        logged_in_page.goto("http://localhost:5100/mcp-services/new")
+
+        logged_in_page.fill('input[name="identifier"]', "test-path-mcp")
+        logged_in_page.fill('input[name="name"]', "Test Path MCP")
+
         # Select path routing
         routing_select = logged_in_page.locator('select[name="routing_type"]')
-        routing_select.select_option('path')
-        
-        logged_in_page.fill('input[name="path_prefix"]', '/api/mcp')
-        
+        routing_select.select_option("path")
+
+        logged_in_page.fill('input[name="path_prefix"]', "/api/mcp")
+
         # Submit
         logged_in_page.click('button[type="submit"]')
-        logged_in_page.wait_for_url('http://localhost:5100/mcp-services*')
-    
+        logged_in_page.wait_for_url("http://localhost:5100/mcp-services*")
+
     def test_create_restricted_mcp_service(self, logged_in_page: Page):
         """アクセス制限付きMCP Serviceの作成"""
-        logged_in_page.goto('http://localhost:5100/mcp-services/new')
-        
-        logged_in_page.fill('input[name="identifier"]', 'test-restricted-mcp')
-        logged_in_page.fill('input[name="name"]', 'Test Restricted MCP')
-        
+        logged_in_page.goto("http://localhost:5100/mcp-services/new")
+
+        logged_in_page.fill('input[name="identifier"]', "test-restricted-mcp")
+        logged_in_page.fill('input[name="name"]', "Test Restricted MCP")
+
         routing_select = logged_in_page.locator('select[name="routing_type"]')
-        routing_select.select_option('subdomain')
-        logged_in_page.fill('input[name="subdomain"]', 'restrictedmcp')
-        
+        routing_select.select_option("subdomain")
+        logged_in_page.fill('input[name="subdomain"]', "restrictedmcp")
+
         # Select restricted access
         access_select = logged_in_page.locator('select[name="access_control"]')
-        access_select.select_option('restricted')
-        
+        access_select.select_option("restricted")
+
         logged_in_page.click('button[type="submit"]')
-        logged_in_page.wait_for_url('http://localhost:5100/mcp-services*')
-    
+        logged_in_page.wait_for_url("http://localhost:5100/mcp-services*")
+
     def test_validation_duplicate_identifier(self, logged_in_page: Page):
         """重複identifierのバリデーション"""
         # Create first service
-        logged_in_page.goto('http://localhost:5100/mcp-services/new')
-        logged_in_page.fill('input[name="identifier"]', 'duplicate-test')
-        logged_in_page.fill('input[name="name"]', 'Duplicate Test 1')
-        
+        logged_in_page.goto("http://localhost:5100/mcp-services/new")
+        logged_in_page.fill('input[name="identifier"]', "duplicate-test")
+        logged_in_page.fill('input[name="name"]', "Duplicate Test 1")
+
         routing_select = logged_in_page.locator('select[name="routing_type"]')
-        routing_select.select_option('subdomain')
-        logged_in_page.fill('input[name="subdomain"]', 'dup1')
-        
+        routing_select.select_option("subdomain")
+        logged_in_page.fill('input[name="subdomain"]', "dup1")
+
         logged_in_page.click('button[type="submit"]')
-        logged_in_page.wait_for_url('http://localhost:5100/mcp-services*')
-        
+        logged_in_page.wait_for_url("http://localhost:5100/mcp-services*")
+
         # Try to create second with same identifier
-        logged_in_page.goto('http://localhost:5100/mcp-services/new')
-        logged_in_page.fill('input[name="identifier"]', 'duplicate-test')
-        logged_in_page.fill('input[name="name"]', 'Duplicate Test 2')
-        
+        logged_in_page.goto("http://localhost:5100/mcp-services/new")
+        logged_in_page.fill('input[name="identifier"]', "duplicate-test")
+        logged_in_page.fill('input[name="name"]', "Duplicate Test 2")
+
         routing_select = logged_in_page.locator('select[name="routing_type"]')
-        routing_select.select_option('subdomain')
-        logged_in_page.fill('input[name="subdomain"]', 'dup2')
-        
+        routing_select.select_option("subdomain")
+        logged_in_page.fill('input[name="subdomain"]', "dup2")
+
         logged_in_page.click('button[type="submit"]')
-        
+
         # Should show error
-        error = logged_in_page.locator('.alert-danger, .error')
+        error = logged_in_page.locator(".alert-danger, .error")
         expect(error).to_be_visible(timeout=3000)
 
 
 class TestMcpServiceDetailPage:
     """MCP Service詳細ページのテスト"""
-    
+
     def test_mcp_service_detail_loads(self, logged_in_page: Page):
         """詳細ページが表示される"""
         # Create a service first
-        logged_in_page.goto('http://localhost:5100/mcp-services/new')
-        logged_in_page.fill('input[name="identifier"]', 'detail-test-mcp')
-        logged_in_page.fill('input[name="name"]', 'Detail Test MCP')
-        
+        logged_in_page.goto("http://localhost:5100/mcp-services/new")
+        logged_in_page.fill('input[name="identifier"]', "detail-test-mcp")
+        logged_in_page.fill('input[name="name"]', "Detail Test MCP")
+
         routing_select = logged_in_page.locator('select[name="routing_type"]')
-        routing_select.select_option('subdomain')
-        logged_in_page.fill('input[name="subdomain"]', 'detailtest')
-        
+        routing_select.select_option("subdomain")
+        logged_in_page.fill('input[name="subdomain"]', "detailtest")
+
         logged_in_page.click('button[type="submit"]')
-        logged_in_page.wait_for_url('http://localhost:5100/mcp-services*')
-        
+        logged_in_page.wait_for_url("http://localhost:5100/mcp-services*")
+
         # Navigate to detail
-        logged_in_page.goto('http://localhost:5100/mcp-services')
-        detail_link = logged_in_page.locator('a[href*="/mcp-services/"][href*="/detail"], a[href*="/mcp-services/"]:not([href*="/edit"]):not([href*="/new"])').first
+        logged_in_page.goto("http://localhost:5100/mcp-services")
+        detail_link = logged_in_page.locator(
+            'a[href*="/mcp-services/"][href*="/detail"], a[href*="/mcp-services/"]:not([href*="/edit"]):not([href*="/new"])'
+        ).first
         if detail_link.is_visible():
             detail_link.click()
-            
+
             # Check detail page
-            expect(logged_in_page.locator('h1, h2')).to_contain_text('MCP Service')
-    
+            expect(logged_in_page.locator("h1, h2")).to_contain_text("MCP Service")
+
     def test_navigate_to_apps_from_detail(self, logged_in_page: Page):
         """詳細ページからApps管理画面へ遷移"""
-        logged_in_page.goto('http://localhost:5100/mcp-services')
-        
+        logged_in_page.goto("http://localhost:5100/mcp-services")
+
         # Click first service
         service_link = logged_in_page.locator('a[href*="/mcp-services/"]').first
         if service_link.is_visible():
             service_link.click()
-            
+
             # Look for "Apps" or "Manage Apps" link
-            apps_link = logged_in_page.get_by_role('link', name='Apps')
+            apps_link = logged_in_page.get_by_role("link", name="Apps")
             if apps_link.is_visible():
                 apps_link.click()
-                expect(logged_in_page).to_have_url('**/apps')
-    
+                expect(logged_in_page).to_have_url("**/apps")
+
     def test_copy_mcp_endpoint(self, logged_in_page: Page):
         """MCPエンドポイントのコピー"""
-        logged_in_page.goto('http://localhost:5100/mcp-services')
-        
+        logged_in_page.goto("http://localhost:5100/mcp-services")
+
         service_link = logged_in_page.locator('a[href*="/mcp-services/"]').first
         if service_link.is_visible():
             service_link.click()
-            
+
             # Look for copy button
             copy_button = logged_in_page.locator('button:has-text("Copy"), .copy-button')
             if copy_button.is_visible():
                 copy_button.click()
-                
+
                 # Success notification should appear
                 logged_in_page.wait_for_timeout(500)
 
 
 class TestMcpServiceEditPage:
     """MCP Service編集ページのテスト"""
-    
+
     def test_edit_mcp_service(self, logged_in_page: Page):
         """MCP Serviceの編集"""
         # Create service
-        logged_in_page.goto('http://localhost:5100/mcp-services/new')
-        logged_in_page.fill('input[name="identifier"]', 'edit-test-mcp')
-        logged_in_page.fill('input[name="name"]', 'Edit Test MCP')
-        
+        logged_in_page.goto("http://localhost:5100/mcp-services/new")
+        logged_in_page.fill('input[name="identifier"]', "edit-test-mcp")
+        logged_in_page.fill('input[name="name"]', "Edit Test MCP")
+
         routing_select = logged_in_page.locator('select[name="routing_type"]')
-        routing_select.select_option('subdomain')
-        logged_in_page.fill('input[name="subdomain"]', 'edittest')
-        
+        routing_select.select_option("subdomain")
+        logged_in_page.fill('input[name="subdomain"]', "edittest")
+
         logged_in_page.click('button[type="submit"]')
-        logged_in_page.wait_for_url('http://localhost:5100/mcp-services*')
-        
+        logged_in_page.wait_for_url("http://localhost:5100/mcp-services*")
+
         # Go to edit
-        logged_in_page.goto('http://localhost:5100/mcp-services')
+        logged_in_page.goto("http://localhost:5100/mcp-services")
         edit_link = logged_in_page.locator('a[href*="/mcp-services/"][href*="/edit"]').first
         if edit_link.is_visible():
             edit_link.click()
-            
+
             # Update name
             name_input = logged_in_page.locator('input[name="name"]')
             name_input.clear()
-            name_input.fill('Updated Edit Test MCP')
-            
+            name_input.fill("Updated Edit Test MCP")
+
             # Submit
             logged_in_page.click('button[type="submit"]')
-            logged_in_page.wait_for_url('http://localhost:5100/mcp-services*')
-            
+            logged_in_page.wait_for_url("http://localhost:5100/mcp-services*")
+
             # Check success
-            success_message = logged_in_page.locator('.alert-success, .success')
+            success_message = logged_in_page.locator(".alert-success, .success")
             expect(success_message).to_be_visible(timeout=3000)
-    
+
     def test_toggle_mcp_service(self, logged_in_page: Page):
         """MCP Serviceの有効/無効切り替え"""
-        logged_in_page.goto('http://localhost:5100/mcp-services')
-        
+        logged_in_page.goto("http://localhost:5100/mcp-services")
+
         # Look for toggle switch or enable/disable button
-        toggle_button = logged_in_page.locator('input[type="checkbox"].toggle, button:has-text("Enable"), button:has-text("Disable")').first
+        toggle_button = logged_in_page.locator(
+            'input[type="checkbox"].toggle, button:has-text("Enable"), button:has-text("Disable")'
+        ).first
         if toggle_button.is_visible():
             toggle_button.click()
             logged_in_page.wait_for_timeout(500)
-    
+
     def test_delete_mcp_service(self, logged_in_page: Page):
         """MCP Serviceの削除"""
         # Create service
-        logged_in_page.goto('http://localhost:5100/mcp-services/new')
-        logged_in_page.fill('input[name="identifier"]', 'delete-test-mcp')
-        logged_in_page.fill('input[name="name"]', 'Delete Test MCP')
-        
+        logged_in_page.goto("http://localhost:5100/mcp-services/new")
+        logged_in_page.fill('input[name="identifier"]', "delete-test-mcp")
+        logged_in_page.fill('input[name="name"]', "Delete Test MCP")
+
         routing_select = logged_in_page.locator('select[name="routing_type"]')
-        routing_select.select_option('subdomain')
-        logged_in_page.fill('input[name="subdomain"]', 'deletetest')
-        
+        routing_select.select_option("subdomain")
+        logged_in_page.fill('input[name="subdomain"]', "deletetest")
+
         logged_in_page.click('button[type="submit"]')
-        logged_in_page.wait_for_url('http://localhost:5100/mcp-services*')
-        
+        logged_in_page.wait_for_url("http://localhost:5100/mcp-services*")
+
         # Go to edit page
-        logged_in_page.goto('http://localhost:5100/mcp-services')
+        logged_in_page.goto("http://localhost:5100/mcp-services")
         edit_link = logged_in_page.locator('a[href*="/mcp-services/"][href*="/edit"]').first
         if edit_link.is_visible():
             edit_link.click()
-            
+
             # Click delete
             delete_button = logged_in_page.locator('button:has-text("Delete"), button.btn-danger')
             if delete_button.is_visible():
-                logged_in_page.on('dialog', lambda dialog: dialog.accept())
+                logged_in_page.on("dialog", lambda dialog: dialog.accept())
                 delete_button.click()
-                
-                logged_in_page.wait_for_url('http://localhost:5100/mcp-services')
+
+                logged_in_page.wait_for_url("http://localhost:5100/mcp-services")
 
 
 class TestMcpServiceAppsPage:
     """MCP Service Apps管理ページのテスト"""
-    
+
     def test_mcp_service_apps_page_loads(self, logged_in_page: Page):
         """Apps管理ページが表示される"""
-        logged_in_page.goto('http://localhost:5100/mcp-services')
-        
+        logged_in_page.goto("http://localhost:5100/mcp-services")
+
         # Navigate to first service's apps page
         service_link = logged_in_page.locator('a[href*="/mcp-services/"]').first
         if service_link.is_visible():
             service_link.click()
-            
-            apps_link = logged_in_page.get_by_role('link', name='Apps')
+
+            apps_link = logged_in_page.get_by_role("link", name="Apps")
             if apps_link.is_visible():
                 apps_link.click()
-                
+
                 # Check apps list
-                expect(logged_in_page.locator('h1, h2')).to_contain_text('Apps')
-    
+                expect(logged_in_page.locator("h1, h2")).to_contain_text("Apps")
+
     def test_add_app_to_mcp_service(self, logged_in_page: Page):
         """MCP ServiceにAppを追加"""
         # This would require creating a service first
         # Then adding an app (Service) to it
         # Simplified test structure here
-        logged_in_page.goto('http://localhost:5100/mcp-services')
-        
+        logged_in_page.goto("http://localhost:5100/mcp-services")
+
         # Navigate through UI to add app
         # Implementation depends on actual UI structure
         pass
@@ -331,105 +336,111 @@ class TestMcpServiceAppsPage:
 
 class TestMcpServiceAccessControl:
     """MCP Serviceアクセス制御のE2Eテスト"""
-    
+
     def test_public_mcp_service_accessible(self, logged_in_page: Page):
         """公開MCP Serviceへのアクセス"""
         # Create public service
-        logged_in_page.goto('http://localhost:5100/mcp-services/new')
-        logged_in_page.fill('input[name="identifier"]', 'public-mcp')
-        logged_in_page.fill('input[name="name"]', 'Public MCP')
-        
+        logged_in_page.goto("http://localhost:5100/mcp-services/new")
+        logged_in_page.fill('input[name="identifier"]', "public-mcp")
+        logged_in_page.fill('input[name="name"]', "Public MCP")
+
         routing_select = logged_in_page.locator('select[name="routing_type"]')
-        routing_select.select_option('subdomain')
-        logged_in_page.fill('input[name="subdomain"]', 'publicmcp')
-        
+        routing_select.select_option("subdomain")
+        logged_in_page.fill('input[name="subdomain"]', "publicmcp")
+
         access_select = logged_in_page.locator('select[name="access_control"]')
-        access_select.select_option('public')
-        
+        access_select.select_option("public")
+
         logged_in_page.click('button[type="submit"]')
-        logged_in_page.wait_for_url('http://localhost:5100/mcp-services*')
-        
+        logged_in_page.wait_for_url("http://localhost:5100/mcp-services*")
+
         # Verify public badge
-        logged_in_page.goto('http://localhost:5100/mcp-services')
+        logged_in_page.goto("http://localhost:5100/mcp-services")
         public_badge = logged_in_page.locator('.badge:has-text("Public"), .badge-success:has-text("Public")')
         expect(public_badge.first).to_be_visible()
-    
+
     def test_restricted_mcp_service_badge(self, logged_in_page: Page):
         """制限付きMCP Serviceのバッジ表示"""
-        logged_in_page.goto('http://localhost:5100/mcp-services/new')
-        logged_in_page.fill('input[name="identifier"]', 'restricted-mcp-badge')
-        logged_in_page.fill('input[name="name"]', 'Restricted MCP Badge')
-        
+        logged_in_page.goto("http://localhost:5100/mcp-services/new")
+        logged_in_page.fill('input[name="identifier"]', "restricted-mcp-badge")
+        logged_in_page.fill('input[name="name"]', "Restricted MCP Badge")
+
         routing_select = logged_in_page.locator('select[name="routing_type"]')
-        routing_select.select_option('subdomain')
-        logged_in_page.fill('input[name="subdomain"]', 'restrictedmcpbadge')
-        
+        routing_select.select_option("subdomain")
+        logged_in_page.fill('input[name="subdomain"]', "restrictedmcpbadge")
+
         access_select = logged_in_page.locator('select[name="access_control"]')
-        access_select.select_option('restricted')
-        
+        access_select.select_option("restricted")
+
         logged_in_page.click('button[type="submit"]')
-        logged_in_page.wait_for_url('http://localhost:5100/mcp-services*')
-        
+        logged_in_page.wait_for_url("http://localhost:5100/mcp-services*")
+
         # Verify restricted badge
-        logged_in_page.goto('http://localhost:5100/mcp-services')
-        restricted_badge = logged_in_page.locator('.badge:has-text("Restricted"), .badge-warning:has-text("Restricted")')
+        logged_in_page.goto("http://localhost:5100/mcp-services")
+        restricted_badge = logged_in_page.locator(
+            '.badge:has-text("Restricted"), .badge-warning:has-text("Restricted")'
+        )
         expect(restricted_badge.first).to_be_visible()
 
 
 class TestMcpServiceExportImport:
     """MCP ServiceのExport/Importテスト"""
-    
+
     def test_export_mcp_service(self, logged_in_page: Page):
         """MCP ServiceをYAML形式でエクスポートできる"""
         # First create a service
-        logged_in_page.goto('http://localhost:5100/mcp-services/new')
-        logged_in_page.fill('input[name="identifier"]', 'export-test-service')
-        logged_in_page.fill('input[name="name"]', 'Export Test Service')
-        logged_in_page.fill('textarea[name="description"]', 'Service for export testing')
-        
+        logged_in_page.goto("http://localhost:5100/mcp-services/new")
+        logged_in_page.fill('input[name="identifier"]', "export-test-service")
+        logged_in_page.fill('input[name="name"]', "Export Test Service")
+        logged_in_page.fill('textarea[name="description"]', "Service for export testing")
+
         routing_select = logged_in_page.locator('select[name="routing_type"]')
-        routing_select.select_option('subdomain')
-        logged_in_page.fill('input[name="subdomain"]', 'exporttest')
-        
+        routing_select.select_option("subdomain")
+        logged_in_page.fill('input[name="subdomain"]', "exporttest")
+
         logged_in_page.click('button[type="submit"]')
         logged_in_page.wait_for_timeout(1000)
-        
+
         # Navigate to service detail and export
-        logged_in_page.goto('http://localhost:5100/mcp-services')
-        
+        logged_in_page.goto("http://localhost:5100/mcp-services")
+
         # Click on the created service
-        service_link = logged_in_page.get_by_text('Export Test Service').first
+        service_link = logged_in_page.get_by_text("Export Test Service").first
         if service_link.is_visible():
             service_link.click()
             logged_in_page.wait_for_timeout(500)
-            
+
             # Click export button
-            export_button = logged_in_page.get_by_role('button', name='エクスポート') or logged_in_page.get_by_role('button', name='Export')
+            export_button = logged_in_page.get_by_role("button", name="エクスポート") or logged_in_page.get_by_role(
+                "button", name="Export"
+            )
             if export_button.is_visible():
                 with logged_in_page.expect_download() as download_info:
                     export_button.click()
-                
+
                 download = download_info.value
                 # Verify YAML file
-                assert download.suggested_filename.endswith('.yaml') or download.suggested_filename.endswith('.yml')
-    
+                assert download.suggested_filename.endswith(".yaml") or download.suggested_filename.endswith(".yml")
+
     def test_import_mcp_service_modal_opens(self, logged_in_page: Page):
         """MCPサービスインポートモーダルが開く"""
-        logged_in_page.goto('http://localhost:5100/mcp-services')
-        
+        logged_in_page.goto("http://localhost:5100/mcp-services")
+
         # Click import button
-        import_button = logged_in_page.get_by_role('button', name='インポート') or logged_in_page.get_by_role('button', name='Import')
+        import_button = logged_in_page.get_by_role("button", name="インポート") or logged_in_page.get_by_role(
+            "button", name="Import"
+        )
         if import_button.is_visible():
             import_button.click()
-            
+
             # Modal should appear
-            modal = logged_in_page.locator('.modal, .custom-modal')
+            modal = logged_in_page.locator(".modal, .custom-modal")
             expect(modal).to_be_visible()
-            
+
             # Check for file input
             file_input = logged_in_page.locator('input[type="file"]')
             expect(file_input).to_be_visible()
-            
+
             # Check file accept attribute
-            accept_attr = file_input.get_attribute('accept')
-            assert '.yaml' in accept_attr or '.yml' in accept_attr
+            accept_attr = file_input.get_attribute("accept")
+            assert ".yaml" in accept_attr or ".yml" in accept_attr

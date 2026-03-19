@@ -1,12 +1,12 @@
 """
 Playwright configuration for pytest
 """
+
 import pytest
-from typing import Dict
 
 
 @pytest.fixture(scope="session")
-def browser_context_args(browser_context_args: Dict) -> Dict:
+def browser_context_args(browser_context_args: dict) -> dict:
     """
     Configure browser context
     """
@@ -22,7 +22,7 @@ def browser_context_args(browser_context_args: Dict) -> Dict:
 
 
 @pytest.fixture(scope="session")
-def browser_type_launch_args(browser_type_launch_args: Dict) -> Dict:
+def browser_type_launch_args(browser_type_launch_args: dict) -> dict:
     """
     Configure browser launch arguments
     """

@@ -1,5 +1,7 @@
 # MCP Server with Flask and FastMCP
 
+English | [日本語](README.md)
+
 HTTP/stdio compatible MCP server with API/MCP relay functionality and user-based permission management via a Web admin interface.
 
 ## Features
@@ -377,3 +379,53 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 python app.py
 ```
+
+### Code Quality Checks
+
+This project uses **Ruff** (linter & formatter) and **mypy** (type checker) for code quality.
+
+**Run all checks:**
+
+```bash
+./check.sh
+```
+
+This script runs:
+
+- Code style checks with Ruff
+- Format checks with Ruff
+- Type checks with mypy
+
+**Auto-fix and format:**
+
+```bash
+./format.sh
+```
+
+This script runs:
+
+- Auto-fix with Ruff
+- Code formatting with Ruff
+
+**Run individually:**
+
+```bash
+# Ruff linter
+ruff check app/ tests/
+
+# Ruff formatter (check only)
+ruff format app/ tests/ --check
+
+# Ruff formatter (apply)
+ruff format app/ tests/
+
+# mypy type checker
+mypy app/
+
+# Auto-fix
+ruff check app/ tests/ --fix
+```
+
+**Configuration:**
+
+- `pyproject.toml` - Ruff and mypy configuration

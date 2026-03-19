@@ -1,0 +1,141 @@
+[project]
+name = "accelmcp"
+version = "1.0.0"
+description = "MCP Server with Flask and FastMCP"
+requires-python = ">=3.10"
+
+[tool.ruff]
+# Python バージョン
+target-version = "py310"
+
+# 行の長さ
+line-length = 120
+
+# 除外するディレクトリ
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "*.egg-info",
+    "build",
+    "dist",
+    "instance",
+    ".pytest_cache",
+    "node_modules",
+]
+
+[tool.ruff.lint]
+# 有効にするルール
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "SIM", # flake8-simplify
+]
+
+# 無視するルール
+ignore = [
+    "E501",  # 行の長さは line-length で管理
+    "B008",  # function call in argument defaults
+    "B904",  # raise from
+]
+
+[tool.ruff.lint.per-file-ignores]
+# テストファイルでは assert の使用を許可
+"tests/**/*.py" = ["B011"]
+# __init__.py では未使用インポートを許可
+"__init__.py" = ["F401"]
+
+[tool.ruff.lint.isort]
+# インポートの順序
+known-first-party = ["app", "tests"]
+
+[tool.ruff.format]
+# フォーマットの設定
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.mypy]
+# 基本設定
+python_version = "3.10"
+warn_return_any = false
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+disallow_untyped_decorators = false
+no_implicit_optional = false  # Allow implicit Optional
+warn_redundant_casts = true
+warn_unused_ignores = false
+warn_no_return = true
+warn_unreachable = false
+strict_equality = true
+
+# 外部ライブラリの型チェックを緩和
+ignore_missing_imports = true
+
+# 除外するパス
+exclude = [
+    "^venv/",
+    "^\\.venv/",
+    "^build/",
+    "^dist/",
+]
+
+# Flask-SQLAlchemy の型定義問題を回避
+[[tool.mypy.overrides]]
+module = "flask_sqlalchemy.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "flask.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "app.models.*"
+disable_error_code = ["name-defined", "attr-defined"]
+
+[[tool.mypy.overrides]]
+module = "app.controllers.*"
+disable_error_code = ["attr-defined"]
+
+[[tool.mypy.overrides]]
+module = "app.services.variable_replacer"
+disable_error_code = ["assignment", "arg-type"]
+
+[[tool.mypy.overrides]]
+module = "app.services.mcp_handler"
+disable_error_code = ["index", "var-annotated"]
+
+[[tool.mypy.overrides]]
+module = "app.services.audit_logger"
+disable_error_code = ["union-attr", "attr-defined"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = false
+disallow_untyped_defs = false
+disable_error_code = ["attr-defined", "name-defined"]
+
+[tool.pytest.ini_options]
+# Pytest の設定（既存の pytest.ini から移行可能）
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+]
+markers = [
+    "slow: marks tests as slow",
+    "e2e: marks tests as end-to-end tests",
+]
