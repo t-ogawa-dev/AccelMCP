@@ -82,6 +82,29 @@ def authenticate_bearer_token(log_context=None):
     return account, None, None
 
 
+def _is_streamable_http_request(req) -> bool:
+    """Check whether the client requests StreamableHTTP (SSE) transport."""
+    accept = req.headers.get("Accept", "")
+    return "text/event-stream" in accept
+
+
+def _build_sse_response(data: dict, session_id: str | None = None) -> Response:
+    """Wrap a JSON-RPC dict in an SSE response body.
+
+    Format per MCP StreamableHTTP spec:
+        data: <JSON>\\n\\n
+    """
+    body = "data: " + json.dumps(data, ensure_ascii=False) + "\n\n"
+    headers = {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+    }
+    if session_id:
+        headers["Mcp-Session-Id"] = session_id
+    return Response(body, status=200, headers=headers)
+
+
 @mcp_bp.route("/mcp", methods=["POST", "GET"])
 def mcp_subdomain_endpoint():
     """
@@ -246,6 +269,11 @@ def mcp_subdomain_endpoint():
         error_message=error_message,
     )
 
+    # Return SSE stream if client requests StreamableHTTP, otherwise plain JSON
+    if _is_streamable_http_request(request):
+        session_id = response.get("result", {}).get("sessionId") if mcp_request.get("method") == "initialize" else None
+        return _build_sse_response(response, session_id=session_id)
+
     return jsonify(response)
 
 
@@ -389,6 +417,11 @@ def mcp_path_endpoint(path_identifier):
         error_code=error_code,
         error_message=error_message,
     )
+
+    # Return SSE stream if client requests StreamableHTTP, otherwise plain JSON
+    if _is_streamable_http_request(request):
+        session_id = response.get("result", {}).get("sessionId") if mcp_request.get("method") == "initialize" else None
+        return _build_sse_response(response, session_id=session_id)
 
     return jsonify(response)
 
