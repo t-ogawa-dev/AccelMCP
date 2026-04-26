@@ -17,6 +17,9 @@ class Config:
     ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "accel")
     ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "universe")
 
+    # Admin MCP API key (Bearer token for /admin/mcp endpoint)
+    ADMIN_API_KEY = os.getenv("ACCELMCP_ADMIN_API_KEY", "")
+
     # Flask settings
     DEBUG = os.getenv("FLASK_DEBUG", "False").lower() == "true"
     TESTING = False

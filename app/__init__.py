@@ -66,6 +66,7 @@ def create_app(config_class=Config):
 
     # Register blueprints
     from app.controllers.admin_controller import admin_bp
+    from app.controllers.admin_mcp_controller import admin_mcp_bp
     from app.controllers.api_controller import api_bp
     from app.controllers.auth_controller import auth_bp
     from app.controllers.mcp_controller import mcp_bp
@@ -74,6 +75,7 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_bp)
     app.register_blueprint(api_bp, url_prefix="/api")
     app.register_blueprint(mcp_bp)
+    app.register_blueprint(admin_mcp_bp)
 
     app.logger.info("All blueprints registered")
 
