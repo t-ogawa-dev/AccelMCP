@@ -5,6 +5,7 @@ Handles MCP protocol endpoints
 
 import json
 import logging
+import time
 
 from flask import Blueprint, Response, current_app, jsonify, request
 
@@ -105,7 +106,33 @@ def _build_sse_response(data: dict, session_id: str | None = None) -> Response:
     return Response(body, status=200, headers=headers)
 
 
-@mcp_bp.route("/mcp", methods=["POST", "GET"])
+# Session store for StreamableHTTP: {session_id: expiry_timestamp}
+_active_sessions: dict[str, float] = {}
+_SESSION_TTL_SECONDS = 3600  # 1 hour
+
+
+def _register_session(session_id: str) -> None:
+    """Register a new StreamableHTTP session ID with expiry."""
+    _active_sessions[session_id] = time.time() + _SESSION_TTL_SECONDS
+    # Prune expired sessions opportunistically
+    now = time.time()
+    expired = [sid for sid, exp in list(_active_sessions.items()) if exp < now]
+    for sid in expired:
+        _active_sessions.pop(sid, None)
+
+
+def _is_valid_session(session_id: str) -> bool:
+    """Return True if the session ID was issued by this server and has not expired."""
+    exp = _active_sessions.get(session_id)
+    if exp is None:
+        return False
+    if exp < time.time():
+        _active_sessions.pop(session_id, None)
+        return False
+    return True
+
+
+@mcp_bp.route("/mcp", methods=["POST", "GET", "DELETE"])
 def mcp_subdomain_endpoint():
     """
     MCP endpoint with subdomain routing
@@ -139,7 +166,7 @@ def mcp_subdomain_endpoint():
         except Exception:
             pass
     else:
-        log_context.mcp_method = "GET"
+        log_context.mcp_method = request.method  # "GET", "DELETE", etc.
 
     # Extract subdomain
     subdomain = get_subdomain_from_request()
@@ -207,8 +234,20 @@ def mcp_subdomain_endpoint():
     # Get apps (services) under this MCP service
     services = Service.query.filter_by(mcp_service_id=mcp_service.id).all()
 
+    # Handle DELETE - session termination (StreamableHTTP spec)
+    if request.method == "DELETE":
+        session_id = request.headers.get("Mcp-Session-Id")
+        if session_id and _is_valid_session(session_id):
+            del _active_sessions[session_id]
+            log_mcp_request(current_app._get_current_object(), log_context, status_code=200, is_success=True)
+            return Response("", status=200)
+        return Response("", status=404)
+
     # Handle GET request - return capabilities from all services
     if request.method == "GET":
+        # StreamableHTTP clients expect a server-push SSE stream; we don't support it (spec: return 405)
+        if _is_streamable_http_request(request):
+            return Response("", status=405)
         all_capabilities = []
         for service in services:
             capabilities = Capability.query.filter_by(app_id=service.id).all()
@@ -241,6 +280,26 @@ def mcp_subdomain_endpoint():
         )
         return jsonify(error_response), 400
 
+    # Validate session for StreamableHTTP non-initialize requests (spec: SHOULD return 400)
+    if _is_streamable_http_request(request) and mcp_request.get("method") != "initialize":
+        incoming_session_id = request.headers.get("Mcp-Session-Id")
+        if not incoming_session_id or not _is_valid_session(incoming_session_id):
+            error_response = {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "error": {"code": -32600, "message": "Invalid or missing Mcp-Session-Id"},
+            }
+            log_mcp_request(
+                current_app._get_current_object(),
+                log_context,
+                response_body=json.dumps(error_response, ensure_ascii=False),
+                status_code=400,
+                is_success=False,
+                error_code=-32600,
+                error_message="Invalid or missing Mcp-Session-Id",
+            )
+            return jsonify(error_response), 400
+
     # Check if this is a notification (no id field or method starts with 'notifications/')
     is_notification = "id" not in mcp_request or mcp_request.get("method", "").startswith("notifications/")
 
@@ -271,13 +330,17 @@ def mcp_subdomain_endpoint():
 
     # Return SSE stream if client requests StreamableHTTP, otherwise plain JSON
     if _is_streamable_http_request(request):
-        session_id = response.get("result", {}).get("sessionId") if mcp_request.get("method") == "initialize" else None
+        session_id = None
+        if mcp_request.get("method") == "initialize":
+            session_id = response.get("result", {}).get("sessionId")
+            if session_id:
+                _register_session(session_id)
         return _build_sse_response(response, session_id=session_id)
 
     return jsonify(response)
 
 
-@mcp_bp.route("/<path_identifier>/mcp", methods=["POST", "GET"])
+@mcp_bp.route("/<path_identifier>/mcp", methods=["POST", "GET", "DELETE"])
 def mcp_path_endpoint(path_identifier):
     """
     Path-based MCP endpoint
@@ -312,7 +375,7 @@ def mcp_path_endpoint(path_identifier):
         except Exception:
             pass
     else:
-        log_context.mcp_method = "GET"
+        log_context.mcp_method = request.method  # "GET", "DELETE", etc.
 
     # Get MCP service by subdomain with routing_type='path'
     mcp_service = McpService.query.filter_by(identifier=path_identifier, routing_type="path").first()
@@ -356,8 +419,20 @@ def mcp_path_endpoint(path_identifier):
     # Get apps (services) under this MCP service
     services = Service.query.filter_by(mcp_service_id=mcp_service.id).all()
 
+    # Handle DELETE - session termination (StreamableHTTP spec)
+    if request.method == "DELETE":
+        session_id = request.headers.get("Mcp-Session-Id")
+        if session_id and _is_valid_session(session_id):
+            del _active_sessions[session_id]
+            log_mcp_request(current_app._get_current_object(), log_context, status_code=200, is_success=True)
+            return Response("", status=200)
+        return Response("", status=404)
+
     # Handle GET request - return capabilities from all services
     if request.method == "GET":
+        # StreamableHTTP clients expect a server-push SSE stream; we don't support it (spec: return 405)
+        if _is_streamable_http_request(request):
+            return Response("", status=405)
         all_capabilities = []
         for service in services:
             capabilities = Capability.query.filter_by(app_id=service.id).all()
@@ -390,6 +465,26 @@ def mcp_path_endpoint(path_identifier):
         )
         return jsonify(error_response), 400
 
+    # Validate session for StreamableHTTP non-initialize requests (spec: SHOULD return 400)
+    if _is_streamable_http_request(request) and mcp_request.get("method") != "initialize":
+        incoming_session_id = request.headers.get("Mcp-Session-Id")
+        if not incoming_session_id or not _is_valid_session(incoming_session_id):
+            error_response = {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "error": {"code": -32600, "message": "Invalid or missing Mcp-Session-Id"},
+            }
+            log_mcp_request(
+                current_app._get_current_object(),
+                log_context,
+                response_body=json.dumps(error_response, ensure_ascii=False),
+                status_code=400,
+                is_success=False,
+                error_code=-32600,
+                error_message="Invalid or missing Mcp-Session-Id",
+            )
+            return jsonify(error_response), 400
+
     # Check if this is a notification (no id field or method starts with 'notifications/')
     is_notification = "id" not in mcp_request or mcp_request.get("method", "").startswith("notifications/")
 
@@ -420,7 +515,11 @@ def mcp_path_endpoint(path_identifier):
 
     # Return SSE stream if client requests StreamableHTTP, otherwise plain JSON
     if _is_streamable_http_request(request):
-        session_id = response.get("result", {}).get("sessionId") if mcp_request.get("method") == "initialize" else None
+        session_id = None
+        if mcp_request.get("method") == "initialize":
+            session_id = response.get("result", {}).get("sessionId")
+            if session_id:
+                _register_session(session_id)
         return _build_sse_response(response, session_id=session_id)
 
     return jsonify(response)
