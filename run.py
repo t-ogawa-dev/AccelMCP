@@ -6,13 +6,23 @@ from app import create_app
 
 app = create_app()
 
-# Seed admin credentials after migration (only when running the server, not tests)
-if not app.config.get("TESTING"):
+# Seed admin credentials and builtin templates after migration (only when running
+# the server, not tests). When AccelMCP is split into separate web/mcp containers
+# (see compose.yaml), only the web service performs this one-time database
+# seeding to avoid both containers racing to insert the same rows on first boot.
+if not app.config.get("TESTING") and os.getenv("SERVICE_ROLE", "web") != "mcp":
     try:
         from db.seeds.admin_credentials import seed_admin_credentials
         seed_admin_credentials(app)
     except Exception as e:
         app.logger.warning(f"Admin credentials seed skipped: {e}")
+
+    try:
+        from db.seeds.builtin_templates import load_service_templates
+        with app.app_context():
+            load_service_templates()
+    except Exception as e:
+        app.logger.warning(f"Builtin templates seed skipped: {e}")
 
 if __name__ == '__main__':
     # Get environment and log level

@@ -17,8 +17,32 @@ depends_on = None
 
 
 def upgrade():
+    # The unique constraint on subdomain was auto-named by the database back
+    # when the table was still called "services" (e.g. "services_subdomain_key"
+    # on Postgres), not literally "subdomain" -- look up the real name instead
+    # of assuming it.
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+
+    uq_name = next(
+        (uq['name'] for uq in inspector.get_unique_constraints('apps')
+         if uq.get('column_names') == ['subdomain']),
+        None
+    )
+    if uq_name:
+        op.drop_constraint(uq_name, 'apps', type_='unique')
+    else:
+        # Fall back in case it was created as a plain index rather than a
+        # unique constraint.
+        idx_name = next(
+            (ix['name'] for ix in inspector.get_indexes('apps')
+             if ix.get('column_names') == ['subdomain']),
+            None
+        )
+        if idx_name:
+            op.drop_index(idx_name, table_name='apps')
+
     # Remove subdomain column from apps table
-    op.drop_index('subdomain', table_name='apps')
     op.drop_column('apps', 'subdomain')
 
 

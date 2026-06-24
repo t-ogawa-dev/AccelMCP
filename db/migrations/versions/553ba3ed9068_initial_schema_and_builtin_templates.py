@@ -7,7 +7,6 @@ Create Date: 2025-11-17 15:04:29.819485
 """
 from alembic import op
 import sqlalchemy as sa
-from db.seeds.builtin_templates import load_service_templates
 
 
 # revision identifiers, used by Alembic.
@@ -106,9 +105,17 @@ def upgrade():
     sa.UniqueConstraint('account_id', 'capability_id', name='uq_account_capability')
     )
     # ### end Alembic commands ###
-    
-    # Load builtin service templates
-    load_service_templates()
+    #
+    # NOTE: builtin service template seeding used to happen here via
+    # load_service_templates(), but that uses the Flask-SQLAlchemy ORM
+    # session, which opens its own connection from the engine's pool.
+    # Alembic's migration runs in a separate, not-yet-committed
+    # transaction/connection, so the ORM session cannot see the tables
+    # this migration just created (UndefinedTable error) -- and even once
+    # fixed, the ORM model reflects columns added by *later* migrations
+    # (e.g. template_id/template_version) that don't exist in the table
+    # yet at this point in the chain. Seeding now happens after all
+    # migrations have been applied and committed (see run.py).
 
 
 def downgrade():

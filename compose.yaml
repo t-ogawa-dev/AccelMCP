@@ -69,6 +69,7 @@ services:
       - FLASK_ENV=${FLASK_ENV:-development}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - SERVICE_ROLE=mcp
     env_file:
       - .env
     volumes:

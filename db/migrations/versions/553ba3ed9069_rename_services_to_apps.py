@@ -19,11 +19,23 @@ depends_on = None
 def upgrade():
     # Rename services table to apps
     op.rename_table('services', 'apps')
-    
+
+    # Look up the actual (database-generated) FK constraint name instead of
+    # assuming MySQL-style naming ("capabilities_ibfk_1"); Postgres auto-names
+    # it something like "capabilities_service_id_fkey".
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    fk_to_drop = next(
+        (fk['name'] for fk in inspector.get_foreign_keys('capabilities')
+         if fk.get('constrained_columns') == ['service_id']),
+        None
+    )
+
     # Update foreign key and column name in capabilities table
     with op.batch_alter_table('capabilities', schema=None) as batch_op:
-        batch_op.drop_constraint('capabilities_ibfk_1', type_='foreignkey')
-        batch_op.alter_column('service_id', 
+        if fk_to_drop:
+            batch_op.drop_constraint(fk_to_drop, type_='foreignkey')
+        batch_op.alter_column('service_id',
                             new_column_name='app_id',
                             existing_type=sa.Integer(),
                             nullable=False)
