@@ -19,6 +19,33 @@ management via a Web admin interface.
 - **Bearer Token Authentication**: Per-account token generation
 - **Horizontal Scaling**: Split WEB / MCP containers and share sessions via Redis to scale out
 
+## Screenshots
+
+!!! note
+    The screenshots below show the default Japanese UI. AccelMCP also ships with a
+    built-in English UI, switchable from the language dropdown in the top-right corner.
+
+![Login screen](../assets/screenshots/login.png)
+*Login screen*
+
+![Dashboard](../assets/screenshots/dashboard.png)
+*Dashboard — entry point to every admin feature*
+
+![MCP services list](../assets/screenshots/mcp-services-list.png)
+*MCP services list — shows public/restricted access control at a glance*
+
+![MCP service detail](../assets/screenshots/mcp-service-detail.png)
+*MCP service detail — auto-generated client configuration snippets for Claude Desktop / Cursor / VS Code*
+
+![AdminMCP connection guide](../assets/screenshots/guide.png)
+*AdminMCP connection guide — endpoint info and the list of available tools*
+
+![Connection logs](../assets/screenshots/connection-logs.png)
+*Connection logs — review connection history per MCP service*
+
+![Connection accounts list](../assets/screenshots/accounts-list.png)
+*Connection accounts list — issue Bearer tokens for MCP clients*
+
 ## Documentation
 
 | Document | Description |

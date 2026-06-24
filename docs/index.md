@@ -18,6 +18,29 @@ HTTP/stdio 対応の MCP サーバー。API/MCP 中継機能とユーザー別�
 - **Bearer トークン認証**: ユーザー別のトークン発行
 - **水平スケール**: WEB / MCP コンテナを分離し、Redis でセッション共有してスケール可能
 
+## スクリーンショット
+
+![ログイン画面](assets/screenshots/login.png)
+*ログイン画面*
+
+![ダッシュボード](assets/screenshots/dashboard.png)
+*ダッシュボード — 各管理機能への入口*
+
+![MCPサービス一覧](assets/screenshots/mcp-services-list.png)
+*MCPサービス一覧 — public/restrictedのアクセス制御を一覧表示*
+
+![MCPサービス詳細](assets/screenshots/mcp-service-detail.png)
+*MCPサービス詳細 — Claude Desktop / Cursor / VS Code 向けのクライアント設定スニペットを自動生成*
+
+![AdminMCP接続ガイド](assets/screenshots/guide.png)
+*AdminMCP接続ガイド — エンドポイント情報と利用可能なツール一覧*
+
+![接続ログ管理](assets/screenshots/connection-logs.png)
+*接続ログ管理 — MCPサービスごとの接続履歴を確認*
+
+![接続アカウント一覧](assets/screenshots/accounts-list.png)
+*接続アカウント一覧 — Bearerトークンを発行してMCPクライアントに配布*
+
 ## ドキュメント一覧
 
 | ドキュメント | 内容 |
