@@ -79,7 +79,8 @@ BUILTIN_TEMPLATES = [
         'official_url': 'https://docs.github.com/rest',
         'common_headers': {
             'Authorization': 'Bearer YOUR_GITHUB_TOKEN',
-            'Accept': 'application/vnd.github.v3+json'
+            'Accept': 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28'
         },
         'capabilities': [
             {
@@ -112,40 +113,6 @@ BUILTIN_TEMPLATES = [
                 'query_params': {
                     'state': {'type': 'string', 'required': False, 'description': 'open, closed, or all'}
                 }
-            }
-        ]
-    },
-    {
-        'name': 'AWS S3 API',
-        'service_type': 'api',
-        'description': 'Amazon S3 API for cloud storage operations',
-        'icon': '☁️',
-        'category': 'Storage',
-        'mcp_url': 'https://s3.amazonaws.com/',
-        'official_url': 'https://docs.aws.amazon.com/s3/',
-        'common_headers': {},
-        'capabilities': [
-            {
-                'name': 'List Buckets',
-                'capability_type': 'resource',
-                'endpoint_path': '',
-                'method': 'GET',
-                'description': 'List all S3 buckets'
-            },
-            {
-                'name': 'Upload Object',
-                'capability_type': 'tool',
-                'endpoint_path': '{bucket}/{key}',
-                'method': 'PUT',
-                'description': 'Upload an object to S3',
-                'headers': {'Content-Type': 'application/octet-stream'}
-            },
-            {
-                'name': 'Get Object',
-                'capability_type': 'resource',
-                'endpoint_path': '{bucket}/{key}',
-                'method': 'GET',
-                'description': 'Retrieve an object from S3'
             }
         ]
     },
@@ -255,8 +222,264 @@ BUILTIN_TEMPLATES = [
                 }
             }
         ]
+    },
+    {
+        'name': 'Notion API',
+        'service_type': 'api',
+        'description': 'Notion API for pages, databases and content management',
+        'icon': '📝',
+        'category': 'Productivity',
+        'mcp_url': 'https://api.notion.com/v1/',
+        'official_url': 'https://developers.notion.com/reference/intro',
+        'common_headers': {
+            'Authorization': 'Bearer YOUR_NOTION_TOKEN',
+            'Notion-Version': '2022-06-28',
+            'Content-Type': 'application/json'
+        },
+        'capabilities': [
+            {
+                'name': 'Search',
+                'capability_type': 'tool',
+                'endpoint_path': 'search',
+                'method': 'POST',
+                'description': 'Search pages and databases across the workspace',
+                'body_params': {
+                    'query': {'type': 'string', 'required': False, 'description': 'Search text'}
+                }
+            },
+            {
+                'name': 'Retrieve a Page',
+                'capability_type': 'resource',
+                'endpoint_path': 'pages/{page_id}',
+                'method': 'GET',
+                'description': 'Get a page by ID'
+            },
+            {
+                'name': 'Create a Page',
+                'capability_type': 'tool',
+                'endpoint_path': 'pages',
+                'method': 'POST',
+                'description': 'Create a new page',
+                'body_params': {
+                    'parent': {'type': 'object', 'required': True, 'description': 'Parent page or database reference'},
+                    'properties': {'type': 'object', 'required': True, 'description': 'Page property values'}
+                }
+            },
+            {
+                'name': 'Query a Database',
+                'capability_type': 'tool',
+                'endpoint_path': 'databases/{database_id}/query',
+                'method': 'POST',
+                'description': 'Query rows of a database',
+                'body_params': {
+                    'filter': {'type': 'object', 'required': False, 'description': 'Filter conditions'},
+                    'sorts': {'type': 'array', 'required': False, 'description': 'Sort conditions'}
+                }
+            }
+        ]
+    },
+    {
+        'name': 'Stripe API',
+        'service_type': 'api',
+        'description': 'Stripe API for payments, customers and billing',
+        'icon': '💳',
+        'category': 'Payments',
+        'mcp_url': 'https://api.stripe.com/v1/',
+        'official_url': 'https://stripe.com/docs/api',
+        'common_headers': {
+            'Authorization': 'Bearer YOUR_STRIPE_SECRET_KEY',
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        'capabilities': [
+            {
+                'name': 'List Customers',
+                'capability_type': 'resource',
+                'endpoint_path': 'customers',
+                'method': 'GET',
+                'description': 'List existing customers',
+                'query_params': {
+                    'limit': {'type': 'integer', 'required': False, 'description': 'Number of results (max 100)'}
+                }
+            },
+            {
+                'name': 'Create Customer',
+                'capability_type': 'tool',
+                'endpoint_path': 'customers',
+                'method': 'POST',
+                'description': 'Create a new customer',
+                'body_params': {
+                    'email': {'type': 'string', 'required': False, 'description': 'Customer email'},
+                    'name': {'type': 'string', 'required': False, 'description': 'Customer name'}
+                }
+            },
+            {
+                'name': 'Create PaymentIntent',
+                'capability_type': 'tool',
+                'endpoint_path': 'payment_intents',
+                'method': 'POST',
+                'description': 'Create a PaymentIntent to collect a payment',
+                'body_params': {
+                    'amount': {'type': 'integer', 'required': True, 'description': 'Amount in the smallest currency unit (e.g. cents)'},
+                    'currency': {'type': 'string', 'required': True, 'description': 'Three-letter ISO currency code (e.g. usd)'}
+                }
+            },
+            {
+                'name': 'List Charges',
+                'capability_type': 'resource',
+                'endpoint_path': 'charges',
+                'method': 'GET',
+                'description': 'List recent charges',
+                'query_params': {
+                    'limit': {'type': 'integer', 'required': False, 'description': 'Number of results (max 100)'}
+                }
+            }
+        ]
+    },
+    {
+        'name': 'SendGrid API',
+        'service_type': 'api',
+        'description': 'SendGrid API for transactional email delivery',
+        'icon': '📧',
+        'category': 'Communication',
+        'mcp_url': 'https://api.sendgrid.com/v3/',
+        'official_url': 'https://docs.sendgrid.com/api-reference',
+        'common_headers': {
+            'Authorization': 'Bearer YOUR_SENDGRID_API_KEY',
+            'Content-Type': 'application/json'
+        },
+        'capabilities': [
+            {
+                'name': 'Send Mail',
+                'capability_type': 'tool',
+                'endpoint_path': 'mail/send',
+                'method': 'POST',
+                'description': 'Send a transactional email',
+                'body_params': {
+                    'personalizations': {'type': 'array', 'required': True, 'description': 'Recipient(s) and substitution data'},
+                    'from': {'type': 'object', 'required': True, 'description': 'Sender email object'},
+                    'subject': {'type': 'string', 'required': True, 'description': 'Email subject'},
+                    'content': {'type': 'array', 'required': True, 'description': 'Email body content (type/value pairs)'}
+                }
+            }
+        ]
+    },
+    {
+        'name': 'Discord API',
+        'service_type': 'api',
+        'description': 'Discord API for bots, channels and messaging',
+        'icon': '🎮',
+        'category': 'Communication',
+        'mcp_url': 'https://discord.com/api/v10/',
+        'official_url': 'https://discord.com/developers/docs/intro',
+        'common_headers': {
+            'Authorization': 'Bot YOUR_BOT_TOKEN',
+            'Content-Type': 'application/json'
+        },
+        'capabilities': [
+            {
+                'name': 'Get Channel',
+                'capability_type': 'resource',
+                'endpoint_path': 'channels/{channel_id}',
+                'method': 'GET',
+                'description': 'Get a channel by ID'
+            },
+            {
+                'name': 'Create Message',
+                'capability_type': 'tool',
+                'endpoint_path': 'channels/{channel_id}/messages',
+                'method': 'POST',
+                'description': 'Post a message to a channel',
+                'body_params': {
+                    'content': {'type': 'string', 'required': True, 'description': 'Message text'}
+                }
+            },
+            {
+                'name': 'Get Guild',
+                'capability_type': 'resource',
+                'endpoint_path': 'guilds/{guild_id}',
+                'method': 'GET',
+                'description': 'Get a guild (server) by ID'
+            }
+        ]
+    },
+    {
+        'name': 'HubSpot API',
+        'service_type': 'api',
+        'description': 'HubSpot CRM API for contacts and customer data',
+        'icon': '🧡',
+        'category': 'CRM',
+        'mcp_url': 'https://api.hubapi.com/',
+        'official_url': 'https://developers.hubspot.com/docs/api/overview',
+        'common_headers': {
+            'Authorization': 'Bearer YOUR_HUBSPOT_ACCESS_TOKEN',
+            'Content-Type': 'application/json'
+        },
+        'capabilities': [
+            {
+                'name': 'List Contacts',
+                'capability_type': 'resource',
+                'endpoint_path': 'crm/v3/objects/contacts',
+                'method': 'GET',
+                'description': 'List CRM contacts',
+                'query_params': {
+                    'limit': {'type': 'integer', 'required': False, 'description': 'Number of results (max 100)'}
+                }
+            },
+            {
+                'name': 'Create Contact',
+                'capability_type': 'tool',
+                'endpoint_path': 'crm/v3/objects/contacts',
+                'method': 'POST',
+                'description': 'Create a new CRM contact',
+                'body_params': {
+                    'properties': {'type': 'object', 'required': True, 'description': 'Contact property values (e.g. email, firstname)'}
+                }
+            }
+        ]
+    },
+    {
+        'name': 'Twilio API',
+        'service_type': 'api',
+        'description': 'Twilio API for SMS and voice messaging',
+        'icon': '📱',
+        'category': 'Communication',
+        'mcp_url': 'https://api.twilio.com/2010-04-01/',
+        'official_url': 'https://www.twilio.com/docs/usage/api',
+        'common_headers': {
+            'Authorization': 'Basic YOUR_BASE64_ACCOUNTSID_AUTHTOKEN',
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        'capabilities': [
+            {
+                'name': 'Send SMS',
+                'capability_type': 'tool',
+                'endpoint_path': 'Accounts/{AccountSid}/Messages.json',
+                'method': 'POST',
+                'description': 'Send an SMS message',
+                'body_params': {
+                    'To': {'type': 'string', 'required': True, 'description': 'Recipient phone number (E.164)'},
+                    'From': {'type': 'string', 'required': True, 'description': 'Sender phone number (E.164)'},
+                    'Body': {'type': 'string', 'required': True, 'description': 'Message text'}
+                }
+            },
+            {
+                'name': 'List Messages',
+                'capability_type': 'resource',
+                'endpoint_path': 'Accounts/{AccountSid}/Messages.json',
+                'method': 'GET',
+                'description': 'List sent/received messages',
+                'query_params': {
+                    'PageSize': {'type': 'integer', 'required': False, 'description': 'Number of results per page'}
+                }
+            }
+        ]
     }
 ]
+
+# Version tag stamped on locally-seeded builtin templates, kept in sync with the
+# latest entry in data/builtin_templates/index.yaml so a fresh install does not
+# show a false "update available" badge in the admin UI.
+BUILTIN_TEMPLATES_VERSION = '1.1.0'
 
 
 def load_service_templates():
@@ -284,6 +507,8 @@ def load_service_templates():
                 template.category = template_data['category']
                 template.mcp_url = template_data.get('mcp_url')
                 template.official_url = template_data.get('official_url')
+                template.template_id = template_data['name'].lower().replace(' ', '-')
+                template.template_version = BUILTIN_TEMPLATES_VERSION
             else:
                 # Create service template
                 template = McpServiceTemplate(
@@ -295,7 +520,9 @@ def load_service_templates():
                     description=template_data['description'],
                     common_headers=json.dumps(template_data.get('common_headers', {})),
                     icon=template_data['icon'],
-                    category=template_data['category']
+                    category=template_data['category'],
+                    template_id=template_data['name'].lower().replace(' ', '-'),
+                    template_version=BUILTIN_TEMPLATES_VERSION
                 )
                 db.session.add(template)
                 db.session.flush()  # Get template ID
@@ -327,5 +554,31 @@ def load_service_templates():
             print(f"  ✗ Error loading '{template_data['name']}': {e}")
             db.session.rollback()
             raise
-    
+
+    # Remove builtin templates that are no longer part of the catalog (e.g. a template
+    # retired in a later AccelMCP version, such as the removed AWS S3 API template).
+    # Child capability rows must be deleted first: there is no ON DELETE CASCADE on the
+    # mcp_capability_templates -> mcp_service_templates foreign key.
+    current_names = {t['name'] for t in BUILTIN_TEMPLATES}
+    stale_templates = McpServiceTemplate.query.filter_by(template_type='builtin').filter(
+        ~McpServiceTemplate.name.in_(current_names)
+    ).all()
+    for stale in stale_templates:
+        print(f"  ✗ Removing retired builtin template '{stale.name}'")
+        McpCapabilityTemplate.query.filter_by(template_id=stale.id).delete()
+        db.session.delete(stale)
+    if stale_templates:
+        db.session.commit()
+
+    # Record the bootstrapped catalog version so the "check for updates" feature
+    # does not report a false update on a fresh install.
+    from app.models.models import AdminSettings
+
+    setting = AdminSettings.query.filter_by(setting_key='builtin_templates_version').first()
+    if setting:
+        setting.setting_value = BUILTIN_TEMPLATES_VERSION
+    else:
+        db.session.add(AdminSettings(setting_key='builtin_templates_version', setting_value=BUILTIN_TEMPLATES_VERSION))
+    db.session.commit()
+
     print("✓ All builtin templates loaded successfully")

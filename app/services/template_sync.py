@@ -228,7 +228,17 @@ class TemplateSyncService:
 
         try:
             # 既存のbuiltinテンプレートを全削除（クリーンな状態で再登録）
+            # 先に子テーブル(McpCapabilityTemplate)を削除しないと、外部キー制約
+            # (ON DELETE CASCADE非設定)違反でテンプレート本体の削除が失敗する
             logger.info("Removing all existing builtin templates...")
+            old_template_ids = [
+                row[0]
+                for row in db.session.query(McpServiceTemplate.id).filter_by(template_type="builtin").all()
+            ]
+            if old_template_ids:
+                McpCapabilityTemplate.query.filter(McpCapabilityTemplate.template_id.in_(old_template_ids)).delete(
+                    synchronize_session=False
+                )
             deleted_count = McpServiceTemplate.query.filter_by(template_type="builtin").delete()
             logger.info(f"Deleted {deleted_count} existing builtin templates")
             db.session.flush()

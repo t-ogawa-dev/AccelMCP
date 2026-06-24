@@ -1,0 +1,549 @@
+# AccelMCP Builtin Templates v1.1.0
+# Compatible with AccelMCP 1.0.0 - 1.9.9
+
+version: 1.1.0
+accel_mcp_version: 1.0.0
+last_updated: '2026-06-25T00:00:00Z'
+description: Adds 6 new API templates, fixes the GitHub API Accept header, and removes the AWS S3 template
+  (incompatible with static-header relay)
+templates:
+- id: github-mcp
+  name: GitHub MCP
+  service_type: mcp
+  description: GitHub Copilot MCP server for AI-powered development assistance
+  icon: 🐙
+  category: AI
+  mcp_url: https://api.githubcopilot.com/mcp/
+  official_url: https://github.com/github/github-mcp-server
+  common_headers:
+    Authorization: Bearer YOUR_GITHUB_TOKEN
+- id: ms-learn-mcp
+  name: MS Learn MCP
+  service_type: mcp
+  description: Microsoft Learn MCP server for documentation and learning resources
+  icon: 📚
+  category: Documentation
+  mcp_url: https://learn.microsoft.com/api/mcp
+  official_url: https://learn.microsoft.com/
+  common_headers: {}
+- id: slack-api
+  name: Slack API
+  service_type: api
+  description: Slack Web API for messaging and collaboration
+  icon: 💬
+  category: Communication
+  mcp_url: https://slack.com/api/
+  official_url: https://api.slack.com/
+  common_headers:
+    Authorization: Bearer YOUR_SLACK_TOKEN
+    Content-Type: application/json
+  capabilities:
+  - name: Post Message
+    capability_type: tool
+    endpoint_path: chat.postMessage
+    method: POST
+    description: Post a message to a Slack channel
+    headers: {}
+    body_params:
+      channel:
+        type: string
+        required: true
+        description: Channel ID or name
+      text:
+        type: string
+        required: true
+        description: Message text
+      thread_ts:
+        type: string
+        required: false
+        description: Thread timestamp
+    query_params: {}
+  - name: List Channels
+    capability_type: resource
+    endpoint_path: conversations.list
+    method: GET
+    description: List all channels in workspace
+    headers: {}
+    body_params: {}
+    query_params:
+      types:
+        type: string
+        required: false
+        description: Channel types (public_channel, private_channel)
+- id: github-api
+  name: GitHub API
+  service_type: api
+  description: GitHub REST API for repository management
+  icon: 🐙
+  category: Development
+  mcp_url: https://api.github.com/
+  official_url: https://docs.github.com/rest
+  common_headers:
+    Authorization: Bearer YOUR_GITHUB_TOKEN
+    Accept: application/vnd.github+json
+    X-GitHub-Api-Version: '2022-11-28'
+  capabilities:
+  - name: Get Repository
+    capability_type: resource
+    endpoint_path: repos/{owner}/{repo}
+    method: GET
+    description: Get repository information
+    headers: {}
+    body_params: {}
+    query_params: {}
+  - name: Create Issue
+    capability_type: tool
+    endpoint_path: repos/{owner}/{repo}/issues
+    method: POST
+    description: Create a new issue
+    headers:
+      Content-Type: application/json
+    body_params:
+      title:
+        type: string
+        required: true
+        description: Issue title
+      body:
+        type: string
+        required: false
+        description: Issue body
+      labels:
+        type: array
+        required: false
+        description: Labels
+    query_params: {}
+  - name: List Pull Requests
+    capability_type: resource
+    endpoint_path: repos/{owner}/{repo}/pulls
+    method: GET
+    description: List pull requests
+    headers: {}
+    body_params: {}
+    query_params:
+      state:
+        type: string
+        required: false
+        description: open, closed, or all
+- id: openweather-api
+  name: OpenWeather API
+  service_type: api
+  description: Weather data and forecasting API
+  icon: 🌤️
+  category: Data
+  mcp_url: https://api.openweathermap.org/data/2.5/
+  official_url: https://openweathermap.org/api
+  common_headers: {}
+  capabilities:
+  - name: Current Weather
+    capability_type: resource
+    endpoint_path: weather
+    method: GET
+    description: Get current weather data
+    headers: {}
+    body_params: {}
+    query_params:
+      q:
+        type: string
+        required: true
+        description: City name
+      appid:
+        type: string
+        required: true
+        description: API key
+      units:
+        type: string
+        required: false
+        description: metric or imperial
+  - name: Weather Forecast
+    capability_type: resource
+    endpoint_path: forecast
+    method: GET
+    description: 5 day / 3 hour forecast
+    headers: {}
+    body_params: {}
+    query_params:
+      q:
+        type: string
+        required: true
+        description: City name
+      appid:
+        type: string
+        required: true
+        description: API key
+- id: openai-api
+  name: OpenAI API
+  service_type: api
+  description: OpenAI API for GPT models and AI capabilities
+  icon: 🤖
+  category: AI
+  mcp_url: https://api.openai.com/v1/
+  official_url: https://platform.openai.com/docs/api-reference
+  common_headers:
+    Authorization: Bearer YOUR_OPENAI_API_KEY
+  capabilities:
+  - name: Create Chat Completion
+    capability_type: tool
+    endpoint_path: chat/completions
+    method: POST
+    description: Create a chat completion
+    headers:
+      Content-Type: application/json
+    body_params:
+      model:
+        type: string
+        required: true
+        description: Model ID (e.g., gpt-4)
+      messages:
+        type: array
+        required: true
+        description: Array of message objects
+      temperature:
+        type: number
+        required: false
+        description: Sampling temperature
+    query_params: {}
+  - name: List Models
+    capability_type: resource
+    endpoint_path: models
+    method: GET
+    description: List available models
+    headers: {}
+    body_params: {}
+    query_params: {}
+- id: google-calendar-api
+  name: Google Calendar API
+  service_type: api
+  description: Google Calendar API for event management
+  icon: 📅
+  category: Productivity
+  mcp_url: https://www.googleapis.com/calendar/v3/
+  official_url: https://developers.google.com/calendar/api
+  common_headers:
+    Authorization: Bearer YOUR_GOOGLE_TOKEN
+  capabilities:
+  - name: List Events
+    capability_type: resource
+    endpoint_path: calendars/{calendarId}/events
+    method: GET
+    description: List calendar events
+    headers: {}
+    body_params: {}
+    query_params:
+      timeMin:
+        type: string
+        required: false
+        description: Start time (RFC3339)
+      timeMax:
+        type: string
+        required: false
+        description: End time (RFC3339)
+  - name: Create Event
+    capability_type: tool
+    endpoint_path: calendars/{calendarId}/events
+    method: POST
+    description: Create a new event
+    headers:
+      Content-Type: application/json
+    body_params:
+      summary:
+        type: string
+        required: true
+        description: Event title
+      start:
+        type: object
+        required: true
+        description: Start time object
+      end:
+        type: object
+        required: true
+        description: End time object
+    query_params: {}
+- id: notion-api
+  name: Notion API
+  service_type: api
+  description: Notion API for pages, databases and content management
+  icon: 📝
+  category: Productivity
+  mcp_url: https://api.notion.com/v1/
+  official_url: https://developers.notion.com/reference/intro
+  common_headers:
+    Authorization: Bearer YOUR_NOTION_TOKEN
+    Notion-Version: '2022-06-28'
+    Content-Type: application/json
+  capabilities:
+  - name: Search
+    capability_type: tool
+    endpoint_path: search
+    method: POST
+    description: Search pages and databases across the workspace
+    headers: {}
+    body_params:
+      query:
+        type: string
+        required: false
+        description: Search text
+    query_params: {}
+  - name: Retrieve a Page
+    capability_type: resource
+    endpoint_path: pages/{page_id}
+    method: GET
+    description: Get a page by ID
+    headers: {}
+    body_params: {}
+    query_params: {}
+  - name: Create a Page
+    capability_type: tool
+    endpoint_path: pages
+    method: POST
+    description: Create a new page
+    headers: {}
+    body_params:
+      parent:
+        type: object
+        required: true
+        description: Parent page or database reference
+      properties:
+        type: object
+        required: true
+        description: Page property values
+    query_params: {}
+  - name: Query a Database
+    capability_type: tool
+    endpoint_path: databases/{database_id}/query
+    method: POST
+    description: Query rows of a database
+    headers: {}
+    body_params:
+      filter:
+        type: object
+        required: false
+        description: Filter conditions
+      sorts:
+        type: array
+        required: false
+        description: Sort conditions
+    query_params: {}
+- id: stripe-api
+  name: Stripe API
+  service_type: api
+  description: Stripe API for payments, customers and billing
+  icon: 💳
+  category: Payments
+  mcp_url: https://api.stripe.com/v1/
+  official_url: https://stripe.com/docs/api
+  common_headers:
+    Authorization: Bearer YOUR_STRIPE_SECRET_KEY
+    Content-Type: application/x-www-form-urlencoded
+  capabilities:
+  - name: List Customers
+    capability_type: resource
+    endpoint_path: customers
+    method: GET
+    description: List existing customers
+    headers: {}
+    body_params: {}
+    query_params:
+      limit:
+        type: integer
+        required: false
+        description: Number of results (max 100)
+  - name: Create Customer
+    capability_type: tool
+    endpoint_path: customers
+    method: POST
+    description: Create a new customer
+    headers: {}
+    body_params:
+      email:
+        type: string
+        required: false
+        description: Customer email
+      name:
+        type: string
+        required: false
+        description: Customer name
+    query_params: {}
+  - name: Create PaymentIntent
+    capability_type: tool
+    endpoint_path: payment_intents
+    method: POST
+    description: Create a PaymentIntent to collect a payment
+    headers: {}
+    body_params:
+      amount:
+        type: integer
+        required: true
+        description: Amount in the smallest currency unit (e.g. cents)
+      currency:
+        type: string
+        required: true
+        description: Three-letter ISO currency code (e.g. usd)
+    query_params: {}
+  - name: List Charges
+    capability_type: resource
+    endpoint_path: charges
+    method: GET
+    description: List recent charges
+    headers: {}
+    body_params: {}
+    query_params:
+      limit:
+        type: integer
+        required: false
+        description: Number of results (max 100)
+- id: sendgrid-api
+  name: SendGrid API
+  service_type: api
+  description: SendGrid API for transactional email delivery
+  icon: 📧
+  category: Communication
+  mcp_url: https://api.sendgrid.com/v3/
+  official_url: https://docs.sendgrid.com/api-reference
+  common_headers:
+    Authorization: Bearer YOUR_SENDGRID_API_KEY
+    Content-Type: application/json
+  capabilities:
+  - name: Send Mail
+    capability_type: tool
+    endpoint_path: mail/send
+    method: POST
+    description: Send a transactional email
+    headers: {}
+    body_params:
+      personalizations:
+        type: array
+        required: true
+        description: Recipient(s) and substitution data
+      from:
+        type: object
+        required: true
+        description: Sender email object
+      subject:
+        type: string
+        required: true
+        description: Email subject
+      content:
+        type: array
+        required: true
+        description: Email body content (type/value pairs)
+    query_params: {}
+- id: discord-api
+  name: Discord API
+  service_type: api
+  description: Discord API for bots, channels and messaging
+  icon: 🎮
+  category: Communication
+  mcp_url: https://discord.com/api/v10/
+  official_url: https://discord.com/developers/docs/intro
+  common_headers:
+    Authorization: Bot YOUR_BOT_TOKEN
+    Content-Type: application/json
+  capabilities:
+  - name: Get Channel
+    capability_type: resource
+    endpoint_path: channels/{channel_id}
+    method: GET
+    description: Get a channel by ID
+    headers: {}
+    body_params: {}
+    query_params: {}
+  - name: Create Message
+    capability_type: tool
+    endpoint_path: channels/{channel_id}/messages
+    method: POST
+    description: Post a message to a channel
+    headers: {}
+    body_params:
+      content:
+        type: string
+        required: true
+        description: Message text
+    query_params: {}
+  - name: Get Guild
+    capability_type: resource
+    endpoint_path: guilds/{guild_id}
+    method: GET
+    description: Get a guild (server) by ID
+    headers: {}
+    body_params: {}
+    query_params: {}
+- id: hubspot-api
+  name: HubSpot API
+  service_type: api
+  description: HubSpot CRM API for contacts and customer data
+  icon: 🧡
+  category: CRM
+  mcp_url: https://api.hubapi.com/
+  official_url: https://developers.hubspot.com/docs/api/overview
+  common_headers:
+    Authorization: Bearer YOUR_HUBSPOT_ACCESS_TOKEN
+    Content-Type: application/json
+  capabilities:
+  - name: List Contacts
+    capability_type: resource
+    endpoint_path: crm/v3/objects/contacts
+    method: GET
+    description: List CRM contacts
+    headers: {}
+    body_params: {}
+    query_params:
+      limit:
+        type: integer
+        required: false
+        description: Number of results (max 100)
+  - name: Create Contact
+    capability_type: tool
+    endpoint_path: crm/v3/objects/contacts
+    method: POST
+    description: Create a new CRM contact
+    headers: {}
+    body_params:
+      properties:
+        type: object
+        required: true
+        description: Contact property values (e.g. email, firstname)
+    query_params: {}
+- id: twilio-api
+  name: Twilio API
+  service_type: api
+  description: Twilio API for SMS and voice messaging
+  icon: 📱
+  category: Communication
+  mcp_url: https://api.twilio.com/2010-04-01/
+  official_url: https://www.twilio.com/docs/usage/api
+  common_headers:
+    Authorization: Basic YOUR_BASE64_ACCOUNTSID_AUTHTOKEN
+    Content-Type: application/x-www-form-urlencoded
+  capabilities:
+  - name: Send SMS
+    capability_type: tool
+    endpoint_path: Accounts/{AccountSid}/Messages.json
+    method: POST
+    description: Send an SMS message
+    headers: {}
+    body_params:
+      To:
+        type: string
+        required: true
+        description: Recipient phone number (E.164)
+      From:
+        type: string
+        required: true
+        description: Sender phone number (E.164)
+      Body:
+        type: string
+        required: true
+        description: Message text
+    query_params: {}
+  - name: List Messages
+    capability_type: resource
+    endpoint_path: Accounts/{AccountSid}/Messages.json
+    method: GET
+    description: List sent/received messages
+    headers: {}
+    body_params: {}
+    query_params:
+      PageSize:
+        type: integer
+        required: false
+        description: Number of results per page

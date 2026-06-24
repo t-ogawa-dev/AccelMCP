@@ -151,6 +151,82 @@ class TestTemplateSyncService:
                 assert version_setting is not None
                 assert version_setting.setting_value == "1.1.0"
 
+    def test_sync_templates_removes_existing_capabilities_before_deleting_templates(self, app, db):
+        """Re-syncing must delete child McpCapabilityTemplate rows before deleting their
+        parent McpServiceTemplate rows, otherwise the bulk delete violates the DB-level
+        foreign key constraint (no ON DELETE CASCADE) and the whole sync fails in production
+        Postgres, even though it passes against SQLite (which doesn't enforce FKs in tests)."""
+        from app.models.models import McpCapabilityTemplate, McpServiceTemplate, db as _db
+        from app.services.template_sync import TemplateSyncService
+
+        with app.app_context():
+            # Seed a pre-existing builtin template that has child capabilities, mirroring
+            # production state (e.g. the real "Slack API" builtin template).
+            old_template = McpServiceTemplate(
+                name="Old API",
+                template_type="builtin",
+                service_type="api",
+                template_id="old-api",
+                template_version="1.0.0",
+            )
+            _db.session.add(old_template)
+            _db.session.flush()
+            _db.session.add(
+                McpCapabilityTemplate(
+                    template_id=old_template.id,
+                    name="Old Capability",
+                    capability_type="tool",
+                )
+            )
+            _db.session.commit()
+
+            mock_index = {
+                "versions": [
+                    {
+                        "version": "1.1.0",
+                        "accel_mcp_min": "0.1.0",
+                        "accel_mcp_max": "2.0.0",
+                        "file": "builtin_templates_v1.1.0.yaml",
+                    }
+                ]
+            }
+            mock_template_data = {
+                "version": "1.1.0",
+                "templates": [
+                    {
+                        "id": "new-api",
+                        "name": "New API",
+                        "service_type": "api",
+                        "description": "Replacement template",
+                        "icon": "🆕",
+                        "category": "Test",
+                        "capabilities": [
+                            {"name": "New Capability", "capability_type": "tool", "endpoint_path": "x"}
+                        ],
+                    }
+                ],
+            }
+
+            service = TemplateSyncService()
+
+            def fetch_yaml_side_effect(url):
+                return mock_index if "index.yaml" in url else mock_template_data
+
+            with patch.object(service, "fetch_yaml", side_effect=fetch_yaml_side_effect):
+                result = service.sync_templates()
+
+            assert result["success"] is True
+
+            # The old template and its capability must be fully gone. (Note: SQLite reuses
+            # primary keys after a delete, so check by name rather than the stale FK value.)
+            assert McpServiceTemplate.query.filter_by(template_id="old-api").first() is None
+            assert McpCapabilityTemplate.query.filter_by(name="Old Capability").first() is None
+
+            # The new template was added correctly.
+            new_template = McpServiceTemplate.query.filter_by(template_id="new-api").first()
+            assert new_template is not None
+            assert len(new_template.capability_templates) == 1
+
 
 class TestCommonModalBasic:
     """Basic tests for common modal functionality"""

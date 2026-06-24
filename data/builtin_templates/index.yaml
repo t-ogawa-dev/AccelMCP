@@ -7,6 +7,15 @@ metadata:
   description: "AccelMCP builtin service templates version management"
 
 versions:
+  - version: "1.1.0"
+    accel_mcp_min: "1.0.0"
+    accel_mcp_max: "1.9.9"
+    file: "v1.1.0.yaml"
+    released_at: "2026-06-25T00:00:00Z"
+    changelog: "Notion/Stripe/SendGrid/Discord/HubSpot/Twilio APIを追加。GitHub APIのAcceptヘッダーを最新版に修正。AWS S3 API(署名必須のため固定ヘッダー中継方式と非互換)を削除。"
+    schema_breaking: false
+    template_count: 13
+
   - version: "1.0.0"
     accel_mcp_min: "1.0.0"
     accel_mcp_max: "1.9.9"
