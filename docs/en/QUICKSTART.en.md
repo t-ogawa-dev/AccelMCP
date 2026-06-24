@@ -18,7 +18,9 @@ Once you see `Default admin user created`, the server is ready.
 
 ## 2. Login to Admin Interface (1 minute)
 
-1. Open http://localhost:5000 in your browser
+1. Open **https://localhost/** in your browser (no port number; you'll see a self-signed
+   certificate warning — choose "Advanced" → "Proceed" to continue. Caddy reverse-proxies
+   the request, so port 5000 itself is not published to the host)
 2. Login:
    - ID: `accel`
    - Password: `universe`
@@ -70,8 +72,8 @@ On the same account details screen, **copy the Bearer Token**.
 # Replace TOKEN with your actual token
 TOKEN="YOUR_BEARER_TOKEN_HERE"
 
-curl -H "Authorization: Bearer $TOKEN" \
-  http://weather.lvh.me:5000/mcp
+curl -k -H "Authorization: Bearer $TOKEN" \
+  https://weather.lvh.me/mcp
 ```
 
 **Expected Output:**
@@ -106,11 +108,11 @@ curl -H "Authorization: Bearer $TOKEN" \
 ### 4.2 Execute Tool
 
 ```bash
-curl -X POST \
+curl -k -X POST \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"arguments": {"message": "Test from MCP"}}' \
-  http://weather.lvh.me:5000/tools/echo_test
+  https://weather.lvh.me/tools/echo_test
 ```
 
 **Expected Output:**
@@ -165,9 +167,20 @@ You can now:
 Use this instead:
 
 ```bash
-curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:5000/mcp?subdomain=weather
+curl -k -H "Authorization: Bearer $TOKEN" \
+  https://localhost/mcp?subdomain=weather
 ```
+
+### Certificate warning on `https://localhost/`
+
+This is expected: Caddy issues a self-signed certificate automatically. Click through the
+browser warning, or see [Scaling & Containers](SCALING.en.md#https) to trust
+Caddy's local CA instead.
+
+### Running directly with `python run.py` (no Docker)
+
+Use plain `http` and port 5000 instead: `http://localhost:5000/`,
+`http://weather.lvh.me:5000/mcp`.
 
 ### Permission Errors
 

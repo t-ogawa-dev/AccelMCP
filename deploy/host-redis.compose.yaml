@@ -1,0 +1,29 @@
+# Multi-host deployment: Redis host
+#
+# Run this on the machine that will hold the Streamable HTTP session store.
+#
+# Usage:
+#   cd deploy
+#   docker compose -f host-redis.compose.yaml up -d
+#
+# Make sure port 6379 is reachable from the web/mcp hosts (firewall/security
+# group), and that REDIS_URL on the web/mcp hosts points at this host's
+# address. See ../docs/SCALING.md for the full walkthrough.
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: mcp_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  redis_data:

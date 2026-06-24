@@ -20,7 +20,9 @@ docker compose logs -f web
 
 ## 2. 管理画面でログイン (1 分)
 
-1. ブラウザで http://localhost:5000 を開く
+1. ブラウザで **https://localhost/** を開く（ポート番号なし。自己署名証明書の警告が出るので
+   「詳細」→「アクセスする」で進む。Caddy がリバースプロキシをするため、ポート 5000 は
+   ホストには公開されていない）
 2. ログイン:
    - ID: `accel`
    - パスワード: `universe`
@@ -74,8 +76,8 @@ docker compose logs -f web
 # TOKENを置き換えてください
 TOKEN="YOUR_BEARER_TOKEN_HERE"
 
-curl -H "Authorization: Bearer $TOKEN" \
-  http://weather.lvh.me:5000/mcp
+curl -k -H "Authorization: Bearer $TOKEN" \
+  https://weather.lvh.me/mcp
 ```
 
 **期待される出力:**
@@ -110,11 +112,11 @@ curl -H "Authorization: Bearer $TOKEN" \
 ### 4.2 Tool 実行
 
 ```bash
-curl -X POST \
+curl -k -X POST \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"arguments": {"message": "Test from MCP"}}' \
-  http://weather.lvh.me:5000/tools/echo_test
+  https://weather.lvh.me/tools/echo_test
 ```
 
 **期待される出力:**
@@ -169,9 +171,20 @@ curl -X POST \
 代わりに以下を使用:
 
 ```bash
-curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:5000/mcp?subdomain=weather
+curl -k -H "Authorization: Bearer $TOKEN" \
+  https://localhost/mcp?subdomain=weather
 ```
+
+### `https://localhost/` で証明書の警告が出る
+
+Caddy が自動生成する自己署名証明書のため、ローカル開発では想定どおりの動作です。
+ブラウザの警告画面で「詳細」→「アクセスする」と進めば問題なく使えます。
+警告を消したい場合は [スケーリング・コンテナ構成](SCALING.md#https) を参照してください。
+
+### Docker を使わず直接 `python run.py` で起動した場合
+
+ポート 5000・`http`（TLSなし）でアクセスしてください:
+`http://localhost:5000/` 、`http://weather.lvh.me:5000/mcp` のように読み替えます。
 
 ### 権限エラーが出る
 

@@ -43,10 +43,30 @@ docker-compose down
 
 ## Access
 
-- Web Admin Interface: http://admin.lvh.me:5000/ or http://localhost:5000/
+### When started with Docker Compose (recommended)
+
+Caddy acts as the reverse proxy on ports 443/80; the `web`/`mcp` containers' port 5000 is
+**not** published to the host. Access using **HTTPS with no port number**.
+
+- Web Admin Interface: **https://localhost/**
+- MCP service (subdomain-based): **https://`<identifier>`.lvh.me/mcp**
+  (`lvh.me` always resolves to 127.0.0.1, so subdomains work with no extra setup)
+
+The certificate is a self-signed one that Caddy generates automatically (`tls internal`).
+Your browser will show a "connection not private/secure" warning — this is expected for
+local development. To remove the warning, trust Caddy's local CA in your OS following the
+steps in [Scaling & Containers](docs/en/SCALING.en.md#https).
+
 - Default Administrator
   - ID: `accel`
   - Password: `universe`
+
+### When started directly with `python run.py` (no Docker)
+
+The Flask dev server binds directly to port 5000, so access it without TLS.
+
+- Web Admin Interface: http://localhost:5000/
+- MCP service (subdomain-based): http://`<identifier>`.lvh.me:5000/mcp
 
 **⚠️ Security Warning**
 
@@ -63,7 +83,9 @@ environment:
   ADMIN_PASSWORD: your_secure_password
 ```
 
-**Note**: The `admin` subdomain is dedicated to the admin interface and is handled separately from service subdomains.
+**Note**: The admin UI is routed by path (e.g. `/dashboard`), so it renders the same whether
+you access it via `https://localhost/`, `https://lvh.me/`, or `https://admin.lvh.me/`. Only
+MCP services are distinguished by subdomain (`<identifier>.lvh.me`).
 
 ## Security Features
 
@@ -129,18 +151,23 @@ Customizable via AdminSettings:
 
 ## MCP Client Connection
 
+The URLs below are for **Docker Compose (via Caddy, `https://`, no port number)**. If you
+started directly with `python run.py` (no Docker), use `http://` + `:5000` instead (e.g.
+`http://myservice.lvh.me:5000/mcp`). Since the certificate is self-signed, `curl` needs `-k`
+(skip certificate verification).
+
 ### Subdomain-Based Access (Recommended)
 
 #### 1. Get Capabilities (GET Request)
 
 ```bash
-# Using lvh.me domain (for local development)
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://myservice.lvh.me:5000/mcp
+# Using lvh.me domain (for local development, always resolves to 127.0.0.1)
+curl -k -H "Authorization: Bearer YOUR_TOKEN" \
+  https://myservice.lvh.me/mcp
 
 # Or using subdomain parameter
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:5000/mcp?subdomain=myservice
+curl -k -H "Authorization: Bearer YOUR_TOKEN" \
+  https://localhost/mcp?subdomain=myservice
 ```
 
 **Response Example:**
@@ -175,14 +202,14 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 
 ```bash
 # Execute tool directly
-curl -X POST \
+curl -k -X POST \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"arguments": {"city": "Tokyo"}}' \
-  http://myservice.lvh.me:5000/tools/get_weather
+  https://myservice.lvh.me/tools/get_weather
 
 # Or execute via MCP protocol
-curl -X POST \
+curl -k -X POST \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -194,7 +221,7 @@ curl -X POST \
       "arguments": {"city": "Tokyo"}
     }
   }' \
-  http://myservice.lvh.me:5000/mcp
+  https://myservice.lvh.me/mcp
 ```
 
 ### MCP Client Configuration
@@ -205,7 +232,7 @@ curl -X POST \
 {
   "mcpServers": {
     "my-service": {
-      "url": "http://myservice.lvh.me:5000/mcp",
+      "url": "https://myservice.lvh.me/mcp",
       "transport": {
         "type": "http"
       },
@@ -223,7 +250,7 @@ curl -X POST \
 {
   "mcpServers": {
     "my-service": {
-      "url": "http://localhost:5000/mcp/myservice",
+      "url": "https://localhost/mcp/myservice",
       "headers": {
         "Authorization": "Bearer YOUR_TOKEN"
       }
@@ -257,14 +284,17 @@ curl -X POST \
 
 ### MCP Endpoints
 
-| Endpoint                                  | Method | Description                                   |
-| ----------------------------------------- | ------ | --------------------------------------------- |
-| `<subdomain>.lvh.me:5000/mcp`             | GET    | Get Capabilities available to the account     |
-| `<subdomain>.lvh.me:5000/mcp`             | POST   | Process MCP requests (tools/list, tools/call) |
-| `<subdomain>.lvh.me:5000/tools/<tool_id>` | POST   | Execute a specific Tool directly              |
-| `/mcp/<subdomain>`                        | POST   | Legacy endpoint (backward compatibility)      |
+| Endpoint                              | Method | Description                                   |
+| -------------------------------------- | ------ | --------------------------------------------- |
+| `<subdomain>.lvh.me/mcp`             | GET    | Get Capabilities available to the account     |
+| `<subdomain>.lvh.me/mcp`             | POST   | Process MCP requests (tools/list, tools/call) |
+| `<subdomain>.lvh.me/tools/<tool_id>` | POST   | Execute a specific Tool directly              |
+| `/mcp/<subdomain>`                   | POST   | Legacy endpoint (backward compatibility)      |
 
-**Note:** `lvh.me` is a domain for local development that always resolves to 127.0.0.1. Use your own domain in production.
+**Note:** The URLs above are for Docker Compose (via Caddy: `https://`, no port number). If
+you started directly with `python run.py` (no Docker), use
+`http://<subdomain>.lvh.me:5000/mcp` instead (port 5000, plain `http`). `lvh.me` is a domain
+for local development that always resolves to 127.0.0.1. Use your own domain in production.
 
 ## Database Structure
 

@@ -13,7 +13,11 @@ This MCP server provides 3 main endpoints:
 3. **POST /tools/<tool_id>** - Direct Tool execution
 
 All endpoints support subdomain-based routing.
-The admin interface is accessible at `http://admin.lvh.me:5000/`.
+The URLs below are for **Docker Compose (via Caddy, `https://`, no port number)**. If you
+started directly with `python run.py` (no Docker), use `http://` + `:5000` instead. Since the
+certificate is self-signed, `curl` needs `-k` (skip certificate verification).
+
+The admin interface is accessible at `https://localhost/` (or `https://lvh.me/`).
 
 ## Subdomain Specification Methods
 
@@ -22,25 +26,25 @@ The admin interface is accessible at `http://admin.lvh.me:5000/`.
 `lvh.me` always points to 127.0.0.1, making it convenient for local development.
 
 ```
-http://<subdomain>.lvh.me:5000/mcp
+https://<subdomain>.lvh.me/mcp
 ```
 
 **Examples:**
 
-- `http://weather.lvh.me:5000/mcp` - weather service MCP endpoint
-- `http://myapi.lvh.me:5000/mcp` - myapi service MCP endpoint
-- `http://admin.lvh.me:5000/` - Admin interface (subdomain admin is dedicated to admin interface)
+- `https://weather.lvh.me/mcp` - weather service MCP endpoint
+- `https://myapi.lvh.me/mcp` - myapi service MCP endpoint
+- `https://localhost/` - Admin interface (routed by path, so any hostname works)
 
 ### Method 2: Query Parameters
 
 ```
-http://localhost:5000/mcp?subdomain=<subdomain>
+https://localhost/mcp?subdomain=<subdomain>
 ```
 
 ### Method 3: Custom Header
 
 ```bash
-curl -H "X-Subdomain: myservice" http://localhost:5000/mcp
+curl -k -H "X-Subdomain: myservice" https://localhost/mcp
 ```
 
 ## Authentication
@@ -62,8 +66,8 @@ Retrieve the list of Tools available to the account.
 ### Request
 
 ```bash
-curl -H "Authorization: Bearer abc123..." \
-  http://myservice.lvh.me:5000/mcp
+curl -k -H "Authorization: Bearer abc123..." \
+  https://myservice.lvh.me/mcp
 ```
 
 ### Response
@@ -124,7 +128,7 @@ Process requests according to the standard MCP protocol.
 #### Request
 
 ```bash
-curl -X POST \
+curl -k -X POST \
   -H "Authorization: Bearer abc123..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -132,7 +136,7 @@ curl -X POST \
     "id": 1,
     "method": "tools/list"
   }' \
-  http://myservice.lvh.me:5000/mcp
+  https://myservice.lvh.me/mcp
 ```
 
 #### Response
@@ -165,7 +169,7 @@ curl -X POST \
 #### Request
 
 ```bash
-curl -X POST \
+curl -k -X POST \
   -H "Authorization: Bearer abc123..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -179,7 +183,7 @@ curl -X POST \
       }
     }
   }' \
-  http://myservice.lvh.me:5000/mcp
+  https://myservice.lvh.me/mcp
 ```
 
 #### Response (Success)
@@ -221,7 +225,7 @@ Simple endpoint to execute a Tool by directly specifying its ID.
 ### Request
 
 ```bash
-curl -X POST \
+curl -k -X POST \
   -H "Authorization: Bearer abc123..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -229,7 +233,7 @@ curl -X POST \
       "city": "Tokyo"
     }
   }' \
-  http://myservice.lvh.me:5000/tools/get_weather
+  https://myservice.lvh.me/tools/get_weather
 ```
 
 ### Tool ID Specification Methods
@@ -299,7 +303,7 @@ curl -X POST \
 {
   "mcp_servers": {
     "weather_service": {
-      "url": "http://weather.lvh.me:5000/mcp",
+      "url": "https://weather.lvh.me/mcp",
       "auth": {
         "type": "bearer",
         "token": "YOUR_BEARER_TOKEN"
@@ -315,7 +319,7 @@ curl -X POST \
 {
   "mcpServers": {
     "weather": {
-      "url": "http://weather.lvh.me:5000/mcp",
+      "url": "https://weather.lvh.me/mcp",
       "transport": {
         "type": "http"
       },
@@ -339,7 +343,7 @@ headers = {
 
 # Get Capabilities
 response = requests.get(
-    'http://myservice.lvh.me:5000/mcp',
+    'https://myservice.lvh.me/mcp',
     headers=headers
 )
 capabilities = response.json()
@@ -347,7 +351,7 @@ print(capabilities)
 
 # Execute Tool
 response = requests.post(
-    'http://myservice.lvh.me:5000/tools/get_weather',
+    'https://myservice.lvh.me/tools/get_weather',
     headers=headers,
     json={'arguments': {'city': 'Tokyo'}}
 )
@@ -359,18 +363,18 @@ print(result)
 
 ```bash
 # 1. Get Capabilities
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://myservice.lvh.me:5000/mcp
+curl -k -H "Authorization: Bearer YOUR_TOKEN" \
+  https://myservice.lvh.me/mcp
 
 # 2. Execute specific Tool
-curl -X POST \
+curl -k -X POST \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"arguments": {"city": "Tokyo"}}' \
-  http://myservice.lvh.me:5000/tools/get_weather
+  https://myservice.lvh.me/tools/get_weather
 
 # 3. Execute Tool via MCP protocol
-curl -X POST \
+curl -k -X POST \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -382,7 +386,7 @@ curl -X POST \
       "arguments": {"city": "Tokyo"}
     }
   }' \
-  http://myservice.lvh.me:5000/mcp
+  https://myservice.lvh.me/mcp
 ```
 
 ---
@@ -459,7 +463,10 @@ curl -X POST \
 
 1. Check DNS settings (`ping myservice.lvh.me` should return 127.0.0.1)
 2. Use query parameter instead: `?subdomain=myservice`
-3. Include port number: `http://myservice.lvh.me:5000/mcp`
+3. Confirm you're using the right scheme/port: `https://myservice.lvh.me/mcp` via Docker
+   Compose (Caddy), or `http://myservice.lvh.me:5000/mcp` when running directly with
+   `python run.py`
+4. If `curl` reports a certificate error, add `-k` (the certificate is self-signed)
 
 ### Authentication Error
 

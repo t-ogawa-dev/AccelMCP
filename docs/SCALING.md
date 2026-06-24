@@ -22,22 +22,113 @@ AccelMCP は **同一イメージのまま**、1台運用にも複数台運用�
 
 ### Caddy のルーティング
 
+ホスト名に関わらず、**パス**で `web`/`mcp` に振り分けます。
+
 | パス | 振り分け先 |
 | --- | --- |
 | `/mcp`, `/mcp/<subdomain>`, `/<identifier>/mcp`, `/admin/mcp`, `/tools/*` | `mcp` |
 | 上記以外(`/`, `/dashboard`, `/api/*`, `/assets/*` など) | `web` |
 
-## 1. 1台運用(全部入り)
+Caddy は `localhost`(または `ACCEL_MCP_DOMAIN`)と、ローカル開発用の `lvh.me` / `*.lvh.me`
+の両方を受け付けます。`lvh.me` は常に `127.0.0.1` を指す公開DNSなので、サブドメイン方式の
+MCPサービス(`<identifier>.lvh.me/mcp`)を追加設定なしでテストできます。
 
-Dify と同様に、1つのホストで全コンテナを起動します。
+## 1. 1台運用(ローカル・AWS 等)
+
+![1台構成・複数台構成の図](assets/diagrams/deployment-topology.svg)
+
+Dify と同様に、1つのマシンで全コンテナを起動します。**ローカルPCでも、AWS EC2のような
+クラウドVMでも、手順は同じです**(違いは「実ドメインを使うか」だけ)。
+
+### ローカル開発・検証
 
 ```bash
+git clone https://github.com/t-ogawa-dev/AccelMCP.git
+cd AccelMCP
+cp .env.example .env
 docker compose up -d
 ```
 
-- `web` / `mcp` / `redis` / `db` / `caddy` が同一ホストで動きます。
+`https://localhost/` でアクセスします(自己署名証明書の警告は許容して進む。
+[HTTPS](#https) 節を参照)。`ACCEL_MCP_DOMAIN`は設定不要です。
+
+### 本番運用(実ドメインで1台に集約。AWS EC2 / 自前サーバ等)
+
+1. マシンを用意し、Docker と Docker Compose をインストールする
+   (AWSの場合: EC2インスタンスを起動し、セキュリティグループで **80・443番を
+   `0.0.0.0/0` に許可**、SSH用に22番を許可)
+2. 取得したドメインのDNS Aレコードを、そのマシンのパブリックIPに向ける
+3. リポジトリを配置し `.env` を作成・編集:
+
+   ```bash
+   git clone https://github.com/t-ogawa-dev/AccelMCP.git
+   cd AccelMCP
+   cp .env.example .env
+   ```
+
+   `.env` で以下を変更:
+
+   ```bash
+   ACCEL_MCP_DOMAIN=mcp.example.com   # 取得したドメイン
+   FLASK_ENV=production
+   SECRET_KEY=<openssl rand -hex 32 などで生成したランダム文字列>
+   ADMIN_USERNAME=<デフォルトから変更>
+   ADMIN_PASSWORD=<デフォルトから変更>
+   ```
+
+4. 本番用 Caddyfile (Let's Encrypt) を指定して起動:
+
+   ```bash
+   CADDYFILE=./Caddyfile.prod docker compose up -d --build
+   ```
+
+   (`.env` に `CADDYFILE=./Caddyfile.prod` を書いておけば、以降は単に
+   `docker compose up -d` でも反映されます)
+
+5. `https://mcp.example.com/login` にアクセスして確認(Let's Encrypt証明書が
+   自動取得されるので、ブラウザの警告は出ません)
+
+- `web` / `mcp` / `redis` / `db` / `caddy` が同一マシンで動きます。
 - Redis があるので Streamable HTTP セッションは Redis に保存されますが、
   1台なら in-memory でも動作します(後述)。
+- 複数マシンに分けたい場合は [4. 複数ホストに分散する](#4-複数ホストに分散する) へ。
+
+## HTTPS
+
+`web`/`mcp` コンテナのポート 5000 は**ホストには公開されません**(`expose` のみ)。
+ブラウザ・MCPクライアントからは必ず Caddy 経由でアクセスします。
+
+| 用途 | URL |
+| --- | --- |
+| Web管理画面 | `https://localhost/` |
+| MCPサービス(サブドメイン方式) | `https://<identifier>.lvh.me/mcp` |
+| MCPサービス(パス方式) | `https://localhost/<identifier>/mcp` |
+
+ポート番号は不要です(Caddyが443番で受けて内部の5000番へ中継します)。
+
+### 証明書が「信頼されていません」と表示される
+
+これは正常です。ローカル開発用の `Caddyfile` は `tls internal` で **Caddy自身の自己署名CA**
+から証明書を発行しています(Let's Encryptはローカル開発では使えません。`localhost`や`lvh.me`
+は実在の公開ドメインではないため)。対処方法は2つあります。
+
+**A. ブラウザの警告を無視して進む(最も簡単)**
+
+警告画面で「詳細」→「アクセスする(安全ではありません)」を選べば表示されます。
+
+**B. CaddyのローカルCAをOSに信頼させる(警告を消したい場合)**
+
+```bash
+docker cp mcp_caddy:/data/caddy/pki/authorities/local/root.crt ./caddy_local_ca.crt
+```
+
+取り出した `caddy_local_ca.crt` を、macOSなら「キーチェーンアクセス」にドラッグして
+「常に信頼」に設定、Windowsなら「信頼されたルート証明機関」にインポートします。
+
+### Docker を使わず `python run.py` で直接起動する場合
+
+Flask開発サーバーがポート5000で直接起動するので、TLSなしでアクセスします
+(`http://localhost:5000/`、`http://<identifier>.lvh.me:5000/mcp`)。
 
 ## 2. セッションストア(Redis)について
 
@@ -70,20 +161,99 @@ docker compose up -d --scale mcp=3
 
 ## 4. 複数ホストに分散する
 
-WEB / MCP / Redis / DB を別々のホストで動かす場合は、各ホストで必要なサービスだけを
-起動し、接続先を環境変数・Caddy 設定で各ホストのアドレスに変更します。
+WEB / MCP / Redis / DB を別々のマシンで動かす構成です。`deploy/` ディレクトリに
+**ホストの役割ごとに分割した compose ファイル**を用意しているので、各マシンで該当する
+ファイルだけを起動します。
 
-- `web` ホスト: `web` + `caddy`(または別途LB)
-- `mcp` ホスト(複数可): `mcp`(`REDIS_URL`/`DATABASE_URL` を共有Redis/共有DBに向ける)
-- `redis` ホスト: `redis`
-- `db` ホスト: PostgreSQL
+| ファイル | 役割 | 起動するマシン |
+| --- | --- | --- |
+| `deploy/host-db.compose.yaml` | PostgreSQL | DBホスト |
+| `deploy/host-redis.compose.yaml` | Redis (セッション共有) | Redisホスト |
+| `deploy/host-web.compose.yaml` | 管理UI + REST API(マイグレーション実行) | WEBホスト |
+| `deploy/host-mcp.compose.yaml` | MCPエンドポイント | MCPホスト(複数可) |
+| `deploy/host-caddy.compose.yaml` | リバースプロキシ / TLS(公開窓口) | Caddyホスト |
 
-ポイント:
+### ネットワーク要件(ファイアウォール/セキュリティグループ)
 
-- `mcp` はマイグレーションを実行しません(`web` が実行)。スキーマ更新は `web` 側の
+| ホスト | 開けるポート | 許可元 |
+| --- | --- | --- |
+| DBホスト | 5432 | WEBホスト・MCPホストのIPのみ |
+| Redisホスト | 6379 | WEBホスト・MCPホストのIPのみ |
+| WEBホスト | 5000 | CaddyホストのIPのみ |
+| MCPホスト | 5000 | Caddyホストのみ |
+| Caddyホスト | 80・443 | インターネット全体(公開窓口) |
+
+### 手順
+
+各マシンに Docker / Docker Compose をインストールし、リポジトリを配置してから
+以下を実行します(`deploy/` ディレクトリで実行)。
+
+**1. DBホストで:**
+
+```bash
+cd deploy
+docker compose -f host-db.compose.yaml up -d
+```
+
+**2. Redisホストで:**
+
+```bash
+cd deploy
+docker compose -f host-redis.compose.yaml up -d
+```
+
+**3. WEBホストと MCPホスト(全台)に共通の `.env` を配置:**
+
+```bash
+# .env (リポジトリルート)
+DATABASE_URL=postgresql://mcpuser:mcppassword@<DBホストのアドレス>:5432/mcpdb
+REDIS_URL=redis://<Redisホストのアドレス>:6379/0
+SECRET_KEY=<ランダムな文字列>
+ADMIN_USERNAME=<デフォルトから変更>
+ADMIN_PASSWORD=<デフォルトから変更>
+FLASK_ENV=production
+```
+
+**4. WEBホストで(マイグレーションが実行されます):**
+
+```bash
+cd deploy
+docker compose -f host-web.compose.yaml up -d --build
+```
+
+**5. MCPホストで(MCPホストを増やす場合は同じ手順を他のマシンでも繰り返す):**
+
+```bash
+cd deploy
+docker compose -f host-mcp.compose.yaml up -d --build
+```
+
+**6. Caddyホストで(WEB_UPSTREAM/MCP_UPSTREAMに各ホストのアドレスを指定):**
+
+```bash
+cd deploy
+ACCEL_MCP_DOMAIN=mcp.example.com \
+WEB_UPSTREAM=<WEBホストのアドレス>:5000 \
+MCP_UPSTREAM="<MCPホスト1のアドレス>:5000 <MCPホスト2のアドレス>:5000" \
+CADDYFILE=../Caddyfile.prod \
+docker compose -f host-caddy.compose.yaml up -d
+```
+
+`MCP_UPSTREAM` はスペース区切りで複数指定できます(MCPホストが複数台の場合)。
+ローカルでの動作確認など実ドメインが無い場合は `CADDYFILE=../Caddyfile`(自己署名証明書)
+を使います。
+
+**7. 確認:** `https://mcp.example.com/login`(または `https://<Caddyホストのアドレス>/login`)
+にアクセスして管理画面が表示されることを確認します。
+
+### ポイント
+
+- `mcp` はマイグレーションを実行しません(`web` が実行)。スキーマ更新は WEBホスト側の
   デプロイで一度だけ行われます。
-- すべての `mcp` レプリカが**同じ `REDIS_URL` と同じ `DATABASE_URL`** を参照すること。
-- Caddy(または前段のLB)で MCP パスを `mcp` 群へ、それ以外を `web` へ振り分けること。
+- WEBホスト・全MCPホストが**同じ `REDIS_URL` と同じ `DATABASE_URL`** を参照すること。
+- MCPホストを増設する場合は、新しいマシンで手順5を実行し、Caddyホストの
+  `MCP_UPSTREAM` に追加してCaddyを再起動するだけです。
+- 各 `deploy/host-*.compose.yaml` のコメントにも同じ手順を記載しています。
 
 ## 関連する実装
 

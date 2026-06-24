@@ -1,0 +1,52 @@
+# Multi-host deployment: MCP host (MCP endpoint)
+#
+# Run this on one or more machines that will serve MCP traffic. Does NOT run
+# DB migrations (the web host does). Safe to run on multiple hosts at once
+# since Streamable HTTP sessions are shared via Redis.
+#
+# Usage (repeat on each MCP host):
+#   cd deploy
+#   docker compose -f host-mcp.compose.yaml up -d --build
+#
+# Note: because port 5000 is published with a fixed host port below, this
+# file is meant to be run on SEPARATE hosts (one container per host), not
+# scaled with `--scale mcp=N` on the same host (that would try to bind port
+# 5000 multiple times on one machine and fail). To run several replicas on a
+# single host instead, see "Scaling only the MCP endpoint" in
+# ../docs/SCALING.md, which uses the single-host compose.yaml without a fixed
+# host port.
+#
+# Required environment (set in ../.env or the shell):
+#   DATABASE_URL=postgresql://mcpuser:mcppassword@<db-host>:5432/mcpdb
+#   REDIS_URL=redis://<redis-host>:6379/0
+#
+# Port 5000 is published here (unlike the single-host compose.yaml, where it
+# is only `expose`d) because the Caddy host is now a separate machine. If
+# running multiple MCP hosts, list every host's address (space-separated) in
+# Caddy's MCP_UPSTREAM env var -- see ../docs/SCALING.md.
+
+services:
+  mcp:
+    build:
+      context: ..
+    container_name: mcp_endpoint
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - DOCKER_ENV=1
+      - FLASK_ENV=${FLASK_ENV:-production}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - SERVICE_ROLE=mcp
+    env_file:
+      - ../.env
+    command: >
+      sh -c "
+        if [ \"$$FLASK_ENV\" = \"production\" ]; then
+          echo 'Starting production server (mcp) with Gunicorn...' &&
+          gunicorn -w 4 -b 0.0.0.0:5000 --timeout 120 --access-logfile - --error-logfile - run:app
+        else
+          echo 'Starting development server (mcp)...' &&
+          python run.py
+        fi
+      "

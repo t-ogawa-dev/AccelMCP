@@ -10,6 +10,10 @@
 # ルーティング:
 #   - MCP エンドポイント (/mcp, /<id>/mcp, /admin/mcp, /tools/*) -> mcp サービス
 #   - それ以外 (管理UI / REST API / アセット)               -> web サービス
+#
+# 複数台運用の場合は環境変数 WEB_UPSTREAM / MCP_UPSTREAM に各ホストのアドレスを設定する
+# (例: MCP_UPSTREAM="10.0.1.10:5000 10.0.1.11:5000" のようにスペース区切りで複数指定可能。
+# デフォルトは同一 compose 内の Docker サービス名 web:5000 / mcp:5000)。詳細は docs/SCALING.md。
 
 {
     # メールアドレスを設定すると Let's Encrypt からの期限通知を受信できる
@@ -33,7 +37,7 @@ http://{$ACCEL_MCP_DOMAIN} {
     @mcp_path path_regexp ^/[^/]+/mcp/?$
 
     handle @mcp {
-        reverse_proxy mcp:5000 {
+        reverse_proxy {$MCP_UPSTREAM:mcp:5000} {
             header_up Host {host}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
@@ -46,7 +50,7 @@ http://{$ACCEL_MCP_DOMAIN} {
     }
 
     handle @mcp_path {
-        reverse_proxy mcp:5000 {
+        reverse_proxy {$MCP_UPSTREAM:mcp:5000} {
             header_up Host {host}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
@@ -60,7 +64,7 @@ http://{$ACCEL_MCP_DOMAIN} {
 
     # --- それ以外は管理UI/API (web) へ ---
     handle {
-        reverse_proxy web:5000 {
+        reverse_proxy {$WEB_UPSTREAM:web:5000} {
             header_up Host {host}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}

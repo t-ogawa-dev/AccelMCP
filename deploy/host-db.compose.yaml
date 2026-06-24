@@ -1,0 +1,33 @@
+# Multi-host deployment: DB host
+#
+# Run this on the machine that will hold the PostgreSQL database.
+#
+# Usage:
+#   cd deploy
+#   docker compose -f host-db.compose.yaml up -d
+#
+# Make sure port 5432 is reachable from the web/mcp hosts (firewall/security
+# group), and that DATABASE_URL on the web/mcp hosts points at this host's
+# address. See ../docs/SCALING.md for the full walkthrough.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: mcp_postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-mcpdb}
+      - POSTGRES_USER=${POSTGRES_USER:-mcpuser}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-mcppassword}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mcpuser} -d ${POSTGRES_DB:-mcpdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

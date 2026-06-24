@@ -1,0 +1,38 @@
+# Multi-host deployment: Caddy host (reverse proxy / TLS / public entry point)
+#
+# This is the only host that needs to be reachable from the public internet
+# (ports 80/443). It proxies to the web/mcp hosts over the network using
+# WEB_UPSTREAM / MCP_UPSTREAM.
+#
+# Usage:
+#   cd deploy
+#   ACCEL_MCP_DOMAIN=mcp.example.com \
+#   WEB_UPSTREAM=10.0.1.10:5000 \
+#   MCP_UPSTREAM="10.0.1.11:5000 10.0.1.12:5000" \
+#   docker compose -f host-caddy.compose.yaml up -d
+#
+# For local/dev multi-host testing without a real domain, use the default
+# Caddyfile (CADDYFILE=../Caddyfile) instead of Caddyfile.prod; it issues a
+# self-signed certificate and does not require a public domain. See
+# ../docs/SCALING.md for the full walkthrough.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: mcp_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - ACCEL_MCP_DOMAIN=${ACCEL_MCP_DOMAIN}
+      - WEB_UPSTREAM=${WEB_UPSTREAM}
+      - MCP_UPSTREAM=${MCP_UPSTREAM}
+    volumes:
+      - ${CADDYFILE:-../Caddyfile.prod}:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

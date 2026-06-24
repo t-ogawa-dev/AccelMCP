@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 760" width="1040" height="760" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <linearGradient id="accelGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <marker id="arrowhead2" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1040" height="760" rx="20" fill="#fafbff"/>
+
+  <!-- ===== Top: single-host ===== -->
+  <text x="40" y="36" font-size="16" font-weight="bold" fill="#1e293b">1台構成（ローカル / AWS など）</text>
+
+  <rect x="20" y="100" width="150" height="80" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="95" y="136" text-anchor="middle" font-size="14" font-weight="bold" fill="#1e293b">Agent</text>
+  <text x="95" y="154" text-anchor="middle" font-size="10.5" fill="#64748b">(ブラウザ / MCPクライアント)</text>
+
+  <rect x="210" y="55" width="790" height="170" rx="18" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="6,5"/>
+  <text x="230" y="78" font-size="12.5" fill="#64748b">1台のマシン（ローカルPC / AWS EC2 など。docker compose up -d）</text>
+
+  <rect x="230" y="100" width="140" height="80" rx="14" fill="url(#accelGradient2)"/>
+  <text x="300" y="136" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">Caddy</text>
+  <text x="300" y="154" text-anchor="middle" font-size="10" fill="#eef0ff">リバースプロキシ/TLS</text>
+
+  <rect x="386" y="100" width="140" height="80" rx="14" fill="url(#accelGradient2)"/>
+  <text x="456" y="136" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">Web</text>
+  <text x="456" y="154" text-anchor="middle" font-size="10" fill="#eef0ff">管理UI + API</text>
+
+  <rect x="542" y="100" width="140" height="80" rx="14" fill="url(#accelGradient2)"/>
+  <text x="612" y="136" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">MCP</text>
+  <text x="612" y="154" text-anchor="middle" font-size="10" fill="#eef0ff">MCPエンドポイント</text>
+
+  <rect x="698" y="100" width="140" height="80" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="768" y="136" text-anchor="middle" font-size="14" font-weight="bold" fill="#1e293b">Redis</text>
+  <text x="768" y="154" text-anchor="middle" font-size="10" fill="#64748b">セッション共有</text>
+
+  <rect x="854" y="100" width="140" height="80" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="924" y="136" text-anchor="middle" font-size="14" font-weight="bold" fill="#1e293b">DB</text>
+  <text x="924" y="154" text-anchor="middle" font-size="10" fill="#64748b">PostgreSQL</text>
+
+  <line x1="170" y1="140" x2="226" y2="140" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrowhead2)"/>
+  <line x1="370" y1="140" x2="382" y2="140" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrowhead2)"/>
+
+  <text x="990" y="208" text-anchor="end" font-size="10.5" font-style="italic" fill="#64748b">同一Docker network内でコンテナ名により通信</text>
+
+  <!-- ===== Divider ===== -->
+  <rect x="20" y="248" width="1000" height="1.5" fill="#e2e8f0"/>
+  <text x="520" y="272" text-anchor="middle" font-size="16" font-weight="bold" fill="#1e293b">複数台構成（WEB / MCP / Redis / DB を分散）</text>
+
+  <!-- ===== Bottom: multi-host ===== -->
+  <rect x="440" y="300" width="160" height="60" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="520" y="334" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e293b">Agent / Internet</text>
+
+  <line x1="520" y1="360" x2="520" y2="396" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrowhead2)"/>
+
+  <rect x="400" y="400" width="240" height="80" rx="14" fill="url(#accelGradient2)"/>
+  <text x="520" y="436" text-anchor="middle" font-size="15" font-weight="bold" fill="#ffffff">Caddyホスト</text>
+  <text x="520" y="456" text-anchor="middle" font-size="10.5" fill="#eef0ff">公開窓口（80/443、Let's Encrypt）</text>
+
+  <line x1="460" y1="480" x2="330" y2="516" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrowhead2)"/>
+  <line x1="580" y1="480" x2="740" y2="516" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrowhead2)"/>
+
+  <rect x="190" y="520" width="240" height="80" rx="14" fill="url(#accelGradient2)"/>
+  <text x="310" y="556" text-anchor="middle" font-size="15" font-weight="bold" fill="#ffffff">WEBホスト</text>
+  <text x="310" y="576" text-anchor="middle" font-size="10.5" fill="#eef0ff">管理UI + API（マイグレーション実行）</text>
+
+  <rect x="630" y="520" width="240" height="80" rx="14" fill="url(#accelGradient2)"/>
+  <text x="750" y="556" text-anchor="middle" font-size="15" font-weight="bold" fill="#ffffff">MCPホスト（複数可）</text>
+  <text x="750" y="576" text-anchor="middle" font-size="10.5" fill="#eef0ff">MCPエンドポイント</text>
+
+  <line x1="280" y1="600" x2="240" y2="636" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrowhead2)"/>
+  <line x1="340" y1="600" x2="740" y2="636" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrowhead2)"/>
+  <line x1="700" y1="600" x2="300" y2="636" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrowhead2)"/>
+  <line x1="760" y1="600" x2="800" y2="636" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrowhead2)"/>
+
+  <rect x="140" y="640" width="220" height="80" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="250" y="676" text-anchor="middle" font-size="14" font-weight="bold" fill="#1e293b">DBホスト</text>
+  <text x="250" y="696" text-anchor="middle" font-size="10.5" fill="#64748b">PostgreSQL (5432)</text>
+
+  <rect x="680" y="640" width="220" height="80" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="790" y="676" text-anchor="middle" font-size="14" font-weight="bold" fill="#1e293b">Redisホスト</text>
+  <text x="790" y="696" text-anchor="middle" font-size="10.5" fill="#64748b">セッション共有 (6379)</text>
+
+  <text x="520" y="745" text-anchor="middle" font-size="11" font-style="italic" fill="#64748b">各ホストは deploy/host-*.compose.yaml を1つだけ実行（ネットワーク越しに接続）</text>
+</svg>

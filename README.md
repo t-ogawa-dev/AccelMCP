@@ -88,10 +88,30 @@ LOG_LEVEL=DEBUG
 
 ## アクセス
 
-- Web 管理画面: http://admin.lvh.me:5000/ または http://localhost:5000/
+### Docker Compose で起動した場合（推奨）
+
+Caddy がリバースプロキシとして 443/80 番ポートを受け、`web`/`mcp` コンテナの 5000 番は
+ホストに公開されません。**ポート番号なしの `https://`** でアクセスしてください。
+
+- Web 管理画面: **https://localhost/**
+- MCP サービス（サブドメイン方式）: **https://`<identifier>`.lvh.me/mcp**
+  （`lvh.me` は常に 127.0.0.1 を指す公開DNSなので、追加設定なしでサブドメインが使えます）
+
+証明書は Caddy が自動生成する自己署名証明書（`tls internal`）です。ブラウザに
+「この接続は保護されていません」という警告が出ますが、ローカル開発では想定どおりの動作です。
+警告を消したい場合は [スケーリング・コンテナ構成](docs/SCALING.md#https) の手順で
+Caddy のローカル CA をOSに信頼させてください。
+
 - デフォルト管理者
   - ID: `accel`
   - パスワード: `universe`
+
+### Docker を使わず `python run.py` で直接起動した場合
+
+Flask 開発サーバーがそのままポート 5000 で起動するので、TLS なしでアクセスします。
+
+- Web 管理画面: http://localhost:5000/
+- MCP サービス（サブドメイン方式）: http://`<identifier>`.lvh.me:5000/mcp
 
 **⚠️ セキュリティ警告**
 
@@ -108,7 +128,10 @@ environment:
   ADMIN_PASSWORD: your_secure_password
 ```
 
-**注意**: `admin` サブドメインは管理画面専用です。各サービスのサブドメインとは別に扱われます。
+**注意**: 管理画面はパス（`/dashboard` 等）で振り分けられるため、`https://localhost/` ・
+`https://lvh.me/` ・`https://admin.lvh.me/` のどのホスト名でアクセスしても同じ管理画面が
+表示されます。MCP サービス側だけが、サブドメイン（`<identifier>.lvh.me`）で対象サービスを
+区別します。
 
 ## セキュリティ機能
 
@@ -174,18 +197,23 @@ AdminSettings で以下の設定をカスタマイズ可能：
 
 ## MCP クライアント接続
 
+以下は **Docker Compose 起動時 (Caddy 経由、`https://`・ポート番号なし)** のURLです。
+Docker を使わず `python run.py` で直接起動した場合は `http://` + `:5000` を使ってください
+(例: `http://myservice.lvh.me:5000/mcp`)。自己署名証明書のため、`curl` には `-k`
+(証明書検証スキップ) が必要です。
+
 ### サブドメインベースのアクセス (推奨)
 
 #### 1. Capabilities 取得 (GET リクエスト)
 
 ```bash
-# lvh.me ドメインを使用 (ローカル開発用)
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://myservice.lvh.me:5000/mcp
+# lvh.me ドメインを使用 (ローカル開発用、常に127.0.0.1を指す)
+curl -k -H "Authorization: Bearer YOUR_TOKEN" \
+  https://myservice.lvh.me/mcp
 
 # または subdomain パラメータを使用
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:5000/mcp?subdomain=myservice
+curl -k -H "Authorization: Bearer YOUR_TOKEN" \
+  https://localhost/mcp?subdomain=myservice
 ```
 
 **レスポンス例:**
@@ -220,14 +248,14 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 
 ```bash
 # Tool を直接実行
-curl -X POST \
+curl -k -X POST \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"arguments": {"city": "Tokyo"}}' \
-  http://myservice.lvh.me:5000/tools/get_weather
+  https://myservice.lvh.me/tools/get_weather
 
 # または MCP プロトコルで実行
-curl -X POST \
+curl -k -X POST \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -239,7 +267,7 @@ curl -X POST \
       "arguments": {"city": "Tokyo"}
     }
   }' \
-  http://myservice.lvh.me:5000/mcp
+  https://myservice.lvh.me/mcp
 ```
 
 ### MCP クライアント設定
@@ -250,7 +278,7 @@ curl -X POST \
 {
   "mcpServers": {
     "my-service": {
-      "url": "http://myservice.lvh.me:5000/mcp",
+      "url": "https://myservice.lvh.me/mcp",
       "transport": {
         "type": "http"
       },
@@ -268,7 +296,7 @@ curl -X POST \
 {
   "mcpServers": {
     "my-service": {
-      "url": "http://localhost:5000/mcp/myservice",
+      "url": "https://localhost/mcp/myservice",
       "headers": {
         "Authorization": "Bearer YOUR_TOKEN"
       }
@@ -302,14 +330,17 @@ curl -X POST \
 
 ### MCP エンドポイント
 
-| エンドポイント                            | メソッド | 説明                                          |
-| ----------------------------------------- | -------- | --------------------------------------------- |
-| `<subdomain>.lvh.me:5000/mcp`             | GET      | ユーザーが使用可能な Capabilities を取得      |
-| `<subdomain>.lvh.me:5000/mcp`             | POST     | MCP リクエストを処理 (tools/list, tools/call) |
-| `<subdomain>.lvh.me:5000/tools/<tool_id>` | POST     | 特定の Tool を直接実行                        |
-| `/mcp/<subdomain>`                        | POST     | Legacy エンドポイント (後方互換性)            |
+| エンドポイント                       | メソッド | 説明                                          |
+| ------------------------------------ | -------- | --------------------------------------------- |
+| `<subdomain>.lvh.me/mcp`             | GET      | ユーザーが使用可能な Capabilities を取得      |
+| `<subdomain>.lvh.me/mcp`             | POST     | MCP リクエストを処理 (tools/list, tools/call) |
+| `<subdomain>.lvh.me/tools/<tool_id>` | POST     | 特定の Tool を直接実行                        |
+| `/mcp/<subdomain>`                   | POST     | Legacy エンドポイント (後方互換性)            |
 
-**注意:** `lvh.me` はローカル開発用のドメインで、常に 127.0.0.1 を指します。本番環境では独自ドメインを使用してください。
+**注意:** 上記は Docker Compose (Caddy経由) でのURLです（`https://`、ポート番号なし）。
+`python run.py` で直接起動した場合は `http://<subdomain>.lvh.me:5000/mcp` のように
+ポート5000・`http`を使ってください。`lvh.me` はローカル開発用のドメインで、常に 127.0.0.1
+を指します。本番環境では独自ドメインを使用してください。
 
 ## データベース構造
 

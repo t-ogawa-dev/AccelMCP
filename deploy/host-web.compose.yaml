@@ -1,0 +1,44 @@
+# Multi-host deployment: WEB host (admin UI + REST API)
+#
+# Run this on the machine that will serve the admin UI. This is the only
+# role that runs DB migrations on startup.
+#
+# Usage:
+#   cd deploy
+#   docker compose -f host-web.compose.yaml up -d --build
+#
+# Required environment (set in ../.env or the shell):
+#   DATABASE_URL=postgresql://mcpuser:mcppassword@<db-host>:5432/mcpdb
+#   REDIS_URL=redis://<redis-host>:6379/0
+#
+# Port 5000 is published here (unlike the single-host compose.yaml, where it
+# is only `expose`d) because the Caddy host is now a separate machine and
+# needs to reach this host over the network. Restrict access to it with a
+# firewall/security group (only the Caddy host's address, not the public
+# internet) -- see ../docs/SCALING.md.
+
+services:
+  web:
+    build:
+      context: ..
+    container_name: mcp_server
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - DOCKER_ENV=1
+      - FLASK_ENV=${FLASK_ENV:-production}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    env_file:
+      - ../.env
+    command: >
+      sh -c "
+        python db/migrate.py upgrade &&
+        if [ \"$$FLASK_ENV\" = \"production\" ]; then
+          echo 'Starting production server (web) with Gunicorn...' &&
+          gunicorn -w 4 -b 0.0.0.0:5000 --timeout 120 --access-logfile - --error-logfile - run:app
+        else
+          echo 'Starting development server (web)...' &&
+          python run.py
+        fi
+      "

@@ -30,14 +30,22 @@ docker compose logs -f web
 
 ### 4. Web 管理画面へアクセス
 
-ブラウザで http://admin.lvh.me:5000/ または http://localhost:5000/ を開きます。
+ブラウザで **https://localhost/** を開きます(ポート番号なし)。Caddy がリバースプロキシ
+として 80/443 番を受け、アプリ本体のポート 5000 はホストに公開されないため、`:5000` では
+アクセスできません。自己署名証明書のため「保護されていない通信」の警告が出ますが、
+「詳細」→「アクセスする」で進めます(警告を消したい場合は
+[スケーリング・コンテナ構成](SCALING.md#https) 参照)。
+
+Docker を使わず `python run.py` で直接起動した場合は `http://localhost:5000/` を使います。
 
 **デフォルト管理者アカウント:**
 
 - ログイン ID: `accel`
 - パスワード: `universe`
 
-**注意**: 管理画面は `admin` サブドメインでもアクセス可能です。各 MCP サービスのサブドメインとは別に扱われます。
+**注意**: 管理画面はパスで振り分けられるため、`https://localhost/` ・`https://lvh.me/` ・
+`https://admin.lvh.me/` のどれでアクセスしても同じ画面が表示されます。MCP サービスのみ
+サブドメインで区別されます。
 
 ## 基本的な使い方
 
@@ -54,7 +62,8 @@ docker compose logs -f web
 
 ```
 サブドメイン: myservice
-→ MCPエンドポイント: http://myservice.lvh.me:5000/mcp
+→ MCPエンドポイント: https://myservice.lvh.me/mcp   (Docker Compose, Caddy経由)
+→ MCPエンドポイント: http://myservice.lvh.me:5000/mcp  (python run.py で直接起動した場合)
 ```
 
 ### 2. Capability の登録
@@ -105,30 +114,33 @@ Capability名: search_database
 
 ## MCP クライアントからの接続
 
+以下は **Docker Compose 起動時 (Caddy 経由、`https://`・ポート番号なし)** のURLです。
+Docker を使わず `python run.py` で直接起動した場合は `http://` + `:5000` を使ってください。
+
 ### サブドメインベースのアクセス (推奨)
 
 #### lvh.me ドメインを使用
 
-`lvh.me` は常に 127.0.0.1 を指すローカル開発用ドメインです。
+`lvh.me` は常に 127.0.0.1 を指す、ローカル開発用の公開ドメインです。
 
 ```bash
-# Capabilities取得
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://myservice.lvh.me:5000/mcp
+# Capabilities取得 (自己署名証明書のため -k が必要)
+curl -k -H "Authorization: Bearer YOUR_TOKEN" \
+  https://myservice.lvh.me/mcp
 
 # Tool実行
-curl -X POST \
+curl -k -X POST \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"arguments": {"param": "value"}}' \
-  http://myservice.lvh.me:5000/tools/get_weather
+  https://myservice.lvh.me/tools/get_weather
 ```
 
 #### クエリパラメータを使用
 
 ```bash
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:5000/mcp?subdomain=myservice
+curl -k -H "Authorization: Bearer YOUR_TOKEN" \
+  https://localhost/mcp?subdomain=myservice
 ```
 
 ### MCP クライアント設定例
@@ -139,7 +151,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 {
   "mcp_servers": {
     "my_service": {
-      "url": "http://myservice.lvh.me:5000/mcp",
+      "url": "https://myservice.lvh.me/mcp",
       "auth": {
         "type": "bearer",
         "token": "YOUR_BEARER_TOKEN"
@@ -155,7 +167,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 {
   "mcpServers": {
     "my-service": {
-      "url": "http://myservice.lvh.me:5000/mcp",
+      "url": "https://myservice.lvh.me/mcp",
       "transport": {
         "type": "http"
       },
@@ -173,7 +185,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 {
   "mcpServers": {
     "my-service": {
-      "url": "http://localhost:5000/mcp/myservice",
+      "url": "https://localhost/mcp/myservice",
       "headers": {
         "Authorization": "Bearer YOUR_BEARER_TOKEN"
       }
@@ -253,12 +265,20 @@ docker compose restart web
 
 ### ポート競合
 
-`compose.yaml`のポート設定を変更:
+ホストに公開されているのは `caddy` サービスの 80/443 番のみです(`web`/`mcp` の 5000 番は
+内部専用)。80/443 が他のプロセスと競合する場合は `compose.yaml` の `caddy` サービスの
+`ports` を変更してください:
 
 ```yaml
 ports:
-  - "8080:5000" # 8080ポートに変更
+  - "8080:80"
+  - "8443:443"
 ```
+
+### `https://localhost/` で証明書の警告が出る
+
+Caddy が自動生成する自己署名証明書のため、ローカル開発では想定どおりの動作です。
+[スケーリング・コンテナ構成](SCALING.md#https) を参照してください。
 
 ### トークンが無効
 

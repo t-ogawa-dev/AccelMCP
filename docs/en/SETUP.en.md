@@ -30,14 +30,20 @@ Once startup is complete, the default administrator's Bearer token will be displ
 
 ### 4. Access Web Admin Interface
 
-Open http://admin.lvh.me:5000/ or http://localhost:5000/ in your browser.
+Open **https://localhost/** in your browser (no port number). Caddy reverse-proxies ports
+80/443; the app's port 5000 itself is not published to the host, so `:5000` will not work.
+You'll see a self-signed certificate warning — choose "Advanced" → "Proceed" to continue
+(see [Scaling & Containers](SCALING.en.md#https) if you want to remove the warning).
+
+If you started directly with `python run.py` (no Docker), use `http://localhost:5000/` instead.
 
 **Default Administrator Account:**
 
 - Login ID: `accel`
 - Password: `universe`
 
-**Note**: The admin interface is also accessible via the `admin` subdomain. It is handled separately from each MCP service subdomain.
+**Note**: The admin UI is routed by path, so `https://localhost/`, `https://lvh.me/`, and
+`https://admin.lvh.me/` all show the same screen. Only MCP services are distinguished by subdomain.
 
 ## Basic Usage
 
@@ -54,7 +60,8 @@ Open http://admin.lvh.me:5000/ or http://localhost:5000/ in your browser.
 
 ```
 Subdomain: myservice
-→ MCP Endpoint: http://myservice.lvh.me:5000/mcp
+→ MCP Endpoint: https://myservice.lvh.me/mcp   (Docker Compose, via Caddy)
+→ MCP Endpoint: http://myservice.lvh.me:5000/mcp  (when run directly with python run.py)
 ```
 
 ### 2. Capability Registration
@@ -105,30 +112,33 @@ Now the account can use the specified capability.
 
 ## Connecting from MCP Clients
 
+The URLs below are for **Docker Compose (via Caddy, `https://`, no port number)**. If you
+started directly with `python run.py` (no Docker), use `http://` + `:5000` instead.
+
 ### Subdomain-Based Access (Recommended)
 
 #### Using lvh.me Domain
 
-`lvh.me` is a local development domain that always points to 127.0.0.1.
+`lvh.me` is a public domain for local development that always resolves to 127.0.0.1.
 
 ```bash
-# Get Capabilities
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://myservice.lvh.me:5000/mcp
+# Get Capabilities (curl needs -k since the cert is self-signed)
+curl -k -H "Authorization: Bearer YOUR_TOKEN" \
+  https://myservice.lvh.me/mcp
 
 # Execute Tool
-curl -X POST \
+curl -k -X POST \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"arguments": {"param": "value"}}' \
-  http://myservice.lvh.me:5000/tools/get_weather
+  https://myservice.lvh.me/tools/get_weather
 ```
 
 #### Using Query Parameters
 
 ```bash
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:5000/mcp?subdomain=myservice
+curl -k -H "Authorization: Bearer YOUR_TOKEN" \
+  https://localhost/mcp?subdomain=myservice
 ```
 
 ### MCP Client Configuration Examples
@@ -139,7 +149,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 {
   "mcp_servers": {
     "my_service": {
-      "url": "http://myservice.lvh.me:5000/mcp",
+      "url": "https://myservice.lvh.me/mcp",
       "auth": {
         "type": "bearer",
         "token": "YOUR_BEARER_TOKEN"
@@ -155,7 +165,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 {
   "mcpServers": {
     "my-service": {
-      "url": "http://myservice.lvh.me:5000/mcp",
+      "url": "https://myservice.lvh.me/mcp",
       "transport": {
         "type": "http"
       },
@@ -173,7 +183,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 {
   "mcpServers": {
     "my-service": {
-      "url": "http://localhost:5000/mcp/myservice",
+      "url": "https://localhost/mcp/myservice",
       "headers": {
         "Authorization": "Bearer YOUR_BEARER_TOKEN"
       }
@@ -253,12 +263,20 @@ docker compose restart web
 
 ### Port Conflict
 
-Change port settings in `compose.yaml`:
+Only the `caddy` service's ports 80/443 are published to the host (`web`/`mcp` port 5000 is
+internal-only). If 80/443 conflict with something else, change the `caddy` service's `ports`
+in `compose.yaml`:
 
 ```yaml
 ports:
-  - "8080:5000" # Changed to port 8080
+  - "8080:80"
+  - "8443:443"
 ```
+
+### Certificate warning on `https://localhost/`
+
+This is expected: Caddy issues a self-signed certificate automatically for local development.
+See [Scaling & Containers](SCALING.en.md#https) for details.
 
 ### Invalid Token
 
