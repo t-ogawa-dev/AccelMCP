@@ -305,6 +305,11 @@ body {
     color: #92400e;
 }
 
+.badge-system {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
 /* Text Utilities */
 .text-muted {
     color: #6c757d;

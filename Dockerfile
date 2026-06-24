@@ -2,10 +2,10 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies for Python, MySQL, and Node.js
+# Install system dependencies for Python, PostgreSQL, and Node.js
 RUN apt-get update && apt-get install -y \
     gcc \
-    default-libmysqlclient-dev \
+    libpq-dev \
     pkg-config \
     curl \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \

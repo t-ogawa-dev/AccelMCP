@@ -15,14 +15,14 @@ class TestI18nTranslations:
     @pytest.fixture
     def html_files(self):
         """テスト対象のHTMLファイル一覧を取得"""
-        project_root = Path(__file__).parent.parent
+        project_root = Path(__file__).parent.parent.parent.parent
         templates_dir = project_root / "app" / "views" / "templates"
         return list(templates_dir.rglob("*.html"))
 
     @pytest.fixture
     def i18n_keys(self):
         """i18n.jsから翻訳キー一覧を取得"""
-        project_root = Path(__file__).parent.parent
+        project_root = Path(__file__).parent.parent.parent.parent
         i18n_file = project_root / "app" / "assets" / "i18n.js"
 
         content = i18n_file.read_text(encoding="utf-8")
@@ -50,6 +50,9 @@ class TestI18nTranslations:
             found_keys = re.findall(pattern, content)
 
             for key in found_keys:
+                # Jinja2 テンプレート式（{{ ... }}）を含むキーは動的に解決されるためスキップ
+                if "{{" in key or "}}" in key:
+                    continue
                 if key not in i18n_keys:
                     if html_file.name not in missing_keys:
                         missing_keys[html_file.name] = []
@@ -73,7 +76,7 @@ class TestI18nTranslations:
 
     def test_japanese_translations_exist(self):
         """日本語翻訳が存在することを確認"""
-        project_root = Path(__file__).parent.parent
+        project_root = Path(__file__).parent.parent.parent.parent
         i18n_file = project_root / "app" / "assets" / "i18n.js"
         content = i18n_file.read_text(encoding="utf-8")
 
@@ -85,7 +88,7 @@ class TestI18nTranslations:
 
     def test_english_translations_exist(self):
         """英語翻訳が存在することを確認"""
-        project_root = Path(__file__).parent.parent
+        project_root = Path(__file__).parent.parent.parent.parent
         i18n_file = project_root / "app" / "assets" / "i18n.js"
         content = i18n_file.read_text(encoding="utf-8")
 
@@ -130,7 +133,7 @@ class TestI18nConsistency:
 
     def test_ja_en_key_consistency(self):
         """日本語と英語で同じキーが定義されていることを確認"""
-        project_root = Path(__file__).parent.parent
+        project_root = Path(__file__).parent.parent.parent.parent
         i18n_file = project_root / "app" / "assets" / "i18n.js"
         content = i18n_file.read_text(encoding="utf-8")
 

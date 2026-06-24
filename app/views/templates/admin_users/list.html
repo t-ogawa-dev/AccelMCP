@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}管理者アカウント一覧 - Accel MCP{% endblock %}
+
+{% block breadcrumb %}
+<nav class="breadcrumb">
+    <a href="/dashboard" data-i18n="breadcrumb_home">ホーム</a>
+    <span class="breadcrumb-separator">›</span>
+    <span class="breadcrumb-current" data-i18n="breadcrumb_admin_user_list">管理者アカウント一覧</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h2 data-i18n="admin_user_list_title">管理者アカウント一覧</h2>
+            <p data-i18n="admin_user_list_desc">Web管理画面にログインできる管理者アカウントの管理</p>
+        </div>
+        <a href="/admin-users/new" class="btn btn-primary" data-i18n="admin_user_new_button">新規管理者登録</a>
+    </div>
+</div>
+
+<div id="admin-users-list"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/assets/view/admin_users/list.js"></script>
+{% endblock %}

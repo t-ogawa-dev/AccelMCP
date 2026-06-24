@@ -1,13 +1,31 @@
 services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: mcp_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ${CADDYFILE:-./Caddyfile}:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - mcp
+
+  # Management UI + REST API (and, in single-host mode, also serves MCP).
+  # Runs DB migrations on startup.
   web:
     build: .
     container_name: mcp_server
-    ports:
-      - "5001:5000"
+    expose:
+      - "5000"
     environment:
       - DOCKER_ENV=1
       - FLASK_ENV=${FLASK_ENV:-development}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
     env_file:
       - .env
     volumes:
@@ -19,14 +37,60 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:5000/health').status==200 else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     command: >
       sh -c "
         python db/migrate.py upgrade &&
         if [ \"$$FLASK_ENV\" = \"production\" ]; then
-          echo 'Starting production server with Gunicorn...' &&
+          echo 'Starting production server (web) with Gunicorn...' &&
           gunicorn -w 4 -b 0.0.0.0:5000 --timeout 120 --access-logfile - --error-logfile - run:app
         else
-          echo 'Starting development server...' &&
+          echo 'Starting development server (web)...' &&
+          python run.py
+        fi
+      "
+
+  # MCP endpoint service. Same image as web; does NOT run migrations (web does).
+  # Streamable HTTP sessions are shared via Redis, so this service can be scaled
+  # (deploy:replicas or run on a separate host) without breaking sessions.
+  mcp:
+    build: .
+    container_name: mcp_endpoint
+    expose:
+      - "5000"
+    environment:
+      - DOCKER_ENV=1
+      - FLASK_ENV=${FLASK_ENV:-development}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    env_file:
+      - .env
+    volumes:
+      - ./app:/app/app
+      - ./run.py:/app/run.py
+      - ./db:/app/db
+      - ./tests:/app/tests
+      - ./pytest.ini:/app/pytest.ini
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    command: >
+      sh -c "
+        if [ \"$$FLASK_ENV\" = \"production\" ]; then
+          echo 'Starting production server (mcp) with Gunicorn...' &&
+          gunicorn -w 4 -b 0.0.0.0:5000 --timeout 120 --access-logfile - --error-logfile - run:app
+        else
+          echo 'Starting development server (mcp)...' &&
           python run.py
         fi
       "
@@ -54,23 +118,39 @@ services:
       - e2e
     command: python -m pytest tests/e2e/ -v
 
-  db:
-    image: mysql:8.4.3
-    container_name: mcp_mysql
-    environment:
-      - MYSQL_ROOT_PASSWORD=rootpassword
-      - MYSQL_DATABASE=mcpdb
-      - MYSQL_USER=mcpuser
-      - MYSQL_PASSWORD=mcppassword
-    ports:
-      - "3306:3306"
+  redis:
+    image: redis:7-alpine
+    container_name: mcp_redis
+    restart: unless-stopped
+    expose:
+      - "6379"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - redis_data:/data
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db:
+    image: postgres:16-alpine
+    container_name: mcp_postgres
+    environment:
+      - POSTGRES_DB=mcpdb
+      - POSTGRES_USER=mcpuser
+      - POSTGRES_PASSWORD=mcppassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mcpuser -d mcpdb"]
       interval: 10s
       timeout: 5s
       retries: 5
 
 volumes:
-  mysql_data:
+  postgres_data:
+  caddy_data:
+  caddy_config:
+  redis_data:

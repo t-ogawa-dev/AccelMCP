@@ -318,3 +318,121 @@ class TestAdminMcpSession:
             },
         )
         assert list_resp2.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# initialize の instructions フィールド
+# ---------------------------------------------------------------------------
+
+
+class TestAdminMcpInstructions:
+    def test_initialize_has_instructions_field(self, client, db):
+        """initialize レスポンスに instructions フィールドが含まれること。"""
+        resp = post_admin_mcp(
+            client,
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {"protocolVersion": "2025-03-26", "capabilities": {}, "clientInfo": {"name": "test"}},
+            },
+            headers={"Authorization": BEARER},
+        )
+        assert resp.status_code == 200
+        data = json.loads(resp.data)
+        result = data["result"]
+        assert "instructions" in result, "initialize レスポンスに 'instructions' が含まれていない"
+
+    def test_initialize_instructions_mentions_admin(self, client, db):
+        """instructions の文字列に AccelMCP に関する説明が含まれること。"""
+        resp = post_admin_mcp(
+            client,
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {},
+            },
+            headers={"Authorization": BEARER},
+        )
+        data = json.loads(resp.data)
+        instructions = data["result"]["instructions"]
+        assert isinstance(instructions, str)
+        assert len(instructions) > 0
+        # AccelMCP administration server を示す文字列が含まれること
+        assert "AccelMCP" in instructions or "administration" in instructions.lower()
+
+    def test_initialize_instructions_mentions_key_operations(self, client, db):
+        """instructions にツール操作の説明が含まれること。"""
+        resp = post_admin_mcp(
+            client,
+            {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+            headers={"Authorization": BEARER},
+        )
+        data = json.loads(resp.data)
+        instructions = data["result"]["instructions"].lower()
+        # 主要操作のキーワードが含まれること
+        assert any(kw in instructions for kw in ["manage", "list", "create", "delete", "variable", "log"])
+
+
+# ---------------------------------------------------------------------------
+# ADMIN_TOOLS の順序・英語化検証
+# ---------------------------------------------------------------------------
+
+
+class TestAdminToolsDefinition:
+    def test_tools_are_sorted_alphabetically(self):
+        """ADMIN_TOOLS がアルファベット順に並んでいること。"""
+        from app.controllers.admin_mcp_controller import ADMIN_TOOLS
+
+        names = [t["name"] for t in ADMIN_TOOLS]
+        assert names == sorted(names), f"ADMIN_TOOLS がアルファベット順でない: {names}"
+
+    def test_all_tools_have_english_description(self):
+        """各ツールの description が英語（ASCII 主体）で書かれていること。"""
+        from app.controllers.admin_mcp_controller import ADMIN_TOOLS
+
+        for tool in ADMIN_TOOLS:
+            desc = tool.get("description", "")
+            assert desc, f"'{tool['name']}' の description が空"
+            # 日本語（ひらがな・カタカナ・漢字）が含まれていないこと
+            has_japanese = any("\u3000" <= ch <= "\u9fff" or "\uff00" <= ch <= "\uffef" for ch in desc)
+            assert not has_japanese, f"'{tool['name']}' の description に日本語が含まれている: {desc!r}"
+
+    def test_all_tools_have_input_schema(self):
+        """各ツールに inputSchema が定義されていること。"""
+        from app.controllers.admin_mcp_controller import ADMIN_TOOLS
+
+        for tool in ADMIN_TOOLS:
+            assert "inputSchema" in tool, f"'{tool['name']}' に inputSchema がない"
+            schema = tool["inputSchema"]
+            assert "type" in schema, f"'{tool['name']}' の inputSchema に type がない"
+
+    def test_expected_tool_count(self):
+        """ADMIN_TOOLS に 12 個のツールが存在すること。"""
+        from app.controllers.admin_mcp_controller import ADMIN_TOOLS
+
+        assert len(ADMIN_TOOLS) == 12, f"ツール数が 12 でない: {len(ADMIN_TOOLS)}"
+
+    def test_first_tool_is_create_mcp_service(self):
+        """アルファベット順先頭は create_mcp_service であること。"""
+        from app.controllers.admin_mcp_controller import ADMIN_TOOLS
+
+        assert ADMIN_TOOLS[0]["name"] == "create_mcp_service"
+
+    def test_input_schema_properties_are_english(self):
+        """inputSchema の description フィールドが英語であること。"""
+        from app.controllers.admin_mcp_controller import ADMIN_TOOLS
+
+        for tool in ADMIN_TOOLS:
+            schema = tool.get("inputSchema", {})
+            props = schema.get("properties", {})
+            for prop_name, prop_def in props.items():
+                prop_desc = prop_def.get("description", "")
+                if prop_desc:
+                    has_japanese = any(
+                        "\u3000" <= ch <= "\u9fff" or "\uff00" <= ch <= "\uffef" for ch in prop_desc
+                    )
+                    assert not has_japanese, (
+                        f"'{tool['name']}.{prop_name}' の description に日本語: {prop_desc!r}"
+                    )

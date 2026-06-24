@@ -12,6 +12,20 @@ HTTP/stdio compatible MCP server with API/MCP relay functionality and user-based
 - **Web Admin Interface**: Manage Services, Capabilities, and Accounts
 - **Bearer Token Authentication**: Per-account token generation
 
+## Container Layout
+
+AccelMCP is composed of the following containers (`web` and `mcp` share the same image):
+
+- `caddy`: Reverse proxy / TLS (routes by path to `web` and `mcp`)
+- `web`: Admin UI + REST API (runs DB migrations on startup)
+- `mcp`: MCP endpoint (can be scaled to multiple replicas / separate hosts)
+- `redis`: Shared store for Streamable HTTP sessions
+- `db`: PostgreSQL
+
+Both single-host (all-in-one) and multi-host (WEB/MCP/Redis split across servers) run from the
+**same compose definition**. MCP sessions are shared via Redis when `REDIS_URL` is set, and fall
+back to in-process memory when it is unset. See [Scaling & Containers](docs/en/SCALING.en.md) for details.
+
 ## Starting the Server
 
 ```bash
@@ -445,3 +459,14 @@ Detailed documentation is available in the `docs/` directory.
 | [Testing Guide](docs/en/TESTING.en.md) / [日本語](docs/TESTING.md)             | How to run and configure unit and integration tests        |
 | [E2E Testing](docs/en/E2E_TESTING.en.md) / [日本語](docs/E2E_TESTING.md)       | How to run E2E tests with Playwright                       |
 | [Database Migration](docs/en/MIGRATION.en.md) / [日本語](docs/MIGRATION.md)    | Database migration management with Flask-Migrate (Alembic) |
+| [Scaling & Containers](docs/en/SCALING.en.md) / [日本語](docs/SCALING.md)      | Container layout, single-host vs. multi-host, Redis-backed sessions, scaling the MCP endpoint |
+
+## About This Project
+
+This project was built **100% through vibe coding** — all code was implemented via pair
+programming with AI.
+
+**Models used:**
+
+- Claude Sonnet 4.5 / 4.6
+- Claude Opus 4.8

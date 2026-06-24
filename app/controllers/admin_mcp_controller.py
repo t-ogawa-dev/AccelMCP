@@ -7,18 +7,18 @@ AccelMCP 自身を管理する MCP エンドポイント (/admin/mcp)
 
 import json
 import logging
-import time
 import uuid
 
 from flask import Blueprint, Response, current_app, jsonify, request
 
 from app.services import admin_mcp_tools
+from app.services.session_store import get_session_store
 
 admin_mcp_bp = Blueprint("admin_mcp", __name__)
 logger = logging.getLogger(__name__)
 
-# StreamableHTTP セッションストア（管理 MCP 専用）
-_admin_sessions: dict[str, float] = {}
+# StreamableHTTP セッションストア（管理 MCP 専用）。REDIS_URL があれば Redis 共有、
+# なければプロセス内メモリ。"admin" 名前空間で MCP 本体のセッションとは分離される。
 _SESSION_TTL = 3600  # 1 hour
 
 
@@ -27,12 +27,28 @@ _SESSION_TTL = 3600  # 1 hour
 # ---------------------------------------------------------------------------
 
 
+def _get_admin_api_key() -> str:
+    """DB のシステムアカウントから Admin MCP APIキーを取得する。
+    見つからなければ config の ADMIN_API_KEY にフォールバックする。
+    """
+    try:
+        from app.models.models import ConnectionAccount
+
+        system_account = ConnectionAccount.query.filter_by(is_system=True).first()
+        if system_account and system_account.bearer_token:
+            return system_account.bearer_token
+    except Exception:
+        pass
+    # Fallback: env-based key (startup before first seed)
+    return current_app.config.get("ADMIN_API_KEY", "")
+
+
 def _authenticate_admin() -> tuple[bool, Response | None]:
     """
     Authorization: Bearer <ACCELMCP_ADMIN_API_KEY> を検証する。
     成功時 (True, None)、失敗時 (False, Response) を返す。
     """
-    expected_key = current_app.config.get("ADMIN_API_KEY", "")
+    expected_key = _get_admin_api_key()
     if not expected_key:
         logger.error("ACCELMCP_ADMIN_API_KEY is not configured")
         return False, (jsonify({"error": "Admin MCP is not configured"}), 503)
@@ -42,7 +58,7 @@ def _authenticate_admin() -> tuple[bool, Response | None]:
         return False, (jsonify({"error": "Missing or invalid Authorization header"}), 401)
 
     provided_key = auth_header[7:]
-    # タイミング攻撃対策として比較前にハッシュ比較は行わず secrets.compare_digest を使用
+    # タイミング攻撃対策として secrets.compare_digest を使用
     import secrets
 
     if not secrets.compare_digest(provided_key, expected_key):
@@ -68,20 +84,15 @@ def _sse_response(data: dict, session_id: str | None = None) -> Response:
 
 
 def _register_session(sid: str) -> None:
-    _admin_sessions[sid] = time.time() + _SESSION_TTL
-    now = time.time()
-    for k in [k for k, v in list(_admin_sessions.items()) if v < now]:
-        _admin_sessions.pop(k, None)
+    get_session_store("admin").register(sid, _SESSION_TTL)
 
 
 def _is_valid_session(sid: str) -> bool:
-    exp = _admin_sessions.get(sid)
-    if exp is None:
-        return False
-    if exp < time.time():
-        _admin_sessions.pop(sid, None)
-        return False
-    return True
+    return get_session_store("admin").is_valid(sid)
+
+
+def _remove_session(sid: str) -> None:
+    get_session_store("admin").remove(sid)
 
 
 def _make_error(req_id, code: int, message: str) -> dict:
@@ -94,67 +105,24 @@ def _make_error(req_id, code: int, message: str) -> dict:
 
 ADMIN_TOOLS = [
     {
-        "name": "get_dashboard_summary",
-        "description": "AccelMCP 全体のサマリー（サービス数・アプリ数・変数数・直近エラー）を返す",
-        "inputSchema": {"type": "object", "properties": {}, "required": []},
-    },
-    {
-        "name": "get_connection_logs",
-        "description": "MCP 接続ログを取得する",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "limit": {"type": "integer", "description": "取得件数（最大200、デフォルト50）", "default": 50},
-                "offset": {"type": "integer", "description": "オフセット（デフォルト0）", "default": 0},
-            },
-        },
-    },
-    {
-        "name": "get_error_logs",
-        "description": "エラーになった MCP 接続ログのみ取得する",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "limit": {"type": "integer", "description": "取得件数（最大200、デフォルト50）", "default": 50},
-                "offset": {"type": "integer", "description": "オフセット（デフォルト0）", "default": 0},
-            },
-        },
-    },
-    {
-        "name": "get_admin_action_logs",
-        "description": "管理者操作ログを取得する",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "limit": {"type": "integer", "description": "取得件数（最大200、デフォルト50）", "default": 50},
-                "offset": {"type": "integer", "description": "オフセット（デフォルト0）", "default": 0},
-            },
-        },
-    },
-    {
-        "name": "list_mcp_services",
-        "description": "全 MCP サービスの一覧を返す",
-        "inputSchema": {"type": "object", "properties": {}, "required": []},
-    },
-    {
         "name": "create_mcp_service",
-        "description": "新しい MCP サービスを作成する",
+        "description": "Create a new MCP service",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "name": {"type": "string", "description": "サービス名"},
-                "identifier": {"type": "string", "description": "一意の識別子（URLパス等に使用）"},
+                "name": {"type": "string", "description": "Service name"},
+                "identifier": {"type": "string", "description": "Unique identifier (used in URL path etc.)"},
                 "routing_type": {
                     "type": "string",
                     "enum": ["subdomain", "path"],
-                    "description": "ルーティング方式（デフォルト: path）",
+                    "description": "Routing type (default: path)",
                     "default": "path",
                 },
-                "description": {"type": "string", "description": "説明", "default": ""},
+                "description": {"type": "string", "description": "Description", "default": ""},
                 "access_control": {
                     "type": "string",
                     "enum": ["public", "restricted"],
-                    "description": "アクセス制御（デフォルト: restricted）",
+                    "description": "Access control (default: restricted)",
                     "default": "restricted",
                 },
             },
@@ -163,62 +131,105 @@ ADMIN_TOOLS = [
     },
     {
         "name": "delete_mcp_service",
-        "description": "MCP サービスを削除する（関連するアプリ・ケーパビリティも削除される）",
+        "description": "Delete an MCP service (also deletes associated apps and capabilities)",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "mcp_service_id": {"type": "integer", "description": "削除する MCP サービスの ID"},
+                "mcp_service_id": {"type": "integer", "description": "ID of the MCP service to delete"},
             },
             "required": ["mcp_service_id"],
         },
     },
     {
-        "name": "list_apps",
-        "description": "アプリ一覧を返す。mcp_service_id を指定すると絞り込み",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "mcp_service_id": {
-                    "type": "integer",
-                    "description": "絞り込む MCP サービス ID（省略時は全件）",
-                },
-            },
-        },
-    },
-    {
-        "name": "list_variables",
-        "description": "変数一覧を返す（値はマスクされる）",
-        "inputSchema": {"type": "object", "properties": {}, "required": []},
-    },
-    {
-        "name": "set_variable",
-        "description": "変数を作成または更新する",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "name": {"type": "string", "description": "変数名"},
-                "value": {"type": "string", "description": "値"},
-                "description": {"type": "string", "description": "説明", "default": ""},
-                "is_secret": {"type": "boolean", "description": "シークレット扱いにするか（デフォルト: true）", "default": True},
-            },
-            "required": ["name", "value"],
-        },
-    },
-    {
         "name": "delete_variable",
-        "description": "変数を削除する",
+        "description": "Delete a variable",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "name": {"type": "string", "description": "削除する変数名"},
+                "name": {"type": "string", "description": "Name of the variable to delete"},
             },
             "required": ["name"],
         },
     },
     {
-        "name": "list_templates",
-        "description": "MCP サービステンプレート一覧を返す",
+        "name": "get_admin_action_logs",
+        "description": "Retrieve administrator action logs",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "limit": {"type": "integer", "description": "Number of records to fetch (max 200, default 50)", "default": 50},
+                "offset": {"type": "integer", "description": "Offset (default 0)", "default": 0},
+            },
+        },
+    },
+    {
+        "name": "get_connection_logs",
+        "description": "Retrieve MCP connection logs",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "limit": {"type": "integer", "description": "Number of records to fetch (max 200, default 50)", "default": 50},
+                "offset": {"type": "integer", "description": "Offset (default 0)", "default": 0},
+            },
+        },
+    },
+    {
+        "name": "get_dashboard_summary",
+        "description": "Return an AccelMCP-wide summary (service count, app count, variable count, recent errors)",
         "inputSchema": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "get_error_logs",
+        "description": "Retrieve only MCP connection logs that resulted in errors",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "limit": {"type": "integer", "description": "Number of records to fetch (max 200, default 50)", "default": 50},
+                "offset": {"type": "integer", "description": "Offset (default 0)", "default": 0},
+            },
+        },
+    },
+    {
+        "name": "list_apps",
+        "description": "Return a list of apps, optionally filtered by mcp_service_id",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "mcp_service_id": {
+                    "type": "integer",
+                    "description": "MCP service ID to filter by (returns all if omitted)",
+                },
+            },
+        },
+    },
+    {
+        "name": "list_mcp_services",
+        "description": "Return a list of all MCP services",
+        "inputSchema": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "list_templates",
+        "description": "Return a list of MCP service templates",
+        "inputSchema": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "list_variables",
+        "description": "Return a list of variables (values are masked)",
+        "inputSchema": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "set_variable",
+        "description": "Create or update a variable",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Variable name"},
+                "value": {"type": "string", "description": "Value"},
+                "description": {"type": "string", "description": "Description", "default": ""},
+                "is_secret": {"type": "boolean", "description": "Whether to treat as secret (default: true)", "default": True},
+            },
+            "required": ["name", "value"],
+        },
     },
 ]
 
@@ -306,6 +317,12 @@ def _handle_request(mcp_request: dict) -> tuple[dict, str | None]:
                 "protocolVersion": "2025-03-26",
                 "capabilities": {"tools": {}},
                 "serverInfo": {"name": "AccelMCP Admin", "version": "1.0.0"},
+                "instructions": (
+                    "This is the AccelMCP administration server. "
+                    "Use it to manage MCP services (create/delete), list apps, manage variables (list/set/delete), "
+                    "retrieve connection logs and error logs, get a dashboard summary, and list templates. "
+                    "Call get_dashboard_summary first to understand the current state of the system."
+                ),
                 "sessionId": session_id,
             },
         }
@@ -369,7 +386,7 @@ def admin_mcp_endpoint():
     if request.method == "DELETE":
         session_id = request.headers.get("Mcp-Session-Id")
         if session_id and _is_valid_session(session_id):
-            _admin_sessions.pop(session_id, None)
+            _remove_session(session_id)
             return Response("", status=200)
         return Response("", status=404)
 

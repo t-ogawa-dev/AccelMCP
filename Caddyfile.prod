@@ -1,0 +1,94 @@
+# AccelMCP Caddyfile (本番用)
+#
+# 必須: .env に ACCEL_MCP_DOMAIN=your-domain.com を設定すること
+# Caddy が Let's Encrypt から TLS 証明書を自動取得・自動更新する
+#
+# 使い方:
+#   CADDYFILE=./Caddyfile.prod docker compose up -d
+# または .env に CADDYFILE=./Caddyfile.prod を追記
+#
+# ルーティング:
+#   - MCP エンドポイント (/mcp, /<id>/mcp, /admin/mcp, /tools/*) -> mcp サービス
+#   - それ以外 (管理UI / REST API / アセット)               -> web サービス
+
+{
+    # メールアドレスを設定すると Let's Encrypt からの期限通知を受信できる
+    # email {$ACCEL_MCP_ADMIN_EMAIL}
+
+    # ログレベル
+    log {
+        level INFO
+    }
+}
+
+# HTTP → HTTPS リダイレクト (Caddy が自動で処理するが明示的に記述)
+http://{$ACCEL_MCP_DOMAIN} {
+    redir https://{host}{uri} permanent
+}
+
+# HTTPS (Let's Encrypt 自動取得)
+{$ACCEL_MCP_DOMAIN} {
+    # --- MCP エンドポイントへの振り分け ---
+    @mcp path /mcp /mcp/* /admin/mcp /tools/*
+    @mcp_path path_regexp ^/[^/]+/mcp/?$
+
+    handle @mcp {
+        reverse_proxy mcp:5000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+
+            health_uri /health
+            health_interval 30s
+            health_timeout 10s
+        }
+    }
+
+    handle @mcp_path {
+        reverse_proxy mcp:5000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+
+            health_uri /health
+            health_interval 30s
+            health_timeout 10s
+        }
+    }
+
+    # --- それ以外は管理UI/API (web) へ ---
+    handle {
+        reverse_proxy web:5000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+
+            # ヘルスチェック
+            health_uri /health
+            health_interval 30s
+            health_timeout 10s
+        }
+    }
+
+    # セキュリティヘッダー
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+        -Server
+    }
+
+    encode gzip
+
+    log {
+        output stdout
+        format json
+        level INFO
+    }
+}

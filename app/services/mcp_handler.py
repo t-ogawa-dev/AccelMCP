@@ -428,6 +428,7 @@ class MCPHandler:
                 "protocolVersion": "2024-11-05",
                 "capabilities": capabilities,
                 "serverInfo": {"name": f"AccelMCP - {mcp_service.name}", "version": "1.0.0"},
+                "instructions": mcp_service.description or "",
                 "sessionId": str(uuid.uuid4()),
             },
         }
@@ -670,6 +671,7 @@ class MCPHandler:
                 "protocolVersion": "2024-11-05",
                 "capabilities": capabilities,
                 "serverInfo": {"name": f"AccelMCP - {service.name}", "version": "1.0.0"},
+                "instructions": service.description or "",
                 "sessionId": str(uuid.uuid4()),
             },
         }
@@ -1191,6 +1193,36 @@ class MCPHandler:
                 },
             }
 
+    def _parse_mcp_http_response(self, response) -> dict[str, Any]:
+        """Parse an upstream MCP HTTP response.
+
+        Supports both transports the MCP spec allows over HTTP:
+        - a single ``application/json`` body (returned as-is), and
+        - a ``text/event-stream`` (SSE) body, where the JSON-RPC payload is carried in
+          ``data:`` lines. The last valid JSON ``data:`` event is returned.
+
+        This lets AccelMCP act as a Streamable HTTP client and relay through upstream
+        servers (including another AccelMCP) that answer with SSE.
+        """
+        content_type = response.headers.get("content-type", "") or response.headers.get("Content-Type", "")
+        if "text/event-stream" in content_type:
+            result = None
+            for line in response.text.splitlines():
+                stripped = line.strip()
+                if stripped.startswith("data:"):
+                    data = stripped[len("data:") :].strip()
+                    if not data:
+                        continue
+                    try:
+                        result = json.loads(data)
+                    except json.JSONDecodeError:
+                        continue
+            if result is not None:
+                return result
+            return {"success": False, "error": "Empty or invalid SSE response from upstream MCP server"}
+        # Plain JSON response
+        return response.json()
+
     def _execute_mcp_call(self, service, capability, arguments: dict[str, Any]) -> dict[str, Any]:
         """Execute MCP relay call"""
         # For MCP relay, we need to connect to another MCP server
@@ -1210,12 +1242,18 @@ class MCPHandler:
                 return {"success": False, "error": "MCP server URL is not configured"}
 
             if mcp_url.startswith("http"):
-                # HTTP MCP connection
+                # HTTP MCP connection (Streamable HTTP compatible client)
                 headers = {}
                 if service.common_headers:
                     headers.update(json.loads(service.common_headers))
                 if capability.headers:
                     headers.update(json.loads(capability.headers))
+
+                # Advertise Streamable HTTP support to the upstream server: accept both a
+                # single JSON response and an SSE (text/event-stream) response. This lets
+                # AccelMCP relay through upstream servers that only speak Streamable HTTP
+                # (including another AccelMCP), so a full streamable-http chain works.
+                headers.setdefault("Accept", "application/json, text/event-stream")
 
                 # Add depth header for daisy-chain loop prevention
                 from flask import request
@@ -1227,6 +1265,9 @@ class MCPHandler:
                     return {"success": False, "error": f"Maximum MCP daisy-chain depth ({max_depth}) exceeded"}
 
                 headers["X-AccelMCP-Depth"] = str(current_depth + 1)
+
+                # Get timeout from capability settings (used by both init and tools/call)
+                timeout_seconds = float(capability.timeout_seconds or 30)
 
                 # Check if we need to establish a session (GitHub Copilot MCP requires session)
                 if "Mcp-Session-Id" not in headers:
@@ -1242,14 +1283,11 @@ class MCPHandler:
                         },
                     }
 
-                    # Get timeout from capability settings
-                    timeout_seconds = float(capability.timeout_seconds or 30)
-
                     logger.debug(f"Initializing MCP session at {mcp_url}")
                     init_response = httpx.post(mcp_url, headers=headers, json=init_request, timeout=timeout_seconds)
                     init_response.raise_for_status()
 
-                    # Extract session ID from response headers
+                    # Extract session ID from response headers (Streamable HTTP session)
                     session_id = init_response.headers.get("Mcp-Session-Id")
                     if session_id:
                         headers["Mcp-Session-Id"] = session_id
@@ -1271,7 +1309,8 @@ class MCPHandler:
                 logger.debug(f"MCP response status: {response.status_code}, body: {response.text}")
                 response.raise_for_status()
 
-                return response.json()
+                # Upstream may answer with plain JSON or an SSE (Streamable HTTP) stream
+                return self._parse_mcp_http_response(response)
 
             else:
                 return {"success": False, "error": "Unsupported MCP transport"}

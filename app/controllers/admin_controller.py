@@ -274,3 +274,64 @@ def connection_log_detail(log_id):
 def connection_logs_settings():
     """Connection logs settings page"""
     return render_template("connection_logs/settings.html")
+
+
+# ============= Credential Change Routes =============
+
+
+@admin_bp.route("/change-credentials")
+@login_required
+def change_credentials():
+    """Credential change page for the currently logged-in admin (forced on first login)."""
+    from app.controllers.auth_controller import _get_current_admin_credentials
+    from app.models.models import ConnectionAccount
+
+    cred = _get_current_admin_credentials()
+    system_account = ConnectionAccount.query.filter_by(is_system=True).first()
+
+    return render_template(
+        "change_credentials.html",
+        cred=cred,
+        system_account=system_account,
+    )
+
+
+# ============= Admin User (Web Login Accounts) Management Routes =============
+
+
+@admin_bp.route("/admin-users")
+@login_required
+def admin_users_list():
+    """Admin user (web UI login accounts) list page"""
+    return render_template("admin_users/list.html")
+
+
+@admin_bp.route("/admin-users/new")
+@login_required
+def admin_user_new():
+    """New admin user registration page"""
+    return render_template("admin_users/new.html")
+
+
+@admin_bp.route("/admin-users/<int:user_id>")
+@login_required
+def admin_user_detail(user_id):
+    """Admin user detail/edit page"""
+    return render_template("admin_users/detail.html", user_id=user_id)
+
+
+@admin_bp.route("/guide")
+@login_required
+def guide():
+    """Connection guide page."""
+    from app.controllers.admin_mcp_controller import ADMIN_TOOLS
+    from app.models.models import ConnectionAccount
+
+    system_account = ConnectionAccount.query.filter_by(is_system=True).first()
+
+    return render_template(
+        "guide.html",
+        system_account=system_account,
+        admin_tools=ADMIN_TOOLS,
+    )
+

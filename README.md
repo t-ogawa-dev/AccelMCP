@@ -12,6 +12,20 @@ HTTP/stdio 対応の MCP サーバー。API/MCP 中継機能とユーザー別�
 - **Web 管理画面**: サービス、Capability、ユーザーの管理
 - **Bearer トークン認証**: ユーザー別のトークン発行
 
+## コンテナ構成
+
+AccelMCP は次のコンテナで構成されます（`web` と `mcp` は同一イメージ）。
+
+- `caddy`: リバースプロキシ / TLS（パスで `web` と `mcp` に振り分け）
+- `web`: 管理画面 + REST API（起動時に DB マイグレーションを実行）
+- `mcp`: MCP エンドポイント（複数レプリカ / 別ホストにスケール可能）
+- `redis`: Streamable HTTP セッションの共有ストア
+- `db`: PostgreSQL
+
+1台運用（全部入り）も複数台運用（WEB/MCP/Redis を別サーバに分散）も**同じ compose 定義**で動きます。
+MCP セッションは `REDIS_URL` があれば Redis で共有され、未設定ならプロセス内メモリにフォールバックします。
+詳細は [スケーリング・コンテナ構成](docs/SCALING.md) を参照してください。
+
 ## 起動方法
 
 ### 開発環境（デフォルト）
@@ -490,3 +504,14 @@ ruff check app/ tests/ --fix
 | [テストガイド](docs/TESTING.md) / [English](docs/en/TESTING.en.md)                       | ユニットテスト・統合テストの実行方法と構成           |
 | [E2E テスト](docs/E2E_TESTING.md) / [English](docs/en/E2E_TESTING.en.md)                 | Playwright を使った E2E テストの実行方法             |
 | [データベースマイグレーション](docs/MIGRATION.md) / [English](docs/en/MIGRATION.en.md)   | Flask-Migrate (Alembic) を使ったマイグレーション管理 |
+| [スケーリング・コンテナ構成](docs/SCALING.md) / [English](docs/en/SCALING.en.md)         | コンテナ構成、1台/複数台運用、Redis セッション共有、MCP エンドポイントのスケール |
+
+## このプロジェクトについて
+
+このプロジェクトは **100% バイブコーディング（vibe coding）** で作成されています。
+コードはすべて AI とのペアプログラミングによって実装されました。
+
+**使用モデル:**
+
+- Claude Sonnet 4.5 / 4.6
+- Claude Opus 4.8

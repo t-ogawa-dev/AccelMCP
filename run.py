@@ -6,6 +6,14 @@ from app import create_app
 
 app = create_app()
 
+# Seed admin credentials after migration (only when running the server, not tests)
+if not app.config.get("TESTING"):
+    try:
+        from db.seeds.admin_credentials import seed_admin_credentials
+        seed_admin_credentials(app)
+    except Exception as e:
+        app.logger.warning(f"Admin credentials seed skipped: {e}")
+
 if __name__ == '__main__':
     # Get environment and log level
     flask_env = os.getenv('FLASK_ENV', 'development')

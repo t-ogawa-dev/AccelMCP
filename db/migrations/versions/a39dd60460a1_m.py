@@ -7,7 +7,6 @@ Create Date: 2025-11-18 17:03:55.986038
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import mysql
 from sqlalchemy import text
 
 # revision identifiers, used by Alembic.
@@ -36,7 +35,7 @@ def upgrade():
     with op.batch_alter_table('apps', schema=None) as batch_op:
         batch_op.add_column(sa.Column('mcp_service_id', sa.Integer(), nullable=True))
         batch_op.alter_column('subdomain',
-               existing_type=mysql.VARCHAR(length=50),
+               existing_type=sa.String(length=50),
                nullable=True)
         batch_op.create_foreign_key('fk_apps_mcp_service_id', 'mcp_services', ['mcp_service_id'], ['id'])
     
@@ -47,7 +46,7 @@ def upgrade():
     for app in apps:
         # Create MCP service for each existing app
         result = conn.execute(
-            text("INSERT INTO mcp_services (name, subdomain, description, is_enabled, created_at, updated_at) VALUES (:name, :subdomain, :description, :is_enabled, :created_at, :updated_at)"),
+            text("INSERT INTO mcp_services (name, subdomain, description, is_enabled, created_at, updated_at) VALUES (:name, :subdomain, :description, :is_enabled, :created_at, :updated_at) RETURNING id"),
             {
                 'name': app[1],  # Use app name as MCP service name
                 'subdomain': app[2],
@@ -57,7 +56,7 @@ def upgrade():
                 'updated_at': app[6]
             }
         )
-        mcp_service_id = result.lastrowid
+        mcp_service_id = result.fetchone()[0]
         
         # Link app to the new MCP service
         conn.execute(
@@ -73,7 +72,7 @@ def downgrade():
     with op.batch_alter_table('apps', schema=None) as batch_op:
         batch_op.drop_constraint('fk_apps_mcp_service_id', type_='foreignkey')
         batch_op.alter_column('subdomain',
-               existing_type=mysql.VARCHAR(length=50),
+               existing_type=sa.String(length=50),
                nullable=False)
         batch_op.drop_column('mcp_service_id')
 

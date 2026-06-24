@@ -2,18 +2,33 @@
 const accountId = parseInt(window.location.pathname.split('/')[2]);
 let allServices = [];
 let allCapabilities = [];
+let currentAccount = null;
 
 async function loadAccount() {
     const response = await fetch(`/api/accounts/${accountId}`);
     const account = await response.json();
+    currentAccount = account;
     
     document.getElementById('name').value = account.name;
     document.getElementById('notes').value = account.notes || '';
+
+    // System accounts: lock the name field
+    const nameInput = document.getElementById('name');
+    if (account.is_system) {
+        nameInput.setAttribute('readonly', 'readonly');
+        nameInput.title = 'システムアカウントのため名前は変更できません';
+    } else {
+        nameInput.removeAttribute('readonly');
+    }
     
     const container = document.getElementById('account-detail');
+    const systemBadge = account.is_system
+        ? '<span class="badge badge-system" title="システムアカウント（削除不可）">&#128274; システム</span>'
+        : '';
     container.innerHTML = `
         <div class="detail-section">
-            <h2>${account.name}</h2>
+            <h2>${account.name} ${systemBadge}</h2>
+            ${account.is_system ? '<p class="text-muted">このアカウントは Admin MCP エンドポイントの認証に使用されます。削除できません。</p>' : ''}
         </div>
         
         <div class="detail-section">
@@ -23,6 +38,7 @@ async function loadAccount() {
                 <button onclick="copyToken('${account.bearer_token}')" class="btn btn-sm btn-secondary">${t('account_copy_token')}</button>
                 <button onclick="regenerateToken()" class="btn btn-sm btn-warning">${t('account_regenerate_token')}</button>
             </div>
+            ${account.is_system ? '<small class="text-muted">トークンを再発行すると MCP クライアント側の設定も更新が必要です。</small>' : ''}
         </div>
         
         ${account.notes ? `
@@ -88,9 +104,13 @@ async function regenerateToken() {
         
         const formData = new FormData(e.target);
         const data = {
-            name: formData.get('name'),
             notes: formData.get('notes')
         };
+
+        // Only include name for non-system accounts
+        if (!currentAccount || !currentAccount.is_system) {
+            data.name = formData.get('name');
+        }
         
         const response = await fetch(`/api/accounts/${accountId}`, {
             method: 'PUT',
@@ -107,3 +127,4 @@ async function regenerateToken() {
         }
     });
 })();
+

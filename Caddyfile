@@ -1,0 +1,72 @@
+# AccelMCP Caddyfile
+#
+# ローカル開発 (tls internal):
+#   - https://localhost でアクセス可能
+#   - 自己署名証明書を自動生成
+#
+# 本番 (独自ドメイン):
+#   - {$ACCEL_MCP_DOMAIN} を環境変数 ACCEL_MCP_DOMAIN に設定
+#   - Let's Encrypt 証明書を自動取得
+#
+# ルーティング:
+#   - MCP エンドポイント (/mcp, /<id>/mcp, /admin/mcp, /tools/*) -> mcp サービス
+#   - それ以外 (管理UI / REST API / アセット)               -> web サービス
+#
+#   1台運用でも複数台運用でも同じ Caddyfile で動く。複数台に分散する場合は
+#   reverse_proxy の宛先 (web:5000 / mcp:5000) を各ホストのアドレスに変更する。
+
+{$ACCEL_MCP_DOMAIN:localhost} {
+    tls internal
+
+    # --- MCP エンドポイントへの振り分け ---
+    # サブドメイン方式 (/mcp), レガシー (/mcp/<subdomain>), Admin MCP (/admin/mcp),
+    # 直接ツール実行 (/tools/<id>)
+    @mcp path /mcp /mcp/* /admin/mcp /tools/*
+    # パス方式 (/<identifier>/mcp) を正規表現で捕捉
+    @mcp_path path_regexp ^/[^/]+/mcp/?$
+
+    handle @mcp {
+        reverse_proxy mcp:5000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    handle @mcp_path {
+        reverse_proxy mcp:5000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # --- それ以外は管理UI/API (web) へ ---
+    handle {
+        reverse_proxy web:5000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # セキュリティヘッダー
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    encode gzip
+
+    log {
+        output stdout
+        format json
+        level INFO
+    }
+}

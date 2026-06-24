@@ -2,8 +2,11 @@
 
 async function loadAccounts() {
     const response = await fetch('/api/accounts');
-    const accounts = await response.json();
-    
+    const allAccounts = await response.json();
+
+    // システムアカウントは接続ガイドページで管理するため一覧から除外
+    const accounts = allAccounts.filter(a => !a.is_system);
+
     const container = document.getElementById('accounts-list');
     
     if (accounts.length === 0) {
@@ -14,14 +17,20 @@ async function loadAccounts() {
     container.innerHTML = accounts.map(account => `
         <div class="list-item">
             <div class="list-item-main">
-                <h3><a href="/accounts/${account.id}">${account.name}</a></h3>
+                <h3>
+                    <a href="/accounts/${account.id}">${account.name}</a>
+                    ${account.is_system ? '<span class="badge badge-system" title="システムアカウント（削除不可）">&#128274; システム</span>' : ''}
+                </h3>
                 <div class="list-item-meta">
                     ${account.notes ? `<span class="text-muted">${account.notes.substring(0, 50)}${account.notes.length > 50 ? '...' : ''}</span>` : ''}
                     <span class="text-muted">${t('account_created')}: ${new Date(account.created_at).toLocaleDateString(currentLanguage === 'ja' ? 'ja-JP' : 'en-US')}</span>
                 </div>
             </div>
             <div class="list-item-actions">
-                <button onclick="deleteAccount(${account.id})" class="btn btn-sm btn-danger">${t('button_delete')}</button>
+                ${account.is_system
+                    ? ''
+                    : `<button onclick="deleteAccount(${account.id})" class="btn btn-sm btn-danger">${t('button_delete')}</button>`
+                }
             </div>
         </div>
     `).join('');
@@ -40,3 +49,4 @@ async function deleteAccount(id) {
     await initLanguageSwitcher();
     loadAccounts();
 })();
+

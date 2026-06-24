@@ -7,7 +7,6 @@ Create Date: 2026-01-14 12:36:33.174437
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import mysql
 
 # revision identifiers, used by Alembic.
 revision = '12ebcecda7af'
@@ -40,7 +39,7 @@ def downgrade():
 
     with op.batch_alter_table('apps', schema=None) as batch_op:
         batch_op.alter_column('mcp_service_id',
-               existing_type=mysql.INTEGER(),
+               existing_type=sa.Integer(),
                nullable=True)
 
     with op.batch_alter_table('account_permissions', schema=None) as batch_op:

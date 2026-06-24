@@ -10,12 +10,13 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 import yaml
-from flask import Blueprint, Response, jsonify, request
+from flask import Blueprint, Response, jsonify, request, session
 from werkzeug.exceptions import NotFound
 
 from app.controllers.auth_controller import login_required
 from app.models.models import (
     AccountPermission,
+    AdminCredentials,
     AdminSettings,
     Capability,
     ConnectionAccount,
@@ -862,13 +863,19 @@ def account_detail(account_id):
 
     elif request.method == "PUT":
         data = request.get_json()
-        account.name = data.get("name", account.name)
-        account.notes = data.get("notes", account.notes)
+        if account.is_system:
+            # System accounts: only allow notes update (name is fixed)
+            account.notes = data.get("notes", account.notes)
+        else:
+            account.name = data.get("name", account.name)
+            account.notes = data.get("notes", account.notes)
 
         db.session.commit()
         return jsonify(account.to_dict())
 
     elif request.method == "DELETE":
+        if account.is_system:
+            return jsonify({"error": "システムアカウントは削除できません"}), 403
         db.session.delete(account)
         db.session.commit()
         return "", 204
@@ -1886,7 +1893,7 @@ def connection_logs_stats():
 
     # Success/Error counts
     success_count = query.filter(McpConnectionLog.is_success).count()
-    error_count = query.filter(not McpConnectionLog.is_success).count()
+    error_count = query.filter(McpConnectionLog.is_success == False).count()  # noqa: E712
 
     # Method distribution
     method_stats = (
@@ -2287,3 +2294,182 @@ def resource_access_control(resource_id):
 
     db.session.commit()
     return jsonify(resource.to_dict())
+
+
+# ============= Admin Credentials API =============
+
+
+@api_bp.route("/admin/credentials", methods=["POST"])
+@login_required
+def update_admin_credentials():
+    """Update the currently logged-in admin's own login credentials and/or the
+    Admin MCP API key.
+
+    Request body (all fields optional):
+      {
+        "username": "new_username",
+        "password": "new_password",
+        "admin_api_key": "new_bearer_token"
+      }
+
+    On success marks AdminCredentials.is_initialized = True.
+    """
+    from app.controllers.auth_controller import _get_current_admin_credentials
+
+    data = request.get_json() or {}
+
+    new_username = data.get("username", "").strip()
+    new_password = data.get("password", "").strip()
+    new_api_key = data.get("admin_api_key", "").strip()
+
+    if not new_username and not new_password and not new_api_key:
+        return jsonify({"error": "username, password, admin_api_key のいずれかを指定してください"}), 400
+
+    cred = _get_current_admin_credentials()
+    if cred is None:
+        return jsonify({"error": "管理者資格情報が存在しません"}), 404
+
+    if new_username:
+        if len(new_username) > 100:
+            return jsonify({"error": "ユーザー名は100文字以内にしてください"}), 400
+        existing = AdminCredentials.query.filter(
+            AdminCredentials.username == new_username, AdminCredentials.id != cred.id
+        ).first()
+        if existing:
+            return jsonify({"error": "同じユーザー名の管理者が既に存在します"}), 409
+        cred.username = new_username
+
+    if new_password:
+        if len(new_password) < 8:
+            return jsonify({"error": "パスワードは8文字以上にしてください"}), 400
+        cred.set_password(new_password)
+
+    if new_api_key:
+        if len(new_api_key) < 16:
+            return jsonify({"error": "Admin MCP APIキーは16文字以上にしてください"}), 400
+        system_account = ConnectionAccount.query.filter_by(is_system=True).first()
+        if system_account is None:
+            return jsonify({"error": "システムアカウントが見つかりません"}), 404
+        system_account.bearer_token = new_api_key
+
+    cred.is_initialized = True
+    db.session.commit()
+
+    # Keep the session in sync if the username changed, so login_required
+    # keeps recognizing the currently logged-in admin on subsequent requests.
+    if new_username:
+        session["admin_username"] = cred.username
+
+    return jsonify({"success": True, "message": "資格情報を更新しました"})
+
+
+# ============= Admin User (Web Login Accounts) API =============
+
+
+@api_bp.route("/admin-users", methods=["GET", "POST"])
+@login_required
+@audit_log("admin_user", action_type="create", get_resource_name=lambda d: d.get("username"))
+def admin_users():
+    """List all admin (web UI login) accounts, or create a new one."""
+    if request.method == "GET":
+        users = AdminCredentials.query.order_by(AdminCredentials.created_at).all()
+        return jsonify([u.to_dict() for u in users])
+
+    elif request.method == "POST":
+        data = request.get_json() or {}
+        username = data.get("username", "").strip()
+        password = data.get("password", "").strip()
+
+        if not username:
+            return jsonify({"error": "ユーザー名を入力してください"}), 400
+        if len(username) > 100:
+            return jsonify({"error": "ユーザー名は100文字以内にしてください"}), 400
+        if len(password) < 8:
+            return jsonify({"error": "パスワードは8文字以上にしてください"}), 400
+        if AdminCredentials.query.filter_by(username=username).first():
+            return jsonify({"error": "同じユーザー名の管理者が既に存在します"}), 409
+
+        # Admins created here are set up directly by another admin, so they
+        # don't need to go through the forced first-login credential change.
+        cred = AdminCredentials(username=username, is_initialized=True)
+        cred.set_password(password)
+        db.session.add(cred)
+        db.session.commit()
+        return jsonify(cred.to_dict()), 201
+
+
+@api_bp.route("/admin-users/<int:user_id>", methods=["GET", "PUT", "DELETE"])
+@login_required
+@audit_log("admin_user", get_resource_name=lambda d: d.get("username"))
+def admin_user_detail(user_id):
+    """Get, update, or delete a specific admin (web UI login) account."""
+    cred = get_or_404(AdminCredentials, user_id)
+
+    if request.method == "GET":
+        return jsonify(cred.to_dict())
+
+    elif request.method == "PUT":
+        data = request.get_json() or {}
+        new_username = data.get("username", "").strip()
+        new_password = data.get("password", "").strip()
+        old_username = cred.username
+
+        if new_username and new_username != cred.username:
+            if len(new_username) > 100:
+                return jsonify({"error": "ユーザー名は100文字以内にしてください"}), 400
+            existing = AdminCredentials.query.filter(
+                AdminCredentials.username == new_username, AdminCredentials.id != cred.id
+            ).first()
+            if existing:
+                return jsonify({"error": "同じユーザー名の管理者が既に存在します"}), 409
+            cred.username = new_username
+
+        if new_password:
+            if len(new_password) < 8:
+                return jsonify({"error": "パスワードは8文字以上にしてください"}), 400
+            cred.set_password(new_password)
+
+        db.session.commit()
+
+        # Keep the session in sync if the currently logged-in admin edited
+        # their own account through this screen.
+        if session.get("admin_username") == old_username:
+            session["admin_username"] = cred.username
+
+        return jsonify(cred.to_dict())
+
+    elif request.method == "DELETE":
+        if AdminCredentials.query.count() <= 1:
+            return jsonify({"error": "最後の管理者アカウントは削除できません"}), 400
+        if session.get("admin_username") == cred.username:
+            return jsonify({"error": "ログイン中の自分のアカウントは削除できません"}), 400
+
+        db.session.delete(cred)
+        db.session.commit()
+        return "", 204
+
+
+@api_bp.route("/admin/system-account", methods=["GET"])
+@login_required
+def get_system_account():
+    """Get system account (Admin MCP API key) info."""
+    system_account = ConnectionAccount.query.filter_by(is_system=True).first()
+    if system_account is None:
+        return jsonify({"error": "システムアカウントが見つかりません"}), 404
+    return jsonify({
+        "id": system_account.id,
+        "bearer_token": system_account.bearer_token,
+    })
+
+
+@api_bp.route("/admin/system-account/regenerate", methods=["POST"])
+@login_required
+def regenerate_system_account_token():
+    """Regenerate the Admin MCP API key (system account bearer token)."""
+    system_account = ConnectionAccount.query.filter_by(is_system=True).first()
+    if system_account is None:
+        return jsonify({"error": "システムアカウントが見つかりません"}), 404
+    system_account.bearer_token = secrets.token_urlsafe(32)
+    db.session.commit()
+    return jsonify({"success": True, "bearer_token": system_account.bearer_token})
+

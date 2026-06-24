@@ -7,7 +7,6 @@ Create Date: 2025-12-02 01:06:43.235281
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import mysql
 
 # revision identifiers, used by Alembic.
 revision = 'ad33b08ca7d7'
@@ -37,7 +36,7 @@ def upgrade():
     # 6. Make capability_id nullable (previously required)
     with op.batch_alter_table('account_permissions', schema=None) as batch_op:
         batch_op.alter_column('capability_id',
-               existing_type=mysql.INTEGER(),
+               existing_type=sa.Integer(),
                nullable=True)
     
     # 7. Add CHECK constraint: exactly one of mcp_service_id, app_id, or capability_id must be set
@@ -66,7 +65,7 @@ def downgrade():
     # Restore capability_id as NOT NULL
     with op.batch_alter_table('account_permissions', schema=None) as batch_op:
         batch_op.alter_column('capability_id',
-               existing_type=mysql.INTEGER(),
+               existing_type=sa.Integer(),
                nullable=False)
     
     # Remove access_control columns

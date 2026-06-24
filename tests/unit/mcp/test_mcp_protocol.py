@@ -1068,3 +1068,83 @@ class TestMcpProtocolInitialize:
         assert "tools" in capabilities
         assert "resources" in capabilities
         assert "prompts" in capabilities
+
+
+# ---------------------------------------------------------------------------
+# initialize の instructions フィールド（MCPサービス / appレベル）
+# ---------------------------------------------------------------------------
+
+
+class TestMcpInitializeInstructions:
+    """MCP サービスレベルの initialize レスポンスに instructions が含まれること。"""
+
+    def _setup_public_mcp(self, db, identifier="instr-test-mcp", description=None):
+        mcp_service = McpService(
+            name="Instructions Test MCP",
+            identifier=identifier,
+            routing_type="subdomain",
+            access_control="public",
+            is_enabled=True,
+            description=description,
+        )
+        db.session.add(mcp_service)
+        db.session.commit()
+        return mcp_service
+
+    def test_initialize_mcp_service_has_instructions_field(self, client, db):
+        """MCPサービスレベルの initialize に instructions フィールドが含まれること。"""
+        self._setup_public_mcp(db, identifier="instr-svc-1")
+
+        response = client.post(
+            "/mcp?subdomain=instr-svc-1",
+            data=json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {"protocolVersion": "2025-03-26", "capabilities": {}, "clientInfo": {"name": "test"}},
+                }
+            ),
+            content_type="application/json",
+        )
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert "result" in data
+        assert "instructions" in data["result"], "initialize レスポンスに 'instructions' がない"
+
+    def test_initialize_instructions_is_string(self, client, db):
+        """instructions フィールドが文字列型であること。"""
+        self._setup_public_mcp(db, identifier="instr-svc-2", description="My description")
+
+        response = client.post(
+            "/mcp?subdomain=instr-svc-2",
+            data=json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}),
+            content_type="application/json",
+        )
+        data = json.loads(response.data)
+        instructions = data["result"]["instructions"]
+        assert isinstance(instructions, str)
+
+    def test_initialize_instructions_uses_service_description(self, client, db):
+        """description を持つ MCP サービスでは instructions にその内容が反映されること。"""
+        self._setup_public_mcp(db, identifier="instr-svc-3", description="Custom service description")
+
+        response = client.post(
+            "/mcp?subdomain=instr-svc-3",
+            data=json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}),
+            content_type="application/json",
+        )
+        data = json.loads(response.data)
+        assert data["result"]["instructions"] == "Custom service description"
+
+    def test_initialize_instructions_empty_when_no_description(self, client, db):
+        """description が未設定の MCP サービスでは instructions が空文字列になること。"""
+        self._setup_public_mcp(db, identifier="instr-svc-4", description=None)
+
+        response = client.post(
+            "/mcp?subdomain=instr-svc-4",
+            data=json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}),
+            content_type="application/json",
+        )
+        data = json.loads(response.data)
+        assert data["result"]["instructions"] == ""

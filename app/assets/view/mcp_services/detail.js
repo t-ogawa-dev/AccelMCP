@@ -144,9 +144,81 @@ async function loadMcpService() {
         badge.textContent = t('access_control_restricted');
         badge.style.cssText = 'padding: 4px 12px; border-radius: 4px; background-color: #fef3c7; color: #92400e; font-weight: 500; font-size: 0.875rem;';
     }
+
+    // Render client configuration snippets
+    renderServiceSnippets(service, endpoint);
 }
 
 (async () => {
     await initLanguageSwitcher();
     loadMcpService();
 })();
+
+// ---- Client Configuration Snippets ----
+
+function renderServiceSnippets(service, endpoint) {
+    const key = '<YOUR_BEARER_TOKEN>';
+    const serverKey = service.identifier || 'mcp-service';
+
+    const claudeSnippet = JSON.stringify({
+        mcpServers: {
+            [serverKey]: {
+                type: 'http',
+                url: endpoint,
+                headers: { Authorization: 'Bearer ' + key }
+            }
+        }
+    }, null, 2);
+
+    const cursorSnippet = JSON.stringify({
+        mcpServers: {
+            [serverKey]: {
+                url: endpoint,
+                headers: { Authorization: 'Bearer ' + key }
+            }
+        }
+    }, null, 2);
+
+    const vscodeSnippet = JSON.stringify({
+        mcp: {
+            servers: {
+                [serverKey]: {
+                    type: 'http',
+                    url: endpoint,
+                    headers: { Authorization: 'Bearer ' + key }
+                }
+            }
+        }
+    }, null, 2);
+
+    const genericSnippet =
+`curl -X POST ${endpoint} \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer ${key}" \\
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'`;
+
+    document.getElementById('svc-snippet-claude-code').textContent = claudeSnippet;
+    document.getElementById('svc-snippet-cursor-code').textContent = cursorSnippet;
+    document.getElementById('svc-snippet-vscode-code').textContent = vscodeSnippet;
+    document.getElementById('svc-snippet-generic-code').textContent = genericSnippet;
+    document.getElementById('svc-snippet-card').style.display = '';
+}
+
+function switchSvcSnippetTab(name) {
+    document.querySelectorAll('#svc-snippet-card .snippet-tab').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('#svc-snippet-card .snippet-content').forEach(el => el.classList.remove('active'));
+    document.getElementById('svc-snippet-' + name).classList.add('active');
+    const order = { claude: 0, cursor: 1, vscode: 2, generic: 3 };
+    document.querySelectorAll('#svc-snippet-card .snippet-tab')[order[name]].classList.add('active');
+}
+
+async function copySvcSnippet(containerId) {
+    const pre = document.getElementById(containerId + '-code');
+    if (!pre) return;
+    try {
+        await navigator.clipboard.writeText(pre.textContent.trim());
+        await modal.success(t('guide_snippet_copied'));
+    } catch (e) {
+        await modal.error(t('copy_failed'));
+    }
+}

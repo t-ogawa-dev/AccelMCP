@@ -24,6 +24,12 @@ class Config:
     DEBUG = os.getenv("FLASK_DEBUG", "False").lower() == "true"
     TESTING = False
 
+    # Streamable HTTP session store backend.
+    # When set, MCP/Admin-MCP Streamable HTTP sessions are shared via Redis so the MCP
+    # endpoint can be scaled across replicas/hosts. When unset, an in-process store is
+    # used (fine for a single container). Example: redis://redis:6379/0
+    REDIS_URL = os.getenv("REDIS_URL")
+
     # Session settings
     PERMANENT_SESSION_LIFETIME = timedelta(hours=int(os.getenv("SESSION_LIFETIME_HOURS", "12")))
     SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "False").lower() == "true"

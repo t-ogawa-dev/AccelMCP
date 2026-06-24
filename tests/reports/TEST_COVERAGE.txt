@@ -470,6 +470,96 @@ Updated: 2026-01-15 (All 131 unit tests passing)
   - test_variable_set_and_get_value
   - test_variable_in_replacer
 
+## test_relay_and_streamable.py (tests/unit/mcp/, NEW - 2026-06-24 追加)
+## ハブ/中継機能 (API中継・MCP中継・連結) と Streamable HTTP
+✅ TestApiRelay (API中継: MCPクライアント - AccelMCP - APIサーバ)
+  - test_api_relay_tool_call_success
+  - test_api_relay_merges_common_and_capability_headers
+
+✅ TestMcpHttpRelay (HTTP MCP中継: MCPクライアント - AccelMCP - MCPサーバ)
+  - test_mcp_relay_tool_call_success
+  - test_mcp_relay_forwards_tool_name_and_arguments
+  - test_mcp_relay_forwards_common_headers
+  - test_mcp_relay_advertises_streamable_http_accept   (Streamable HTTPクライアント対応)
+  - test_mcp_relay_parses_upstream_sse_response        (上流SSE応答のパース)
+
+✅ TestDaisyChain (連結/デイジーチェーン: AccelMCP - AccelMCP - MCPサーバ)
+  - test_depth_header_is_incremented_and_propagated
+  - test_default_depth_starts_at_one
+  - test_max_depth_exceeded_aborts_without_upstream_call
+
+✅ TestStreamableHttp (メイン /mcp の Streamable HTTP/SSE)
+  - test_initialize_returns_sse_with_session
+  - test_subsequent_request_requires_valid_session
+  - test_session_roundtrip_allows_followup_request
+  - test_get_with_sse_accept_returns_405
+  - test_delete_terminates_session
+  - test_plain_json_still_works_without_sse
+
+✅ TestPathRoutingRelay (パスルーティング経由の中継)
+  - test_api_relay_over_path_routing
+
+## test_streamable_chain.py (tests/integration/, NEW - 2026-06-24 追加, @pytest.mark.integration)
+## 実サーバー3段での全区間 Streamable HTTP 連結 (Agent - A - B - 末端MCP)
+✅ TestStreamableChain
+  - test_agent_streamable_initialize_against_first_hop
+  - test_full_chain_tools_call_over_streamable_http
+  - test_daisy_chain_depth_increments_across_hops
+  - test_second_hop_directly_also_serves_streamable_http
+
+詳細レポート: tests/reports/RELAY_AND_STREAMABLE_TESTS.md
+
+## test_admin_users.py (tests/unit/admin/, NEW - 2026-06-22 追加)
+✅ TestAdminCredentialsModel
+  - test_set_password_and_check_password
+  - test_username_unique_constraint
+  - test_to_dict_excludes_password_hash
+
+✅ TestMultiAdminLogin
+  - test_login_with_existing_admin
+  - test_login_with_second_admin_alongside_first
+  - test_login_wrong_password_for_existing_username
+  - test_login_unknown_username_when_other_admins_exist
+  - test_bootstrap_env_fallback_when_table_empty
+
+✅ TestPerUserForcedCredentialChange
+  - test_pending_admin_redirected_to_change_credentials
+  - test_initialized_admin_not_redirected
+  - test_one_pending_admin_does_not_block_other_initialized_admin
+
+✅ TestSelfServiceCredentialChange
+  - test_requires_login
+  - test_updates_own_password
+  - test_updates_own_username_and_syncs_session
+  - test_rejects_username_already_used_by_another_admin
+  - test_only_changes_logged_in_users_own_account
+  - test_marks_initialized_after_change
+
+✅ TestAdminUsersListAndCreate
+  - test_list_requires_login
+  - test_list_returns_all_admin_accounts
+  - test_create_admin_user
+  - test_create_admin_user_can_login_immediately
+  - test_create_rejects_duplicate_username
+  - test_create_rejects_short_password
+  - test_create_rejects_missing_username
+
+✅ TestAdminUserDetailUpdateDelete
+  - test_get_detail
+  - test_get_detail_404_for_unknown_id
+  - test_update_username
+  - test_update_rejects_duplicate_username
+  - test_update_password
+  - test_update_rejects_short_password
+  - test_delete_succeeds_when_multiple_admins_exist
+  - test_delete_last_remaining_admin_is_forbidden
+  - test_cannot_delete_own_logged_in_account
+  - test_can_delete_other_account_while_logged_in
+  - test_renaming_own_account_via_management_api_syncs_session
+  - test_renaming_another_account_does_not_affect_own_session
+
+詳細レポート: tests/reports/ADMIN_USERS_TESTS.md
+
 ===========================================
 3. E2E TESTS (NEW - 2026-01-09 追加)
 ===========================================
@@ -566,9 +656,46 @@ Updated: 2026-01-15 (All 131 unit tests passing)
   - test_footer_branding_text
   - test_footer_at_bottom
 
+## e2e/admin_users/test_admin_users.py (NEW - 2026-06-22 追加)
+✅ TestAdminUsersListPage
+  - test_admin_users_list_loads
+  - test_navigate_to_new_admin_user
+  - test_dashboard_links_to_admin_users
+
+✅ TestAdminUsersNewPage
+  - test_new_admin_user_page_loads
+  - test_create_admin_user
+  - test_password_mismatch_blocks_submission
+
+✅ TestAdminUserDetailPage
+  - test_navigate_to_detail_from_list
+  - test_edit_username
+  - test_delete_admin_user
+  - test_cannot_delete_own_logged_in_account
+
 ===========================================
 4. TEST STATISTICS
 ===========================================
+
+【2026-06-22 追記】管理画面アカウント複数管理対応 (multi-admin account management)
+  新規ユニットテスト: 36 tests (tests/unit/admin/test_admin_users.py) — 全件成功
+  新規E2Eテスト: 10 tests (tests/e2e/admin_users/test_admin_users.py)
+  実測: python -m pytest tests/unit/ → 326 passed (既存290 + 新規36、回帰なし)
+  詳細: tests/reports/ADMIN_USERS_TESTS.md
+
+【2026-06-24 追記】ハブ/中継機能 & Streamable HTTP (relay & streamable)
+  新規ユニットテスト: 17 tests (tests/unit/mcp/test_relay_and_streamable.py) — 全件成功
+  新規結合テスト: 4 tests (tests/integration/test_streamable_chain.py, @integration) — 全件成功
+  実装改修: _execute_mcp_call を Streamable HTTP クライアント対応化
+    (Accept: text/event-stream 送出 + 上流SSE応答パース、timeout NameError修正)
+  対象: API中継 / HTTP MCP中継 / 連結(デイジーチェーン) / メイン/mcpのStreamable HTTP /
+        実サーバー3段の全区間Streamable HTTP連結(Agent-AccelMCP-AccelMCP-MCPサービス)
+  実測: python -m pytest tests/unit/ → 343 passed (既存326 + 新規17、回帰なし)
+        python -m pytest tests/integration/ → 4 passed
+  詳細: tests/reports/RELAY_AND_STREAMABLE_TESTS.md
+
+  以下の「総ユニットテスト数: 131テスト」等は本追記より前のスナップショットであり、
+  その後の機能追加（本件含む）は反映されていない数値です。最新の総数は上記の実測値を参照。
 
 総ユニットテスト数: 131テスト ✅
   - 全テスト成功: 131/131 (100%)

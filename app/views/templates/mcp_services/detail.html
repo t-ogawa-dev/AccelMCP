@@ -2,6 +2,58 @@
 
 {% block title %}MCPサービス詳細 - Accel MCP{% endblock %}
 
+{% block extra_head %}
+<style>
+  .snippet-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 0;
+    border-bottom: 2px solid #dde;
+  }
+  .snippet-tab {
+    padding: 6px 18px;
+    cursor: pointer;
+    font-size: .88rem;
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    background: #f5f5f5;
+    color: #666;
+    margin-right: 4px;
+  }
+  .snippet-tab.active {
+    background: white;
+    border-color: #dde;
+    border-bottom-color: white;
+    color: #667eea;
+    font-weight: 600;
+    margin-bottom: -2px;
+  }
+  .snippet-content {
+    display: none;
+    background: #1e1e2e;
+    color: #cdd6f4;
+    border-radius: 0 4px 4px 4px;
+    padding: 1rem 1.25rem;
+    font-family: monospace;
+    font-size: .83rem;
+    line-height: 1.6;
+    position: relative;
+  }
+  .snippet-content.active { display: block; }
+  .snippet-copy-btn {
+    position: absolute;
+    top: .5rem;
+    right: .5rem;
+    font-size: .75rem;
+    padding: 3px 10px;
+    opacity: .8;
+  }
+  .snippet-copy-btn:hover { opacity: 1; }
+  .snippet-pre { margin: 0; white-space: pre-wrap; word-break: break-all; }
+</style>
+{% endblock %}
+
 {% block breadcrumb %}
 <nav class="breadcrumb" id="breadcrumb">
     <a href="/dashboard" data-i18n="breadcrumb_home">ホーム</a>
@@ -65,6 +117,33 @@
             </td>
         </tr>
     </table>
+</div>
+
+<!-- クライアント設定スニペット -->
+<div class="detail-card" id="svc-snippet-card" style="display:none;">
+    <h3 data-i18n="guide_snippets_section">クライアント設定スニペット</h3>
+    <div class="snippet-tabs">
+      <div class="snippet-tab active" onclick="switchSvcSnippetTab('claude')" data-i18n="guide_tab_claude">Claude Desktop</div>
+      <div class="snippet-tab" onclick="switchSvcSnippetTab('cursor')" data-i18n="guide_tab_cursor">Cursor</div>
+      <div class="snippet-tab" onclick="switchSvcSnippetTab('vscode')" data-i18n="guide_tab_vscode">VS Code</div>
+      <div class="snippet-tab" onclick="switchSvcSnippetTab('generic')" data-i18n="guide_tab_generic">Generic HTTP</div>
+    </div>
+    <div class="snippet-content active" id="svc-snippet-claude">
+      <button class="btn btn-secondary btn-xs snippet-copy-btn" onclick="copySvcSnippet('svc-snippet-claude')" data-i18n="guide_snippet_copy">コピー</button>
+      <pre class="snippet-pre" id="svc-snippet-claude-code"></pre>
+    </div>
+    <div class="snippet-content" id="svc-snippet-cursor">
+      <button class="btn btn-secondary btn-xs snippet-copy-btn" onclick="copySvcSnippet('svc-snippet-cursor')" data-i18n="guide_snippet_copy">コピー</button>
+      <pre class="snippet-pre" id="svc-snippet-cursor-code"></pre>
+    </div>
+    <div class="snippet-content" id="svc-snippet-vscode">
+      <button class="btn btn-secondary btn-xs snippet-copy-btn" onclick="copySvcSnippet('svc-snippet-vscode')" data-i18n="guide_snippet_copy">コピー</button>
+      <pre class="snippet-pre" id="svc-snippet-vscode-code"></pre>
+    </div>
+    <div class="snippet-content" id="svc-snippet-generic">
+      <button class="btn btn-secondary btn-xs snippet-copy-btn" onclick="copySvcSnippet('svc-snippet-generic')" data-i18n="guide_snippet_copy">コピー</button>
+      <pre class="snippet-pre" id="svc-snippet-generic-code"></pre>
+    </div>
 </div>
 {% endblock %}
 

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}管理者アカウント詳細 - Accel MCP{% endblock %}
+
+{% block breadcrumb %}
+<nav class="breadcrumb">
+    <a href="/dashboard" data-i18n="breadcrumb_home">ホーム</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="/admin-users" data-i18n="breadcrumb_admin_user_list">管理者アカウント一覧</a>
+    <span class="breadcrumb-separator">›</span>
+    <span class="breadcrumb-current" data-i18n="admin_user_detail_title">管理者アカウント詳細</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <h2 data-i18n="admin_user_detail_title">管理者アカウント詳細</h2>
+    <p data-i18n="admin_user_detail_desc">管理者アカウントの編集</p>
+</div>
+
+<div id="admin-user-detail" class="detail-card"></div>
+
+<div class="detail-card" style="margin-top: 20px;">
+    <h3 data-i18n="admin_user_edit_info">アカウント情報の編集</h3>
+    <form id="edit-form">
+        <div class="form-group">
+            <label for="username" data-i18n="admin_user_username_label">ユーザー名</label>
+            <input type="text" id="username" name="username" maxlength="100">
+        </div>
+
+        <div class="form-group">
+            <label for="password" data-i18n="admin_user_new_password_label">新しいパスワード</label>
+            <input type="password" id="password" name="password" autocomplete="new-password"
+                   data-i18n-placeholder="admin_user_password_optional_placeholder" placeholder="変更する場合のみ入力">
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" data-i18n="button_save">保存</button>
+            <button type="button" id="delete-btn" class="btn btn-danger" data-i18n="button_delete">削除</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/assets/view/admin_users/detail.js"></script>
+{% endblock %}

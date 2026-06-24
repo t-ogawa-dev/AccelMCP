@@ -171,7 +171,7 @@ class TestCommonModalBasic:
         import os
 
         # Check if i18n.js file exists
-        i18n_path = os.path.join(os.path.dirname(__file__), "..", "app", "assets", "i18n.js")
+        i18n_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "app", "assets", "i18n.js")
         assert os.path.exists(i18n_path)
 
         # Read the file and check for modal-related keys
@@ -191,7 +191,7 @@ class TestCommonModalBasic:
         """Test that modal.js file exists"""
         import os
 
-        modal_js_path = os.path.join(os.path.dirname(__file__), "..", "app", "assets", "view", "common", "modal.js")
+        modal_js_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "app", "assets", "view", "common", "modal.js")
         assert os.path.exists(modal_js_path)
 
         # Check file contains expected functions
@@ -273,7 +273,7 @@ def test_modal_and_sync_integration(app):
         # Check that modal JavaScript exists
         import os
 
-        modal_js_path = os.path.join(os.path.dirname(__file__), "..", "app", "assets", "view", "common", "modal.js")
+        modal_js_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "app", "assets", "view", "common", "modal.js")
         assert os.path.exists(modal_js_path)
 
         # Both features are successfully integrated

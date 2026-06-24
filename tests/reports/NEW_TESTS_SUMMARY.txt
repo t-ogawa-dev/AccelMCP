@@ -1,7 +1,7 @@
 ===========================================
 新規作成テストファイル一覧 (最終版)
 ===========================================
-最終更新: 2026-01-14
+最終更新: 2026-06-22 (管理者アカウント複数管理対応テストを追加)
 
 ## ユニットテスト (7ファイル)
 
@@ -114,6 +114,25 @@
    - test_template_sync_service_initialization
    - test_modal_and_sync_integration
 
+8. tests/unit/admin/test_admin_users.py ⭐NEW (2026-06-22)
+   - 管理画面アカウント複数管理対応の完全テスト
+   - AdminCredentialsのunique制約
+   - 複数管理者ログイン（ユーザー名ベース認証、envフォールバック境界）
+   - per-user強制資格情報変更リダイレクト（回帰防止テスト含む）
+   - 自己サービス資格情報変更（/api/admin/credentials）
+   - 管理者アカウント管理API（/api/admin-users、/api/admin-users/<id>）
+     最後の1件削除禁止・自分自身削除禁止・重複ユーザー名禁止・リネーム時のセッション同期
+
+   テストクラス:
+   - TestAdminCredentialsModel (3 tests)
+   - TestMultiAdminLogin (5 tests)
+   - TestPerUserForcedCredentialChange (3 tests)
+   - TestSelfServiceCredentialChange (6 tests)
+   - TestAdminUsersListAndCreate (7 tests)
+   - TestAdminUserDetailUpdateDelete (12 tests)
+
+   詳細レポート: tests/reports/ADMIN_USERS_TESTS.md
+
 ## E2Eテスト (3ファイル)
 
 7. tests/e2e/variables/test_variables.py ⭐NEW
@@ -160,6 +179,18 @@
    - TestSecurityDashboard (4 tests)
    - TestFooterBranding (3 tests)
 
+10. tests/e2e/admin_users/test_admin_users.py ⭐NEW (2026-06-22)
+    - 管理者アカウント管理画面（複数管理対応）の完全E2Eテスト
+    - 一覧表示・新規登録・編集・削除
+    - 自分自身の削除禁止の確認
+
+    テストクラス:
+    - TestAdminUsersListPage (3 tests)
+    - TestAdminUsersNewPage (3 tests)
+    - TestAdminUserDetailPage (4 tests)
+
+    詳細レポート: tests/reports/ADMIN_USERS_TESTS.md
+
 ## ドキュメント (3ファイル)
 
 10. tests/TEST_COVERAGE.txt
@@ -193,8 +224,13 @@
 - Connection Logs: 10 tests (ユニット) = 10 tests ⭐NEW
 - Permissions: 16 tests (ユニット) = 16 tests ⭐NEW
 - Footer Branding: 3 tests (E2E) = 3 tests
+- Multi-Admin Account Management: 36 tests (ユニット) + 10 tests (E2E) = 46 tests ⭐NEW (2026-06-22)
 
-合計新規: ~180 tests
+合計新規: ~180 tests + 46 tests (2026-06-22時点)
+
+注記: 上記の「~370 tests」等の総数は過去のスナップショットであり、その後の機能追加分は
+反映されていない。2026-06-22時点でのユニットテスト実測値は `python -m pytest tests/unit/`
+で 326 passed（うち本機能追加分 36件）。詳細は tests/reports/ADMIN_USERS_TESTS.md を参照。
 
 ===========================================
 テスト実行方法

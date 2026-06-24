@@ -28,6 +28,37 @@ def get_or_404(model, id, description=None):
     return obj
 
 
+class AdminCredentials(db.Model):
+    """管理者認証情報 - Web UI ログイン用 ID/パスワードを DB で管理"""
+
+    __tablename__ = "admin_credentials"
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100), nullable=False, unique=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    is_initialized = db.Column(db.Boolean, nullable=False, default=False)
+    """False の間はログイン後に変更画面へ強制リダイレクトされる"""
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+    def set_password(self, plain_password: str) -> None:
+        from werkzeug.security import generate_password_hash
+        self.password_hash = generate_password_hash(plain_password)
+
+    def check_password(self, plain_password: str) -> bool:
+        from werkzeug.security import check_password_hash
+        return check_password_hash(self.password_hash, plain_password)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "username": self.username,
+            "is_initialized": self.is_initialized,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
 class ConnectionAccount(db.Model):
     """接続アカウント - MCPサービスに接続するためのアカウント"""
 
@@ -37,6 +68,8 @@ class ConnectionAccount(db.Model):
     name = db.Column(db.String(100), nullable=False)
     bearer_token = db.Column(db.String(100), unique=True, nullable=False)
     notes = db.Column(db.Text)
+    is_system = db.Column(db.Boolean, nullable=False, default=False)
+    """True = システム予約アカウント（削除不可）。Admin MCP API キー用に使用"""
     created_at = db.Column(db.DateTime, default=utcnow)
     updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
 
@@ -49,6 +82,7 @@ class ConnectionAccount(db.Model):
             "name": self.name,
             "bearer_token": self.bearer_token,
             "notes": self.notes,
+            "is_system": self.is_system,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

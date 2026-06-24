@@ -18,15 +18,53 @@ _executor = ThreadPoolExecutor(max_workers=2)
 
 
 def login_required(f):
-    """Decorator to require admin login"""
+    """Decorator to require admin login.
+
+    After login succeeds, if the currently logged-in admin's credentials have
+    not yet been changed from their initial values (is_initialized=False) they
+    are redirected to the credential change page for every request until they
+    complete the change. Only the bootstrap admin (created from env vars) ever
+    starts with is_initialized=False; admins created via the admin accounts
+    management screen are initialized immediately.
+    """
 
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get("admin_logged_in"):
             return redirect(url_for("auth.login"))
+
+        # Check whether the admin has completed the forced credential change.
+        # Allow /admin/change-credentials itself so there is no redirect loop.
+        # Also allow all /api/ paths so that AJAX calls from the change-credentials
+        # page work correctly instead of receiving an HTML redirect response.
+        from flask import request as _req
+
+        change_url = url_for("admin.change_credentials")
+        if not _req.path.startswith(change_url) and not _req.path.startswith("/api/"):
+            cred = _get_current_admin_credentials()
+            if cred is not None and not cred.is_initialized:
+                return redirect(change_url)
+
         return f(*args, **kwargs)
 
     return decorated_function
+
+
+def _get_admin_credentials_by_username(username):
+    """Return the AdminCredentials row matching username, or None if not found."""
+    try:
+        from app.models.models import AdminCredentials
+        return AdminCredentials.query.filter_by(username=username).first()
+    except Exception:
+        return None
+
+
+def _get_current_admin_credentials():
+    """Return the AdminCredentials row for the currently logged-in admin (by session), or None."""
+    username = session.get("admin_username")
+    if not username:
+        return None
+    return _get_admin_credentials_by_username(username)
 
 
 @auth_bp.route("/")
@@ -205,8 +243,22 @@ def login():
                 return jsonify({"success": False, "message": lock_message}), 429
             return render_template("login.html", error=lock_message)
 
-        # Validate credentials
-        if username == current_app.config["ADMIN_USERNAME"] and password == current_app.config["ADMIN_PASSWORD"]:
+        # Validate credentials — look up by username across all admin accounts,
+        # falling back to env-based config only when no admin account exists yet
+        # (bootstrap edge case before the first seed has run).
+        from app.models.models import AdminCredentials
+
+        cred = _get_admin_credentials_by_username(username)
+        authenticated = False
+        if cred is not None:
+            authenticated = cred.check_password(password)
+        elif AdminCredentials.query.count() == 0:
+            authenticated = (
+                username == current_app.config.get("ADMIN_USERNAME", "")
+                and password == current_app.config.get("ADMIN_PASSWORD", "")
+            )
+
+        if authenticated:
             # Success - clear lock status
             _check_and_update_lock_status(ip_address, is_success=True)
 
@@ -220,12 +272,27 @@ def login():
                 username, ip_address, user_agent, True, session_id=session.sid if hasattr(session, "sid") else None
             )
 
+            # Force credential change on first login
+            if cred is not None and not cred.is_initialized:
+                change_url = url_for("admin.change_credentials")
+                if request.is_json:
+                    return jsonify({"success": True, "redirect": change_url, "change_required": True})
+                return redirect(change_url)
+
             if request.is_json:
                 return jsonify({"success": True, "message": "ログインしました"})
             return redirect(url_for("admin.dashboard"))
 
         # Login failed - determine reason
-        failure_reason = "invalid_username" if username != current_app.config["ADMIN_USERNAME"] else "invalid_password"
+        if cred is not None:
+            # Found an account with this username, so the password was wrong
+            failure_reason = "invalid_password"
+        elif AdminCredentials.query.count() == 0:
+            failure_reason = (
+                "invalid_username" if username != current_app.config.get("ADMIN_USERNAME", "") else "invalid_password"
+            )
+        else:
+            failure_reason = "invalid_username"
 
         # Update lock status (increment failed attempts)
         _check_and_update_lock_status(ip_address, is_success=False)

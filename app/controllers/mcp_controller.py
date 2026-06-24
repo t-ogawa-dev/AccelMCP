@@ -5,13 +5,13 @@ Handles MCP protocol endpoints
 
 import json
 import logging
-import time
 
 from flask import Blueprint, Response, current_app, jsonify, request
 
 from app.models.models import Capability, ConnectionAccount, McpService, Service, db
 from app.services.mcp_handler import MCPHandler
 from app.services.mcp_logger import create_log_context_from_request, log_mcp_request
+from app.services.session_store import get_session_store
 
 mcp_bp = Blueprint("mcp", __name__)
 logger = logging.getLogger(__name__)
@@ -106,30 +106,24 @@ def _build_sse_response(data: dict, session_id: str | None = None) -> Response:
     return Response(body, status=200, headers=headers)
 
 
-# Session store for StreamableHTTP: {session_id: expiry_timestamp}
-_active_sessions: dict[str, float] = {}
+# Streamable HTTP session store. Backed by Redis when REDIS_URL is set (so the MCP
+# endpoint can be scaled across replicas/hosts), otherwise process-local in-memory.
 _SESSION_TTL_SECONDS = 3600  # 1 hour
 
 
 def _register_session(session_id: str) -> None:
     """Register a new StreamableHTTP session ID with expiry."""
-    _active_sessions[session_id] = time.time() + _SESSION_TTL_SECONDS
-    # Prune expired sessions opportunistically
-    now = time.time()
-    expired = [sid for sid, exp in list(_active_sessions.items()) if exp < now]
-    for sid in expired:
-        _active_sessions.pop(sid, None)
+    get_session_store("mcp").register(session_id, _SESSION_TTL_SECONDS)
 
 
 def _is_valid_session(session_id: str) -> bool:
     """Return True if the session ID was issued by this server and has not expired."""
-    exp = _active_sessions.get(session_id)
-    if exp is None:
-        return False
-    if exp < time.time():
-        _active_sessions.pop(session_id, None)
-        return False
-    return True
+    return get_session_store("mcp").is_valid(session_id)
+
+
+def _remove_session(session_id: str) -> None:
+    """Terminate a StreamableHTTP session."""
+    get_session_store("mcp").remove(session_id)
 
 
 @mcp_bp.route("/mcp", methods=["POST", "GET", "DELETE"])
@@ -238,7 +232,7 @@ def mcp_subdomain_endpoint():
     if request.method == "DELETE":
         session_id = request.headers.get("Mcp-Session-Id")
         if session_id and _is_valid_session(session_id):
-            del _active_sessions[session_id]
+            _remove_session(session_id)
             log_mcp_request(current_app._get_current_object(), log_context, status_code=200, is_success=True)
             return Response("", status=200)
         return Response("", status=404)
@@ -423,7 +417,7 @@ def mcp_path_endpoint(path_identifier):
     if request.method == "DELETE":
         session_id = request.headers.get("Mcp-Session-Id")
         if session_id and _is_valid_session(session_id):
-            del _active_sessions[session_id]
+            _remove_session(session_id)
             log_mcp_request(current_app._get_current_object(), log_context, status_code=200, is_success=True)
             return Response("", status=200)
         return Response("", status=404)

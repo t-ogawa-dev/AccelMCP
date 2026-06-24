@@ -7,7 +7,6 @@ Create Date: 2026-01-08 10:00:20.764258
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import mysql
 
 # revision identifiers, used by Alembic.
 revision = 'ce9e3b9ee735'
@@ -78,12 +77,24 @@ def upgrade():
 
     with op.batch_alter_table('apps', schema=None) as batch_op:
         batch_op.alter_column('mcp_service_id',
-               existing_type=mysql.INTEGER(),
+               existing_type=sa.Integer(),
                nullable=False)
 
-    with op.batch_alter_table('mcp_capability_templates', schema=None) as batch_op:
-        batch_op.drop_constraint(batch_op.f('mcp_capability_templates_ibfk_1'), type_='foreignkey')
-        batch_op.create_foreign_key(None, 'mcp_service_templates', ['template_id'], ['id'])
+    # Drop existing FK on mcp_capability_templates (name differs by DB dialect)
+    # and recreate it if template_id column exists (added in a later migration)
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_fks = inspector.get_foreign_keys('mcp_capability_templates')
+    fk_to_drop = next(
+        (fk['name'] for fk in existing_fks if 'service_template_id' in fk.get('constrained_columns', [])),
+        None
+    )
+    if fk_to_drop:
+        op.drop_constraint(fk_to_drop, 'mcp_capability_templates', type_='foreignkey')
+
+    cap_cols = [c['name'] for c in inspector.get_columns('mcp_capability_templates')]
+    if 'template_id' in cap_cols:
+        op.create_foreign_key(None, 'mcp_capability_templates', 'mcp_service_templates', ['template_id'], ['id'])
 
     with op.batch_alter_table('mcp_connection_logs', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_mcp_connection_logs_created_at_desc'))
@@ -98,11 +109,11 @@ def downgrade():
 
     with op.batch_alter_table('mcp_capability_templates', schema=None) as batch_op:
         batch_op.drop_constraint(None, type_='foreignkey')
-        batch_op.create_foreign_key(batch_op.f('mcp_capability_templates_ibfk_1'), 'mcp_service_templates', ['template_id'], ['id'], ondelete='CASCADE')
+        batch_op.create_foreign_key('mcp_capability_templates_service_template_id_fkey', 'mcp_service_templates', ['service_template_id'], ['id'], ondelete='CASCADE')
 
     with op.batch_alter_table('apps', schema=None) as batch_op:
         batch_op.alter_column('mcp_service_id',
-               existing_type=mysql.INTEGER(),
+               existing_type=sa.Integer(),
                nullable=True)
 
     # Skip problematic index recreation

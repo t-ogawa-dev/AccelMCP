@@ -4,6 +4,7 @@ Tests JavaScript files for syntax errors without running a browser
 Uses Python's esprima or subprocess to validate JS syntax
 """
 
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -59,8 +60,12 @@ class TestJavaScriptSyntax:
         Node.jsが利用可能ならそれを使用、なければPythonで簡易チェック
         """
         # Node.jsでシンタックスチェック
+        node_cmd = shutil.which("node")
         try:
-            result = subprocess.run(["node", "--check", str(js_file)], capture_output=True, text=True, timeout=5)
+            result = subprocess.run(
+                [node_cmd or "node", "--check", str(js_file)],
+                capture_output=True, text=True, timeout=5,
+            )
             if result.returncode != 0:
                 return result.stderr.strip()
             return None
@@ -165,15 +170,17 @@ class TestJavaScriptSyntax:
 
     def test_specific_capabilities_js(self):
         """capabilities.js のシンタックスを個別にチェック"""
-        # Node.jsがない場合はスキップ
+        node_cmd = shutil.which("node")
+        if not node_cmd:
+            pytest.skip("Node.js not available for accurate syntax checking")
         try:
-            result = subprocess.run(["node", "--version"], capture_output=True, timeout=5)
+            result = subprocess.run([node_cmd, "--version"], capture_output=True, timeout=5)
             if result.returncode != 0:
                 pytest.skip("Node.js not available for accurate syntax checking")
         except (FileNotFoundError, subprocess.TimeoutExpired):
             pytest.skip("Node.js not available for accurate syntax checking")
 
-        project_root = Path(__file__).parent.parent
+        project_root = Path(__file__).parent.parent.parent.parent
         js_file = project_root / "app" / "assets" / "view" / "services" / "capabilities.js"
 
         if not js_file.exists():
@@ -184,15 +191,17 @@ class TestJavaScriptSyntax:
 
     def test_dashboard_js(self):
         """dashboard.js のシンタックスを個別にチェック"""
-        # Node.jsがない場合はスキップ
+        node_cmd = shutil.which("node")
+        if not node_cmd:
+            pytest.skip("Node.js not available for accurate syntax checking")
         try:
-            result = subprocess.run(["node", "--version"], capture_output=True, timeout=5)
+            result = subprocess.run([node_cmd, "--version"], capture_output=True, timeout=5)
             if result.returncode != 0:
                 pytest.skip("Node.js not available for accurate syntax checking")
         except (FileNotFoundError, subprocess.TimeoutExpired):
             pytest.skip("Node.js not available for accurate syntax checking")
 
-        project_root = Path(__file__).parent.parent
+        project_root = Path(__file__).parent.parent.parent.parent
         js_file = project_root / "app" / "assets" / "view" / "dashboard.js"
 
         if not js_file.exists():
@@ -208,7 +217,7 @@ class TestJavaScriptFetchCalls:
     @pytest.fixture
     def js_files(self):
         """テスト対象のJSファイル一覧を取得"""
-        project_root = Path(__file__).parent.parent
+        project_root = Path(__file__).parent.parent.parent.parent
         js_dir = project_root / "app" / "assets" / "view"
 
         return list(js_dir.rglob("*.js"))
