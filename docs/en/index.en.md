@@ -10,6 +10,8 @@ management via a Web admin interface.
 [GitHub Repository](https://github.com/t-ogawa-dev/AccelMCP){ .md-button .md-button--primary }
 [日本語ドキュメント](../index.md){ .md-button }
 
+![AccelMCP architecture overview](../assets/diagrams/architecture-overview.svg)
+
 ## Key Features
 
 - **MCP Protocol Support**: Compatible with both HTTP and stdio, including Streamable HTTP (SSE)

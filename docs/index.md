@@ -9,6 +9,8 @@ HTTP/stdio 対応の MCP サーバー。API/MCP 中継機能とユーザー別�
 [GitHub リポジトリ](https://github.com/t-ogawa-dev/AccelMCP){ .md-button .md-button--primary }
 [English docs](en/index.en.md){ .md-button }
 
+![AccelMCP 概念図](assets/diagrams/architecture-overview.svg)
+
 ## 主な機能
 
 - **MCP プロトコル対応**: HTTP と stdio の両方をサポート、Streamable HTTP (SSE) にも対応

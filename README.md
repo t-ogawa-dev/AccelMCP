@@ -4,6 +4,8 @@
 
 HTTP/stdio 対応の MCP サーバー。API/MCP 中継機能とユーザー別権限管理を備えた Web 管理画面付き。
 
+![AccelMCP 概念図](docs/assets/diagrams/architecture-overview.svg)
+
 ## 機能
 
 - **MCP プロトコル対応**: HTTP と stdio の両方をサポート
