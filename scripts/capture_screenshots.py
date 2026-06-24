@@ -209,6 +209,101 @@ def _seed_sample_data(app):
         return cred.username, weather.id, account.id
 
 
+def _set_server_language(page, base, language):
+    """Force the server-side (post-login) language setting via the same API the
+    in-app language switcher uses, so screenshots don't depend on browser-language
+    auto-detection."""
+    page.evaluate(
+        """async (lang) => {
+            await fetch('/api/settings/language', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ language: lang })
+            });
+        }""",
+        language,
+    )
+
+
+def _capture_language_pass(app, base, username, mcp_service_id, browser, *, locale, login_language, server_language, suffix):
+    """Capture one full set of screenshots for a single UI language.
+
+    suffix is appended before the .png extension, e.g. "" for Japanese
+    (dashboard.png) or ".en" for English (dashboard.en.png).
+    """
+    context = browser.new_context(viewport=VIEWPORT, locale=locale)
+    page = context.new_page()
+
+    # 1. Login page (language is a client-side localStorage preference here,
+    # independent of the post-login server-side setting).
+    page.goto(f"{base}/login")
+    page.wait_for_selector('input[name="username"]')
+    page.evaluate("(lang) => localStorage.setItem('login_language', lang)", login_language)
+    page.reload()
+    page.wait_for_selector('input[name="username"]')
+    page.screenshot(path=str(OUTPUT_DIR / f"login{suffix}.png"))
+
+    # 2. Log in (only the very first login triggers the forced credential-change
+    # redirect; by the second pass it's already completed).
+    page.fill('input[name="username"]', username)
+    page.fill('input[name="password"]', "universe")
+    with page.expect_navigation():
+        page.click('button[type="submit"]')
+    page.wait_for_load_state("networkidle")
+
+    if "/change-credentials" in page.url:
+        page.wait_for_selector("#change-credentials-form")
+        if suffix == "":
+            page.screenshot(path=str(OUTPUT_DIR / "change-credentials.png"))
+        # Complete the forced change out-of-band so the rest of the
+        # walkthrough isn't blocked by the redirect.
+        with app.app_context():
+            from app.models.models import AdminCredentials, db
+
+            cred = AdminCredentials.query.first()
+            cred.is_initialized = True
+            db.session.commit()
+
+    _set_server_language(page, base, server_language)
+
+    # 3. Dashboard
+    page.goto(f"{base}/dashboard")
+    page.wait_for_load_state("networkidle")
+    page.screenshot(path=str(OUTPUT_DIR / f"dashboard{suffix}.png"))
+
+    # 4. MCP services list
+    page.goto(f"{base}/mcp-services")
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(300)
+    page.screenshot(path=str(OUTPUT_DIR / f"mcp-services-list{suffix}.png"))
+
+    # 5. MCP service detail
+    page.goto(f"{base}/mcp-services/{mcp_service_id}")
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(300)
+    page.screenshot(path=str(OUTPUT_DIR / f"mcp-service-detail{suffix}.png"))
+
+    # 6. Connection accounts list
+    page.goto(f"{base}/accounts")
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(300)
+    page.screenshot(path=str(OUTPUT_DIR / f"accounts-list{suffix}.png"))
+
+    # 7. Connection guide (Admin MCP endpoint info)
+    page.goto(f"{base}/guide")
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(300)
+    page.screenshot(path=str(OUTPUT_DIR / f"guide{suffix}.png"))
+
+    # 8. Connection logs
+    page.goto(f"{base}/connection-logs")
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(300)
+    page.screenshot(path=str(OUTPUT_DIR / f"connection-logs{suffix}.png"))
+
+    context.close()
+
+
 def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     os.environ["TESTING"] = ""  # ensure non-testing seed code path is not skipped oddly
@@ -226,67 +321,29 @@ def main():
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
-            context = browser.new_context(viewport=VIEWPORT, locale="ja-JP")
-            page = context.new_page()
 
-            # 1. Login page
-            page.goto(f"{base}/login")
-            page.wait_for_selector('input[name="username"]')
-            page.screenshot(path=str(OUTPUT_DIR / "login.png"))
-
-            # 2. Log in (triggers forced credential-change redirect on first login)
-            page.fill('input[name="username"]', username)
-            page.fill('input[name="password"]', "universe")
-            with page.expect_navigation():
-                page.click('button[type="submit"]')
-            page.wait_for_load_state("networkidle")
-
-            if "/change-credentials" in page.url:
-                page.wait_for_selector("#change-credentials-form")
-                page.screenshot(path=str(OUTPUT_DIR / "change-credentials.png"))
-                # Complete the forced change out-of-band so the rest of the
-                # walkthrough isn't blocked by the redirect.
-                with app.app_context():
-                    from app.models.models import AdminCredentials, db
-
-                    cred = AdminCredentials.query.first()
-                    cred.is_initialized = True
-                    db.session.commit()
-
-            # 3. Dashboard
-            page.goto(f"{base}/dashboard")
-            page.wait_for_load_state("networkidle")
-            page.screenshot(path=str(OUTPUT_DIR / "dashboard.png"))
-
-            # 4. MCP services list
-            page.goto(f"{base}/mcp-services")
-            page.wait_for_load_state("networkidle")
-            page.wait_for_timeout(300)
-            page.screenshot(path=str(OUTPUT_DIR / "mcp-services-list.png"))
-
-            # 5. MCP service detail
-            page.goto(f"{base}/mcp-services/{mcp_service_id}")
-            page.wait_for_load_state("networkidle")
-            page.wait_for_timeout(300)
-            page.screenshot(path=str(OUTPUT_DIR / "mcp-service-detail.png"))
-
-            # 6. Connection accounts list
-            page.goto(f"{base}/accounts")
-            page.wait_for_load_state("networkidle")
-            page.wait_for_timeout(300)
-            page.screenshot(path=str(OUTPUT_DIR / "accounts-list.png"))
-
-            # 7. Connection guide (Admin MCP endpoint info)
-            page.goto(f"{base}/guide")
-            page.wait_for_load_state("networkidle")
-            page.wait_for_timeout(300)
-            page.screenshot(path=str(OUTPUT_DIR / "guide.png"))
-
-            # 8. Connection logs
-            page.goto(f"{base}/connection-logs")
-            page.wait_for_load_state("networkidle")
-            page.wait_for_timeout(300)
-            page.screenshot(path=str(OUTPUT_DIR / "connection-logs.png"))
+            _capture_language_pass(
+                app,
+                base,
+                username,
+                mcp_service_id,
+                browser,
+                locale="ja-JP",
+                login_language="ja",
+                server_language="ja",
+                suffix="",
+            )
+            _capture_language_pass(
+                app,
+                base,
+                username,
+                mcp_service_id,
+                browser,
+                locale="en-US",
+                login_language="en",
+                server_language="en",
+                suffix=".en",
+            )
 
             browser.close()
 

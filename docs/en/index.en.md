@@ -10,7 +10,7 @@ management via a Web admin interface.
 [GitHub Repository](https://github.com/t-ogawa-dev/AccelMCP){ .md-button .md-button--primary }
 [日本語ドキュメント](../index.md){ .md-button }
 
-![AccelMCP architecture overview](../assets/diagrams/architecture-overview.svg)
+![AccelMCP architecture overview](../assets/diagrams/architecture-overview.en.svg)
 
 ## Key Features
 
@@ -24,28 +24,28 @@ management via a Web admin interface.
 ## Screenshots
 
 !!! note
-    The screenshots below show the default Japanese UI. AccelMCP also ships with a
-    built-in English UI, switchable from the language dropdown in the top-right corner.
+    AccelMCP ships with a built-in language switcher (top-right corner). The
+    screenshots below show the English UI; a Japanese UI is also available.
 
-![Login screen](../assets/screenshots/login.png)
+![Login screen](../assets/screenshots/login.en.png)
 *Login screen*
 
-![Dashboard](../assets/screenshots/dashboard.png)
+![Dashboard](../assets/screenshots/dashboard.en.png)
 *Dashboard — entry point to every admin feature*
 
-![MCP services list](../assets/screenshots/mcp-services-list.png)
+![MCP services list](../assets/screenshots/mcp-services-list.en.png)
 *MCP services list — shows public/restricted access control at a glance*
 
-![MCP service detail](../assets/screenshots/mcp-service-detail.png)
+![MCP service detail](../assets/screenshots/mcp-service-detail.en.png)
 *MCP service detail — auto-generated client configuration snippets for Claude Desktop / Cursor / VS Code*
 
-![AdminMCP connection guide](../assets/screenshots/guide.png)
+![AdminMCP connection guide](../assets/screenshots/guide.en.png)
 *AdminMCP connection guide — endpoint info and the list of available tools*
 
-![Connection logs](../assets/screenshots/connection-logs.png)
+![Connection logs](../assets/screenshots/connection-logs.en.png)
 *Connection logs — review connection history per MCP service*
 
-![Connection accounts list](../assets/screenshots/accounts-list.png)
+![Connection accounts list](../assets/screenshots/accounts-list.en.png)
 *Connection accounts list — issue Bearer tokens for MCP clients*
 
 ## Documentation

@@ -4,7 +4,7 @@ English | [日本語](README.md)
 
 HTTP/stdio compatible MCP server with API/MCP relay functionality and user-based permission management via a Web admin interface.
 
-![AccelMCP architecture overview](docs/assets/diagrams/architecture-overview.svg)
+![AccelMCP architecture overview](docs/assets/diagrams/architecture-overview.en.svg)
 
 ## Features
 

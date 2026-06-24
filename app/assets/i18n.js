@@ -1005,7 +1005,12 @@ const translations = {
         button_validate_json: 'Validate JSON',
         button_validate_json: 'Validate JSON',
         button_format_json: 'Format',
-        
+        btn_save: 'Save',
+        btn_back: 'Back',
+
+        // Common
+        loading: 'Loading...',
+
         // Copy/Paste
         copy_failed: 'Failed to copy',
         
@@ -1047,6 +1052,7 @@ const translations = {
         guide_tab_cursor: 'Cursor',
         guide_tab_vscode: 'VS Code',
         guide_tab_generic: 'Generic HTTP',
+        guide_snippet_copy: 'Copy',
         guide_snippet_copied: 'Copied',
         guide_copy_url: 'Copy URL',
         guide_copied: 'Copied',
@@ -1113,6 +1119,7 @@ const translations = {
         log_filter_account: 'Account',
         log_filter_method: 'Method',
         log_filter_status: 'Status',
+        log_filter_search: 'Search',
         log_filter_all: 'All',
         log_filter_success: 'Success Only',
         log_filter_error: 'Errors Only',
@@ -1133,6 +1140,7 @@ const translations = {
         log_error: 'Error',
         
         // Log Detail
+        log_detail_title: 'Log Detail',
         log_detail_basic: 'Basic Information',
         log_detail_account_resource: 'Account & Resource',
         log_detail_client: 'Client Information',
