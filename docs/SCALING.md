@@ -87,12 +87,12 @@ WEB / MCP / Redis / DB を別々のホストで動かす場合は、各ホスト
 
 ## 関連する実装
 
-- セッションストア抽象化: [app/services/session_store.py](../app/services/session_store.py)
+- セッションストア抽象化: [app/services/session_store.py](https://github.com/t-ogawa-dev/AccelMCP/blob/main/app/services/session_store.py)
   - `InMemorySessionStore` / `RedisSessionStore` / `get_session_store(namespace)`
   - 名前空間 `"mcp"`(MCP本体)と `"admin"`(Admin MCP)でセッションを分離
 - セッション利用箇所:
-  - [app/controllers/mcp_controller.py](../app/controllers/mcp_controller.py)
-  - [app/controllers/admin_mcp_controller.py](../app/controllers/admin_mcp_controller.py)
+  - [app/controllers/mcp_controller.py](https://github.com/t-ogawa-dev/AccelMCP/blob/main/app/controllers/mcp_controller.py)
+  - [app/controllers/admin_mcp_controller.py](https://github.com/t-ogawa-dev/AccelMCP/blob/main/app/controllers/admin_mcp_controller.py)
 
 ## テスト
 

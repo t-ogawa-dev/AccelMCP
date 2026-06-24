@@ -188,6 +188,6 @@ docker compose up -d --build
 
 ## Additional Documentation
 
-- **Detailed Setup**: [SETUP.md](SETUP.md)
-- **MCP Endpoint Details**: [MCP_ENDPOINTS.md](MCP_ENDPOINTS.md)
-- **Project Overview**: [README.en.md](../../README.en.md)
+- **Detailed Setup**: [SETUP.en.md](SETUP.en.md)
+- **MCP Endpoint Details**: [MCP_ENDPOINTS.en.md](MCP_ENDPOINTS.en.md)
+- **Project Overview**: [README.en.md](https://github.com/t-ogawa-dev/AccelMCP/blob/main/README.en.md)

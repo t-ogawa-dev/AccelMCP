@@ -1,0 +1,7 @@
+# Dependencies for building the documentation site (mkdocs.yml) and
+# deploying it to GitHub Pages via .github/workflows/docs.yml.
+# Not required to run AccelMCP itself; install separately with:
+#   pip install -r requirements-docs.txt
+
+mkdocs>=1.6,<2.0
+mkdocs-material>=9.5,<10.0

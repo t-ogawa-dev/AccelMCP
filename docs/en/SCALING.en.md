@@ -84,12 +84,12 @@ Key points:
 
 ## Related implementation
 
-- Session store abstraction: [app/services/session_store.py](../../app/services/session_store.py)
+- Session store abstraction: [app/services/session_store.py](https://github.com/t-ogawa-dev/AccelMCP/blob/main/app/services/session_store.py)
   - `InMemorySessionStore` / `RedisSessionStore` / `get_session_store(namespace)`
   - Sessions are isolated by namespace: `"mcp"` (the MCP endpoint) and `"admin"` (Admin MCP)
 - Session usage:
-  - [app/controllers/mcp_controller.py](../../app/controllers/mcp_controller.py)
-  - [app/controllers/admin_mcp_controller.py](../../app/controllers/admin_mcp_controller.py)
+  - [app/controllers/mcp_controller.py](https://github.com/t-ogawa-dev/AccelMCP/blob/main/app/controllers/mcp_controller.py)
+  - [app/controllers/admin_mcp_controller.py](https://github.com/t-ogawa-dev/AccelMCP/blob/main/app/controllers/admin_mcp_controller.py)
 
 ## Tests
 

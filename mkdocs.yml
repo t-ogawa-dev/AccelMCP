@@ -1,0 +1,78 @@
+site_name: AccelMCP
+site_description: HTTP/stdio compatible MCP hub server with API/MCP relay and Web admin interface
+site_url: https://t-ogawa-dev.github.io/AccelMCP/
+repo_url: https://github.com/t-ogawa-dev/AccelMCP
+repo_name: t-ogawa-dev/AccelMCP
+edit_uri: edit/main/docs/
+
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  language: ja
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      toggle:
+        icon: material/brightness-7
+        name: ダークモードに切替
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/brightness-4
+        name: ライトモードに切替
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+
+nav:
+  - 日本語:
+      - ホーム: index.md
+      - クイックスタート: QUICKSTART.md
+      - セットアップガイド: SETUP.md
+      - MCPエンドポイント: MCP_ENDPOINTS.md
+      - ディレクトリ構造: STRUCTURE.md
+      - テストガイド: TESTING.md
+      - E2Eテスト: E2E_TESTING.md
+      - マイグレーション: MIGRATION.md
+      - スケーリング・コンテナ構成: SCALING.md
+  - English:
+      - Home: en/index.en.md
+      - Quick Start: en/QUICKSTART.en.md
+      - Setup Guide: en/SETUP.en.md
+      - MCP Endpoints: en/MCP_ENDPOINTS.en.md
+      - Directory Structure: en/STRUCTURE.en.md
+      - Testing Guide: en/TESTING.en.md
+      - E2E Testing: en/E2E_TESTING.en.md
+      - Migration: en/MIGRATION.en.md
+      - Scaling & Containers: en/SCALING.en.md
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/t-ogawa-dev/AccelMCP
