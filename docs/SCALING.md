@@ -91,7 +91,7 @@ docker compose up -d
 - `web` / `mcp` / `redis` / `db` / `caddy` が同一マシンで動きます。
 - Redis があるので Streamable HTTP セッションは Redis に保存されますが、
   1台なら in-memory でも動作します(後述)。
-- 複数マシンに分けたい場合は [4. 複数ホストに分散する](#4-複数ホストに分散する) へ。
+- 複数マシンに分けたい場合は [4. 複数ホストに分散する](#4) へ。
 
 ## HTTPS
 

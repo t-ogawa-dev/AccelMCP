@@ -35,7 +35,7 @@ services (`<identifier>.lvh.me/mcp`) work out of the box with no extra configura
 
 ## 1. Single-host (local, AWS, etc.)
 
-![Single-host and multi-host topology](assets/diagrams/deployment-topology.en.svg)
+![Single-host and multi-host topology](../assets/diagrams/deployment-topology.en.svg)
 
 Like Dify, run all containers on one machine. **The steps are the same whether it's your local
 PC or a cloud VM like an AWS EC2 instance** — the only difference is whether you use a real domain.
