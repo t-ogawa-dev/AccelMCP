@@ -203,4 +203,4 @@ docker compose up -d --build
 
 - **Detailed Setup**: [SETUP.en.md](SETUP.en.md)
 - **MCP Endpoint Details**: [MCP_ENDPOINTS.en.md](MCP_ENDPOINTS.en.md)
-- **Project Overview**: [README.en.md](https://github.com/t-ogawa-dev/AccelMCP/blob/main/README.en.md)
+- **Project Overview**: [README.en.md](https://github.com/t-ogawa-dev/octopus-mcp-proxy/blob/main/README.en.md)

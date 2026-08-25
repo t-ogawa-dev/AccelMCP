@@ -301,7 +301,7 @@ class TestFooterBranding:
         logged_in_page.goto("http://localhost:5100/")
 
         footer = logged_in_page.locator("footer, .footer")
-        expect(footer).to_contain_text("Accel MCP")
+        expect(footer).to_contain_text("Octopus MCP Proxy")
 
     def test_footer_at_bottom(self, logged_in_page: Page):
         """フッターが画面最下部に配置される"""

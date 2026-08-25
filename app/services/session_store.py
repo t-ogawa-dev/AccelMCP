@@ -2,7 +2,7 @@
 Streamable HTTP session store.
 
 The MCP and Admin-MCP endpoints issue a ``Mcp-Session-Id`` on ``initialize`` and
-validate it on subsequent Streamable HTTP requests. When AccelMCP runs as a single
+validate it on subsequent Streamable HTTP requests. When Octopus MCP Proxy runs as a single
 container the session set can live in process memory, but when the MCP endpoint is
 scaled out (multiple replicas / separate hosts) the session must be shared so that a
 follow-up request handled by a different replica still recognizes the session.

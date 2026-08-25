@@ -52,7 +52,7 @@ async def _discover_tools_async(mcp_url: str, headers: dict) -> list:
                 "params": {
                     "protocolVersion": "2024-11-05",
                     "capabilities": {},
-                    "clientInfo": {"name": "AccelMCP", "version": "1.0.0"},
+                    "clientInfo": {"name": "Octopus MCP Proxy", "version": "1.0.0"},
                 },
                 "id": 1,
             }
@@ -153,7 +153,7 @@ async def _discover_tools_sse_post(mcp_url: str, headers: dict) -> list:
             "params": {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {},
-                "clientInfo": {"name": "AccelMCP", "version": "1.0.0"},
+                    "clientInfo": {"name": "Octopus MCP Proxy", "version": "1.0.0"},
             },
         }
 
@@ -258,7 +258,7 @@ async def _discover_tools_http(mcp_url: str, headers: dict) -> list:
             "params": {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {},
-                "clientInfo": {"name": "AccelMCP", "version": "1.0.0"},
+                "clientInfo": {"name": "Octopus MCP Proxy", "version": "1.0.0"},
             },
             "id": 1,
         }

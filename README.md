@@ -1,10 +1,10 @@
-# MCP Server with Flask and FastMCP
+# Octopus MCP Proxy
 
 [English](README.en.md) | 日本語
 
 HTTP/stdio 対応の MCP サーバー。API/MCP 中継機能とユーザー別権限管理を備えた Web 管理画面付き。
 
-![AccelMCP 概念図](docs/assets/diagrams/architecture-overview.svg)
+![Octopus MCP Proxy 概念図](docs/assets/diagrams/architecture-overview.svg)
 
 ## 機能
 
@@ -16,7 +16,7 @@ HTTP/stdio 対応の MCP サーバー。API/MCP 中継機能とユーザー別�
 
 ## コンテナ構成
 
-AccelMCP は次のコンテナで構成されます（`web` と `mcp` は同一イメージ）。
+Octopus MCP Proxy は次のコンテナで構成されます（`web` と `mcp` は同一イメージ）。
 
 - `caddy`: リバースプロキシ / TLS（パスで `web` と `mcp` に振り分け）
 - `web`: 管理画面 + REST API（起動時に DB マイグレーションを実行）
@@ -354,7 +354,7 @@ curl -k -X POST \
 
 ### 標準出力への JSON 構造化ログ
 
-AccelMCP は、すべての MCP 接続ログを標準出力（stdout）に JSON 形式で出力します。これにより、任意のコンテナログ収集システムで自動的にログを集約できます。
+Octopus MCP Proxy は、すべての MCP 接続ログを標準出力（stdout）に JSON 形式で出力します。これにより、任意のコンテナログ収集システムで自動的にログを集約できます。
 
 **対応プラットフォーム：**
 
@@ -528,15 +528,15 @@ ruff check app/ tests/ --fix
 
 詳細なドキュメントは `docs/` ディレクトリにあります。
 
-| ドキュメント                                                                             | 説明                                                 |
-| ---------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| [クイックスタート](docs/QUICKSTART.md) / [English](docs/en/QUICKSTART.en.md)             | 5 分で MCP サーバーを起動・テストする最短手順        |
-| [セットアップガイド](docs/SETUP.md) / [English](docs/en/SETUP.en.md)                     | 詳細なセットアップ・起動手順                         |
-| [MCP エンドポイント詳細](docs/MCP_ENDPOINTS.md) / [English](docs/en/MCP_ENDPOINTS.en.md) | 各 MCP エンドポイントの詳細な使用方法                |
-| [ディレクトリ構造](docs/STRUCTURE.md) / [English](docs/en/STRUCTURE.en.md)               | MVC パターンに基づくプロジェクト構成の説明           |
-| [テストガイド](docs/TESTING.md) / [English](docs/en/TESTING.en.md)                       | ユニットテスト・統合テストの実行方法と構成           |
-| [E2E テスト](docs/E2E_TESTING.md) / [English](docs/en/E2E_TESTING.en.md)                 | Playwright を使った E2E テストの実行方法             |
-| [データベースマイグレーション](docs/MIGRATION.md) / [English](docs/en/MIGRATION.en.md)   | Flask-Migrate (Alembic) を使ったマイグレーション管理 |
+| ドキュメント                                                                             | 説明                                                                             |
+| ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| [クイックスタート](docs/QUICKSTART.md) / [English](docs/en/QUICKSTART.en.md)             | 5 分で MCP サーバーを起動・テストする最短手順                                    |
+| [セットアップガイド](docs/SETUP.md) / [English](docs/en/SETUP.en.md)                     | 詳細なセットアップ・起動手順                                                     |
+| [MCP エンドポイント詳細](docs/MCP_ENDPOINTS.md) / [English](docs/en/MCP_ENDPOINTS.en.md) | 各 MCP エンドポイントの詳細な使用方法                                            |
+| [ディレクトリ構造](docs/STRUCTURE.md) / [English](docs/en/STRUCTURE.en.md)               | MVC パターンに基づくプロジェクト構成の説明                                       |
+| [テストガイド](docs/TESTING.md) / [English](docs/en/TESTING.en.md)                       | ユニットテスト・統合テストの実行方法と構成                                       |
+| [E2E テスト](docs/E2E_TESTING.md) / [English](docs/en/E2E_TESTING.en.md)                 | Playwright を使った E2E テストの実行方法                                         |
+| [データベースマイグレーション](docs/MIGRATION.md) / [English](docs/en/MIGRATION.en.md)   | Flask-Migrate (Alembic) を使ったマイグレーション管理                             |
 | [スケーリング・コンテナ構成](docs/SCALING.md) / [English](docs/en/SCALING.en.md)         | コンテナ構成、1台/複数台運用、Redis セッション共有、MCP エンドポイントのスケール |
 
 ## このプロジェクトについて

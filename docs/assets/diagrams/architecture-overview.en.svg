@@ -18,9 +18,9 @@
   <text x="110" y="192" text-anchor="middle" font-size="16" font-weight="bold" fill="#1e293b">MCP Client</text>
   <text x="110" y="212" text-anchor="middle" font-size="11.5" fill="#64748b">(Agent / Dify, etc.)</text>
 
-  <!-- AccelMCP hub -->
+  <!-- Octopus MCP Proxy hub -->
   <rect x="390" y="110" width="240" height="180" rx="18" fill="url(#accelGradient)"/>
-  <text x="510" y="183" text-anchor="middle" font-size="23" font-weight="bold" fill="#ffffff">AccelMCP</text>
+  <text x="510" y="183" text-anchor="middle" font-size="23" font-weight="bold" fill="#ffffff">Octopus MCP Proxy</text>
   <text x="510" y="215" text-anchor="middle" font-size="13" fill="#eef0ff">Relay / Permissions</text>
   <text x="510" y="247" text-anchor="middle" font-size="13" fill="#eef0ff">Web Admin UI</text>
 
@@ -47,7 +47,7 @@
 
   <!-- ===== Divider ===== -->
   <rect x="20" y="392" width="1000" height="1.5" fill="#e2e8f0"/>
-  <text x="520" y="416" text-anchor="middle" font-size="13" font-style="italic" fill="#64748b">Example: daisy-chaining multiple AccelMCP instances</text>
+  <text x="520" y="416" text-anchor="middle" font-size="13" font-style="italic" fill="#64748b">Example: daisy-chaining multiple Octopus MCP Proxy instances</text>
 
   <!-- ===== Bottom section: daisy chain ===== -->
 
@@ -56,11 +56,11 @@
   <text x="115" y="484" text-anchor="middle" font-size="10.5" fill="#64748b">(MCP Client)</text>
 
   <rect x="260" y="430" width="200" height="80" rx="14" fill="url(#accelGradient)"/>
-  <text x="360" y="466" text-anchor="middle" font-size="15" font-weight="bold" fill="#ffffff">AccelMCP</text>
+  <text x="360" y="466" text-anchor="middle" font-size="15" font-weight="bold" fill="#ffffff">Octopus MCP Proxy</text>
   <text x="360" y="484" text-anchor="middle" font-size="10.5" fill="#eef0ff">(#1)</text>
 
   <rect x="540" y="430" width="200" height="80" rx="14" fill="url(#accelGradient)"/>
-  <text x="640" y="466" text-anchor="middle" font-size="15" font-weight="bold" fill="#ffffff">AccelMCP</text>
+  <text x="640" y="466" text-anchor="middle" font-size="15" font-weight="bold" fill="#ffffff">Octopus MCP Proxy</text>
   <text x="640" y="484" text-anchor="middle" font-size="10.5" fill="#eef0ff">(#2)</text>
 
   <rect x="820" y="430" width="200" height="80" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>

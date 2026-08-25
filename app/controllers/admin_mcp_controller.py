@@ -1,6 +1,6 @@
 """
 Admin MCP Controller
-AccelMCP 自身を管理する MCP エンドポイント (/admin/mcp)
+Octopus MCP Proxy 自身を管理する MCP エンドポイント (/admin/mcp)
 
 認証: Authorization: Bearer <ACCELMCP_ADMIN_API_KEY>
 """
@@ -175,7 +175,7 @@ ADMIN_TOOLS = [
     },
     {
         "name": "get_dashboard_summary",
-        "description": "Return an AccelMCP-wide summary (service count, app count, variable count, recent errors)",
+        "description": "Return an Octopus MCP Proxy-wide summary (service count, app count, variable count, recent errors)",
         "inputSchema": {"type": "object", "properties": {}, "required": []},
     },
     {
@@ -316,9 +316,9 @@ def _handle_request(mcp_request: dict) -> tuple[dict, str | None]:
             "result": {
                 "protocolVersion": "2025-03-26",
                 "capabilities": {"tools": {}},
-                "serverInfo": {"name": "AccelMCP Admin", "version": "1.0.0"},
+                "serverInfo": {"name": "Octopus MCP Proxy Admin", "version": "1.0.0"},
                 "instructions": (
-                    "This is the AccelMCP administration server. "
+                    "This is the Octopus MCP Proxy administration server. "
                     "Use it to manage MCP services (create/delete), list apps, manage variables (list/set/delete), "
                     "retrieve connection logs and error logs, get a dashboard summary, and list templates. "
                     "Call get_dashboard_summary first to understand the current state of the system."
@@ -395,7 +395,7 @@ def admin_mcp_endpoint():
         if _is_sse_request():
             return Response("", status=405)
         # 非 SSE GET はシンプルにサーバー情報を返す
-        return jsonify({"server": "AccelMCP Admin MCP", "version": "1.0.0"})
+        return jsonify({"server": "Octopus MCP Proxy Admin MCP", "version": "1.0.0"})
 
     # --- POST ---
     mcp_request = request.get_json(silent=True)

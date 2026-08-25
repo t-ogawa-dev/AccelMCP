@@ -8,13 +8,13 @@ Streamable HTTP sessions through Redis, the MCP endpoint can be scaled horizonta
 
 ## Container Layout
 
-| Service | Role | Notes |
-| --- | --- | --- |
-| `caddy` | Reverse proxy / TLS | Routes by path to `web` and `mcp` |
-| `web` | Admin UI + REST API | Runs DB migrations on startup |
-| `mcp` | MCP endpoint | Same image as `web`; does NOT run migrations |
-| `redis` | Shared session store | Holds Streamable HTTP sessions |
-| `db` | PostgreSQL | Application data |
+| Service | Role                 | Notes                                        |
+| ------- | -------------------- | -------------------------------------------- |
+| `caddy` | Reverse proxy / TLS  | Routes by path to `web` and `mcp`            |
+| `web`   | Admin UI + REST API  | Runs DB migrations on startup                |
+| `mcp`   | MCP endpoint         | Same image as `web`; does NOT run migrations |
+| `redis` | Shared session store | Holds Streamable HTTP sessions               |
+| `db`    | PostgreSQL           | Application data                             |
 
 `web` and `mcp` use the **same image and the same app** (all blueprints registered); Caddy routes
 requests by path. This is what lets "all-in-one on one host" and "role-split across hosts" both run
@@ -24,10 +24,10 @@ from the same compose definition.
 
 Routing is by **path**, regardless of hostname.
 
-| Path | Routed to |
-| --- | --- |
-| `/mcp`, `/mcp/<subdomain>`, `/<identifier>/mcp`, `/admin/mcp`, `/tools/*` | `mcp` |
-| Everything else (`/`, `/dashboard`, `/api/*`, `/assets/*`, etc.) | `web` |
+| Path                                                                      | Routed to |
+| ------------------------------------------------------------------------- | --------- |
+| `/mcp`, `/mcp/<subdomain>`, `/<identifier>/mcp`, `/admin/mcp`, `/tools/*` | `mcp`     |
+| Everything else (`/`, `/dashboard`, `/api/*`, `/assets/*`, etc.)          | `web`     |
 
 Caddy accepts both `localhost` (or `ACCEL_MCP_DOMAIN`) and the local-development domain
 `lvh.me` / `*.lvh.me`. `lvh.me` always resolves to `127.0.0.1`, so subdomain-based MCP
@@ -43,8 +43,8 @@ PC or a cloud VM like an AWS EC2 instance** — the only difference is whether y
 ### Local development / testing
 
 ```bash
-git clone https://github.com/t-ogawa-dev/AccelMCP.git
-cd AccelMCP
+git clone https://github.com/t-ogawa-dev/octopus-mcp-proxy.git
+cd octopus-mcp-proxy
 cp .env.example .env
 docker compose up -d
 ```
@@ -60,8 +60,8 @@ Access at `https://localhost/` (click through the self-signed certificate warnin
 3. Deploy the repo and create `.env`:
 
    ```bash
-   git clone https://github.com/t-ogawa-dev/AccelMCP.git
-   cd AccelMCP
+   git clone https://github.com/t-ogawa-dev/octopus-mcp-proxy.git
+   cd octopus-mcp-proxy
    cp .env.example .env
    ```
 
@@ -98,11 +98,11 @@ Access at `https://localhost/` (click through the self-signed certificate warnin
 Port 5000 on the `web`/`mcp` containers is **not published to the host** (`expose` only).
 Always access through Caddy from your browser or MCP client.
 
-| Purpose | URL |
-| --- | --- |
-| Web admin UI | `https://localhost/` |
-| MCP service (subdomain-based) | `https://<identifier>.lvh.me/mcp` |
-| MCP service (path-based) | `https://localhost/<identifier>/mcp` |
+| Purpose                       | URL                                  |
+| ----------------------------- | ------------------------------------ |
+| Web admin UI                  | `https://localhost/`                 |
+| MCP service (subdomain-based) | `https://<identifier>.lvh.me/mcp`    |
+| MCP service (path-based)      | `https://localhost/<identifier>/mcp` |
 
 No port number is needed (Caddy listens on 443 and proxies internally to port 5000).
 
@@ -163,23 +163,23 @@ sessions are shared through `REDIS_URL`, any replica that receives a follow-up r
 Run WEB / MCP / Redis / DB on separate machines. The `deploy/` directory provides **one
 compose file per role**, so each machine only runs the file for its role.
 
-| File | Role | Run on |
-| --- | --- | --- |
-| `deploy/host-db.compose.yaml` | PostgreSQL | DB host |
-| `deploy/host-redis.compose.yaml` | Redis (shared sessions) | Redis host |
-| `deploy/host-web.compose.yaml` | Admin UI + REST API (runs migrations) | WEB host |
-| `deploy/host-mcp.compose.yaml` | MCP endpoint | MCP host(s) |
-| `deploy/host-caddy.compose.yaml` | Reverse proxy / TLS (public entry point) | Caddy host |
+| File                             | Role                                     | Run on      |
+| -------------------------------- | ---------------------------------------- | ----------- |
+| `deploy/host-db.compose.yaml`    | PostgreSQL                               | DB host     |
+| `deploy/host-redis.compose.yaml` | Redis (shared sessions)                  | Redis host  |
+| `deploy/host-web.compose.yaml`   | Admin UI + REST API (runs migrations)    | WEB host    |
+| `deploy/host-mcp.compose.yaml`   | MCP endpoint                             | MCP host(s) |
+| `deploy/host-caddy.compose.yaml` | Reverse proxy / TLS (public entry point) | Caddy host  |
 
 ### Network requirements (firewall / security group)
 
-| Host | Open port | Allowed from |
-| --- | --- | --- |
-| DB host | 5432 | WEB host(s) and MCP host(s) only |
-| Redis host | 6379 | WEB host(s) and MCP host(s) only |
-| WEB host | 5000 | Caddy host only |
-| MCP host | 5000 | Caddy host only |
-| Caddy host | 80, 443 | The public internet (this is the entry point) |
+| Host       | Open port | Allowed from                                  |
+| ---------- | --------- | --------------------------------------------- |
+| DB host    | 5432      | WEB host(s) and MCP host(s) only              |
+| Redis host | 6379      | WEB host(s) and MCP host(s) only              |
+| WEB host   | 5000      | Caddy host only                               |
+| MCP host   | 5000      | Caddy host only                               |
+| Caddy host | 80, 443   | The public internet (this is the entry point) |
 
 ### Steps
 
@@ -256,12 +256,12 @@ and confirm the admin UI loads.
 
 ## Related implementation
 
-- Session store abstraction: [app/services/session_store.py](https://github.com/t-ogawa-dev/AccelMCP/blob/main/app/services/session_store.py)
+- Session store abstraction: [app/services/session_store.py](https://github.com/t-ogawa-dev/octopus-mcp-proxy/blob/main/app/services/session_store.py)
   - `InMemorySessionStore` / `RedisSessionStore` / `get_session_store(namespace)`
   - Sessions are isolated by namespace: `"mcp"` (the MCP endpoint) and `"admin"` (Admin MCP)
 - Session usage:
-  - [app/controllers/mcp_controller.py](https://github.com/t-ogawa-dev/AccelMCP/blob/main/app/controllers/mcp_controller.py)
-  - [app/controllers/admin_mcp_controller.py](https://github.com/t-ogawa-dev/AccelMCP/blob/main/app/controllers/admin_mcp_controller.py)
+  - [app/controllers/mcp_controller.py](https://github.com/t-ogawa-dev/octopus-mcp-proxy/blob/main/app/controllers/mcp_controller.py)
+  - [app/controllers/admin_mcp_controller.py](https://github.com/t-ogawa-dev/octopus-mcp-proxy/blob/main/app/controllers/admin_mcp_controller.py)
 
 ## Tests
 

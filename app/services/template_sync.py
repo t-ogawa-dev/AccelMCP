@@ -78,11 +78,13 @@ class TemplateSyncService:
             # index.yamlを取得
             index_data = self.fetch_yaml(self.get_index_url())
 
-            # 現在のAccelMCPバージョンと互換性のある最新バージョンを探す
+            # 現在のOctopus MCP Proxyバージョンと互換性のある最新バージョンを探す
             compatible_version = self._find_compatible_version(index_data["versions"])
 
             if not compatible_version:
-                raise VersionIncompatibleError(f"No compatible template version found for AccelMCP {ACCEL_MCP_VERSION}")
+                raise VersionIncompatibleError(
+                    f"No compatible template version found for Octopus MCP Proxy {ACCEL_MCP_VERSION}"
+                )
 
             # 現在インストールされているバージョンを取得
             current_version = self._get_current_template_version()
@@ -129,7 +131,9 @@ class TemplateSyncService:
             compatible_version = self._find_compatible_version(index_data["versions"])
 
             if not compatible_version:
-                raise VersionIncompatibleError(f"No compatible template version found for AccelMCP {ACCEL_MCP_VERSION}")
+                raise VersionIncompatibleError(
+                    f"No compatible template version found for Octopus MCP Proxy {ACCEL_MCP_VERSION}"
+                )
 
             # テンプレートファイルを取得
             template_url = self.get_template_url(compatible_version["file"])
@@ -158,7 +162,7 @@ class TemplateSyncService:
 
     def _find_compatible_version(self, versions):
         """
-        現在のAccelMCPバージョンと互換性のある最新バージョンを探す
+        現在のOctopus MCP Proxyバージョンと互換性のある最新バージョンを探す
 
         Args:
             versions: バージョンリスト

@@ -307,7 +307,7 @@ def test_service_connection():
             "params": {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {},
-                "clientInfo": {"name": "AccelMCP", "version": "1.0.0"},
+                "clientInfo": {"name": "Octopus MCP Proxy", "version": "1.0.0"},
             },
             "id": 1,
         }

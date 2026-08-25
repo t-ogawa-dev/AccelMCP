@@ -1,10 +1,10 @@
-# MCP Server with Flask and FastMCP
+# Octopus MCP Proxy
 
 English | [日本語](README.md)
 
 HTTP/stdio compatible MCP server with API/MCP relay functionality and user-based permission management via a Web admin interface.
 
-![AccelMCP architecture overview](docs/assets/diagrams/architecture-overview.en.svg)
+![Octopus MCP Proxy architecture overview](docs/assets/diagrams/architecture-overview.en.svg)
 
 ## Features
 
@@ -16,7 +16,7 @@ HTTP/stdio compatible MCP server with API/MCP relay functionality and user-based
 
 ## Container Layout
 
-AccelMCP is composed of the following containers (`web` and `mcp` share the same image):
+Octopus MCP Proxy is composed of the following containers (`web` and `mcp` share the same image):
 
 - `caddy`: Reverse proxy / TLS (routes by path to `web` and `mcp`)
 - `web`: Admin UI + REST API (runs DB migrations on startup)
@@ -284,8 +284,8 @@ curl -k -X POST \
 
 ### MCP Endpoints
 
-| Endpoint                              | Method | Description                                   |
-| -------------------------------------- | ------ | --------------------------------------------- |
+| Endpoint                             | Method | Description                                   |
+| ------------------------------------ | ------ | --------------------------------------------- |
 | `<subdomain>.lvh.me/mcp`             | GET    | Get Capabilities available to the account     |
 | `<subdomain>.lvh.me/mcp`             | POST   | Process MCP requests (tools/list, tools/call) |
 | `<subdomain>.lvh.me/tools/<tool_id>` | POST   | Execute a specific Tool directly              |
@@ -308,7 +308,7 @@ for local development that always resolves to 127.0.0.1. Use your own domain in 
 
 ### Structured JSON Logs to stdout
 
-AccelMCP outputs all MCP connection logs as structured JSON to stdout. This enables automatic log aggregation by any container log collection system.
+Octopus MCP Proxy outputs all MCP connection logs as structured JSON to stdout. This enables automatic log aggregation by any container log collection system.
 
 **Supported Platforms:**
 
@@ -482,15 +482,15 @@ ruff check app/ tests/ --fix
 
 Detailed documentation is available in the `docs/` directory.
 
-| Document                                                                       | Description                                                |
-| ------------------------------------------------------------------------------ | ---------------------------------------------------------- |
-| [Quick Start](docs/en/QUICKSTART.en.md) / [日本語](docs/QUICKSTART.md)         | Fastest way to start and test the MCP server in 5 minutes  |
-| [Setup Guide](docs/en/SETUP.en.md) / [日本語](docs/SETUP.md)                   | Detailed setup and startup instructions                    |
-| [MCP Endpoints](docs/en/MCP_ENDPOINTS.en.md) / [日本語](docs/MCP_ENDPOINTS.md) | Detailed usage of each MCP server endpoint                 |
-| [Directory Structure](docs/en/STRUCTURE.en.md) / [日本語](docs/STRUCTURE.md)   | Project structure based on MVC pattern                     |
-| [Testing Guide](docs/en/TESTING.en.md) / [日本語](docs/TESTING.md)             | How to run and configure unit and integration tests        |
-| [E2E Testing](docs/en/E2E_TESTING.en.md) / [日本語](docs/E2E_TESTING.md)       | How to run E2E tests with Playwright                       |
-| [Database Migration](docs/en/MIGRATION.en.md) / [日本語](docs/MIGRATION.md)    | Database migration management with Flask-Migrate (Alembic) |
+| Document                                                                       | Description                                                                                   |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| [Quick Start](docs/en/QUICKSTART.en.md) / [日本語](docs/QUICKSTART.md)         | Fastest way to start and test the MCP server in 5 minutes                                     |
+| [Setup Guide](docs/en/SETUP.en.md) / [日本語](docs/SETUP.md)                   | Detailed setup and startup instructions                                                       |
+| [MCP Endpoints](docs/en/MCP_ENDPOINTS.en.md) / [日本語](docs/MCP_ENDPOINTS.md) | Detailed usage of each MCP server endpoint                                                    |
+| [Directory Structure](docs/en/STRUCTURE.en.md) / [日本語](docs/STRUCTURE.md)   | Project structure based on MVC pattern                                                        |
+| [Testing Guide](docs/en/TESTING.en.md) / [日本語](docs/TESTING.md)             | How to run and configure unit and integration tests                                           |
+| [E2E Testing](docs/en/E2E_TESTING.en.md) / [日本語](docs/E2E_TESTING.md)       | How to run E2E tests with Playwright                                                          |
+| [Database Migration](docs/en/MIGRATION.en.md) / [日本語](docs/MIGRATION.md)    | Database migration management with Flask-Migrate (Alembic)                                    |
 | [Scaling & Containers](docs/en/SCALING.en.md) / [日本語](docs/SCALING.md)      | Container layout, single-host vs. multi-host, Redis-backed sessions, scaling the MCP endpoint |
 
 ## About This Project

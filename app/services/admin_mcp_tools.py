@@ -1,6 +1,6 @@
 """
 Admin MCP Tools
-AccelMCP 自身を管理するための MCP ツール実装
+Octopus MCP Proxy 自身を管理するための MCP ツール実装
 """
 
 import logging
@@ -29,7 +29,7 @@ def _utcnow() -> datetime:
 
 
 def get_dashboard_summary() -> dict:
-    """AccelMCP の全体サマリーを返す"""
+    """Octopus MCP Proxy の全体サマリーを返す"""
     mcp_service_count = McpService.query.count()
     enabled_mcp_service_count = McpService.query.filter_by(is_enabled=True).count()
     app_count = Service.query.count()

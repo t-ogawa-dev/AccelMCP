@@ -6,7 +6,7 @@
 const translations = {
     ja: {
         // ヘッダー
-        app_title: 'Accel MCP',
+        app_title: 'Octopus MCP Proxy',
         logout: 'ログアウト',
         
         // パンくずリスト
@@ -70,7 +70,7 @@ const translations = {
         tool_desc_delete_variable: '変数を削除する',
         tool_desc_get_admin_action_logs: '管理者操作ログを取得する',
         tool_desc_get_connection_logs: 'MCP 接続ログを取得する',
-        tool_desc_get_dashboard_summary: 'AccelMCP 全体のサマリー（サービス数・アプリ数・変数数・直近エラー）を返す',
+        tool_desc_get_dashboard_summary: 'Octopus MCP Proxy 全体のサマリー（サービス数・アプリ数・変数数・直近エラー）を返す',
         tool_desc_get_error_logs: 'エラーになった MCP 接続ログのみ取得する',
         tool_desc_list_apps: 'アプリ一覧を返す。mcp_service_id を指定すると絞り込み',
         tool_desc_list_mcp_services: '全 MCP サービスの一覧を返す',
@@ -904,7 +904,7 @@ const translations = {
 
         // 資格情報変更ページ
         change_credentials_title: '資格情報の変更',
-        change_credentials_page_title: '資格情報の変更 - Accel MCP',
+        change_credentials_page_title: '資格情報の変更 - Octopus MCP Proxy',
         change_credentials_first_login_warning: '初回ログインのため、資格情報を変更してください。すべての項目を入力してください。',
         change_credentials_login_section: 'ログイン情報',
         change_credentials_username: 'ユーザー名',
@@ -974,7 +974,7 @@ const translations = {
     },
     en: {
         // Header
-        app_title: 'Accel MCP',
+        app_title: 'Octopus MCP Proxy',
         logout: 'Logout',
         
         // Breadcrumb
@@ -1039,7 +1039,7 @@ const translations = {
         tool_desc_delete_variable: 'Delete a variable',
         tool_desc_get_admin_action_logs: 'Retrieve administrator action logs',
         tool_desc_get_connection_logs: 'Retrieve MCP connection logs',
-        tool_desc_get_dashboard_summary: 'Return an AccelMCP-wide summary (service count, app count, variable count, recent errors)',
+        tool_desc_get_dashboard_summary: 'Return an Octopus MCP Proxy-wide summary (service count, app count, variable count, recent errors)',
         tool_desc_get_error_logs: 'Retrieve only MCP connection logs that resulted in errors',
         tool_desc_list_apps: 'Return a list of apps, optionally filtered by mcp_service_id',
         tool_desc_list_mcp_services: 'Return a list of all MCP services',
@@ -1873,7 +1873,7 @@ const translations = {
 
         // Change Credentials page
         change_credentials_title: 'Change Credentials',
-        change_credentials_page_title: 'Change Credentials - Accel MCP',
+        change_credentials_page_title: 'Change Credentials - Octopus MCP Proxy',
         change_credentials_first_login_warning: 'This is your first login. Please change your credentials before continuing.',
         change_credentials_login_section: 'Login Information',
         change_credentials_username: 'Username',

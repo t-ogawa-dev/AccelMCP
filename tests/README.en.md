@@ -1,10 +1,10 @@
-# AccelMCP Test Suite
+# Octopus MCP Proxy Test Suite
 
 English | [日本語](README.md)
 
 ## Overview
 
-Comprehensive test suite for AccelMCP covering unit tests, integration tests, and end-to-end tests.
+Comprehensive test suite for Octopus MCP Proxy covering unit tests, integration tests, and end-to-end tests.
 
 ## Test Structure
 

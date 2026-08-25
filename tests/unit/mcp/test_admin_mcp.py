@@ -92,7 +92,7 @@ class TestAdminMcpInitialize:
         )
         assert resp.status_code == 200
         data = json.loads(resp.data)
-        assert data["result"]["serverInfo"]["name"] == "AccelMCP Admin"
+        assert data["result"]["serverInfo"]["name"] == "Octopus MCP Proxy Admin"
         assert "sessionId" in data["result"]
 
     def test_initialize_sse_response(self, client, db):

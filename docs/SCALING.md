@@ -8,13 +8,13 @@ AccelMCP は **同一イメージのまま**、1台運用にも複数台運用�
 
 ## コンテナ構成
 
-| サービス | 役割 | 備考 |
-| --- | --- | --- |
-| `caddy` | リバースプロキシ / TLS | パスで `web` と `mcp` に振り分け |
-| `web` | 管理UI + REST API | 起動時に DB マイグレーションを実行 |
-| `mcp` | MCP エンドポイント | `web` と同一イメージ。マイグレーションは実行しない |
-| `redis` | セッション共有ストア | Streamable HTTP セッションを保持 |
-| `db` | PostgreSQL | アプリのデータ |
+| サービス | 役割                   | 備考                                               |
+| -------- | ---------------------- | -------------------------------------------------- |
+| `caddy`  | リバースプロキシ / TLS | パスで `web` と `mcp` に振り分け                   |
+| `web`    | 管理UI + REST API      | 起動時に DB マイグレーションを実行                 |
+| `mcp`    | MCP エンドポイント     | `web` と同一イメージ。マイグレーションは実行しない |
+| `redis`  | セッション共有ストア   | Streamable HTTP セッションを保持                   |
+| `db`     | PostgreSQL             | アプリのデータ                                     |
 
 `web` と `mcp` は **同じイメージ・同じアプリ**(全Blueprint登録)で、Caddy が
 リクエストのパスで振り分けます。これにより「全部入り1台」も「役割分担の複数台」も
@@ -24,10 +24,10 @@ AccelMCP は **同一イメージのまま**、1台運用にも複数台運用�
 
 ホスト名に関わらず、**パス**で `web`/`mcp` に振り分けます。
 
-| パス | 振り分け先 |
-| --- | --- |
-| `/mcp`, `/mcp/<subdomain>`, `/<identifier>/mcp`, `/admin/mcp`, `/tools/*` | `mcp` |
-| 上記以外(`/`, `/dashboard`, `/api/*`, `/assets/*` など) | `web` |
+| パス                                                                      | 振り分け先 |
+| ------------------------------------------------------------------------- | ---------- |
+| `/mcp`, `/mcp/<subdomain>`, `/<identifier>/mcp`, `/admin/mcp`, `/tools/*` | `mcp`      |
+| 上記以外(`/`, `/dashboard`, `/api/*`, `/assets/*` など)                   | `web`      |
 
 Caddy は `localhost`(または `ACCEL_MCP_DOMAIN`)と、ローカル開発用の `lvh.me` / `*.lvh.me`
 の両方を受け付けます。`lvh.me` は常に `127.0.0.1` を指す公開DNSなので、サブドメイン方式の
@@ -43,8 +43,8 @@ Dify と同様に、1つのマシンで全コンテナを起動します。**ロ
 ### ローカル開発・検証
 
 ```bash
-git clone https://github.com/t-ogawa-dev/AccelMCP.git
-cd AccelMCP
+git clone https://github.com/t-ogawa-dev/octopus-mcp-proxy.git
+cd octopus-mcp-proxy
 cp .env.example .env
 docker compose up -d
 ```
@@ -61,8 +61,8 @@ docker compose up -d
 3. リポジトリを配置し `.env` を作成・編集:
 
    ```bash
-   git clone https://github.com/t-ogawa-dev/AccelMCP.git
-   cd AccelMCP
+   git clone https://github.com/t-ogawa-dev/octopus-mcp-proxy.git
+   cd octopus-mcp-proxy
    cp .env.example .env
    ```
 
@@ -98,11 +98,11 @@ docker compose up -d
 `web`/`mcp` コンテナのポート 5000 は**ホストには公開されません**(`expose` のみ)。
 ブラウザ・MCPクライアントからは必ず Caddy 経由でアクセスします。
 
-| 用途 | URL |
-| --- | --- |
-| Web管理画面 | `https://localhost/` |
-| MCPサービス(サブドメイン方式) | `https://<identifier>.lvh.me/mcp` |
-| MCPサービス(パス方式) | `https://localhost/<identifier>/mcp` |
+| 用途                          | URL                                  |
+| ----------------------------- | ------------------------------------ |
+| Web管理画面                   | `https://localhost/`                 |
+| MCPサービス(サブドメイン方式) | `https://<identifier>.lvh.me/mcp`    |
+| MCPサービス(パス方式)         | `https://localhost/<identifier>/mcp` |
 
 ポート番号は不要です(Caddyが443番で受けて内部の5000番へ中継します)。
 
@@ -165,23 +165,23 @@ WEB / MCP / Redis / DB を別々のマシンで動かす構成です。`deploy/`
 **ホストの役割ごとに分割した compose ファイル**を用意しているので、各マシンで該当する
 ファイルだけを起動します。
 
-| ファイル | 役割 | 起動するマシン |
-| --- | --- | --- |
-| `deploy/host-db.compose.yaml` | PostgreSQL | DBホスト |
-| `deploy/host-redis.compose.yaml` | Redis (セッション共有) | Redisホスト |
-| `deploy/host-web.compose.yaml` | 管理UI + REST API(マイグレーション実行) | WEBホスト |
-| `deploy/host-mcp.compose.yaml` | MCPエンドポイント | MCPホスト(複数可) |
-| `deploy/host-caddy.compose.yaml` | リバースプロキシ / TLS(公開窓口) | Caddyホスト |
+| ファイル                         | 役割                                    | 起動するマシン    |
+| -------------------------------- | --------------------------------------- | ----------------- |
+| `deploy/host-db.compose.yaml`    | PostgreSQL                              | DBホスト          |
+| `deploy/host-redis.compose.yaml` | Redis (セッション共有)                  | Redisホスト       |
+| `deploy/host-web.compose.yaml`   | 管理UI + REST API(マイグレーション実行) | WEBホスト         |
+| `deploy/host-mcp.compose.yaml`   | MCPエンドポイント                       | MCPホスト(複数可) |
+| `deploy/host-caddy.compose.yaml` | リバースプロキシ / TLS(公開窓口)        | Caddyホスト       |
 
 ### ネットワーク要件(ファイアウォール/セキュリティグループ)
 
-| ホスト | 開けるポート | 許可元 |
-| --- | --- | --- |
-| DBホスト | 5432 | WEBホスト・MCPホストのIPのみ |
-| Redisホスト | 6379 | WEBホスト・MCPホストのIPのみ |
-| WEBホスト | 5000 | CaddyホストのIPのみ |
-| MCPホスト | 5000 | Caddyホストのみ |
-| Caddyホスト | 80・443 | インターネット全体(公開窓口) |
+| ホスト      | 開けるポート | 許可元                       |
+| ----------- | ------------ | ---------------------------- |
+| DBホスト    | 5432         | WEBホスト・MCPホストのIPのみ |
+| Redisホスト | 6379         | WEBホスト・MCPホストのIPのみ |
+| WEBホスト   | 5000         | CaddyホストのIPのみ          |
+| MCPホスト   | 5000         | Caddyホストのみ              |
+| Caddyホスト | 80・443      | インターネット全体(公開窓口) |
 
 ### 手順
 
@@ -257,12 +257,12 @@ docker compose -f host-caddy.compose.yaml up -d
 
 ## 関連する実装
 
-- セッションストア抽象化: [app/services/session_store.py](https://github.com/t-ogawa-dev/AccelMCP/blob/main/app/services/session_store.py)
+- セッションストア抽象化: [app/services/session_store.py](https://github.com/t-ogawa-dev/octopus-mcp-proxy/blob/main/app/services/session_store.py)
   - `InMemorySessionStore` / `RedisSessionStore` / `get_session_store(namespace)`
   - 名前空間 `"mcp"`(MCP本体)と `"admin"`(Admin MCP)でセッションを分離
 - セッション利用箇所:
-  - [app/controllers/mcp_controller.py](https://github.com/t-ogawa-dev/AccelMCP/blob/main/app/controllers/mcp_controller.py)
-  - [app/controllers/admin_mcp_controller.py](https://github.com/t-ogawa-dev/AccelMCP/blob/main/app/controllers/admin_mcp_controller.py)
+  - [app/controllers/mcp_controller.py](https://github.com/t-ogawa-dev/octopus-mcp-proxy/blob/main/app/controllers/mcp_controller.py)
+  - [app/controllers/admin_mcp_controller.py](https://github.com/t-ogawa-dev/octopus-mcp-proxy/blob/main/app/controllers/admin_mcp_controller.py)
 
 ## テスト
 

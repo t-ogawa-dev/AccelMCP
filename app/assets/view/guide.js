@@ -177,7 +177,7 @@ function switchTab(name) {
 
 (async () => {
     await initLanguageSwitcher();
-    document.title = t('guide_title') + ' - Accel MCP';
+    document.title = t('guide_title') + ' - Octopus MCP Proxy';
 
     await loadSystemAccount();
 

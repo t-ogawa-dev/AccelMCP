@@ -1,8 +1,8 @@
-site_name: AccelMCP
+site_name: Octopus MCP Proxy
 site_description: HTTP/stdio compatible MCP hub server with API/MCP relay and Web admin interface
-site_url: https://t-ogawa-dev.github.io/AccelMCP/
-repo_url: https://github.com/t-ogawa-dev/AccelMCP
-repo_name: t-ogawa-dev/AccelMCP
+site_url: https://t-ogawa-dev.github.io/octopus-mcp-proxy/
+repo_url: https://github.com/t-ogawa-dev/octopus-mcp-proxy
+repo_name: t-ogawa-dev/octopus-mcp-proxy
 edit_uri: edit/main/docs/
 
 docs_dir: docs
@@ -75,4 +75,4 @@ plugins:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/t-ogawa-dev/AccelMCP
+      link: https://github.com/t-ogawa-dev/octopus-mcp-proxy

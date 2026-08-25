@@ -427,7 +427,7 @@ class MCPHandler:
             "result": {
                 "protocolVersion": "2024-11-05",
                 "capabilities": capabilities,
-                "serverInfo": {"name": f"AccelMCP - {mcp_service.name}", "version": "1.0.0"},
+                "serverInfo": {"name": f"Octopus MCP Proxy - {mcp_service.name}", "version": "1.0.0"},
                 "instructions": mcp_service.description or "",
                 "sessionId": str(uuid.uuid4()),
             },
@@ -670,7 +670,7 @@ class MCPHandler:
             "result": {
                 "protocolVersion": "2024-11-05",
                 "capabilities": capabilities,
-                "serverInfo": {"name": f"AccelMCP - {service.name}", "version": "1.0.0"},
+                "serverInfo": {"name": f"Octopus MCP Proxy - {service.name}", "version": "1.0.0"},
                 "instructions": service.description or "",
                 "sessionId": str(uuid.uuid4()),
             },
@@ -1201,8 +1201,8 @@ class MCPHandler:
         - a ``text/event-stream`` (SSE) body, where the JSON-RPC payload is carried in
           ``data:`` lines. The last valid JSON ``data:`` event is returned.
 
-        This lets AccelMCP act as a Streamable HTTP client and relay through upstream
-        servers (including another AccelMCP) that answer with SSE.
+        This lets Octopus MCP Proxy act as a Streamable HTTP client and relay through upstream
+        servers (including another Octopus MCP Proxy) that answer with SSE.
         """
         content_type = response.headers.get("content-type", "") or response.headers.get("Content-Type", "")
         if "text/event-stream" in content_type:
@@ -1251,8 +1251,8 @@ class MCPHandler:
 
                 # Advertise Streamable HTTP support to the upstream server: accept both a
                 # single JSON response and an SSE (text/event-stream) response. This lets
-                # AccelMCP relay through upstream servers that only speak Streamable HTTP
-                # (including another AccelMCP), so a full streamable-http chain works.
+                # Octopus MCP Proxy relay through upstream servers that only speak Streamable HTTP
+                # (including another Octopus MCP Proxy), so a full streamable-http chain works.
                 headers.setdefault("Accept", "application/json, text/event-stream")
 
                 # Add depth header for daisy-chain loop prevention
@@ -1279,7 +1279,7 @@ class MCPHandler:
                         "params": {
                             "protocolVersion": "2024-11-05",
                             "capabilities": {},
-                            "clientInfo": {"name": "AccelMCP", "version": "1.0.0"},
+                            "clientInfo": {"name": "Octopus MCP Proxy", "version": "1.0.0"},
                         },
                     }
 
