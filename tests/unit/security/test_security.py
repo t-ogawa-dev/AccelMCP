@@ -14,7 +14,7 @@ class TestBruteForceProtection:
     def test_successful_login_no_lock(self, client):
         """Test successful login does not create lock status"""
         response = client.post(
-            "/login", data=json.dumps({"username": "accel", "password": "universe"}), content_type="application/json"
+            "/login", data=json.dumps({"username": "admin", "password": "admin"}), content_type="application/json"
         )
 
         assert response.status_code == 200
@@ -89,7 +89,7 @@ class TestBruteForceProtection:
 
         # Successful login
         response = client.post(
-            "/login", data=json.dumps({"username": "accel", "password": "universe"}), content_type="application/json"
+            "/login", data=json.dumps({"username": "admin", "password": "admin"}), content_type="application/json"
         )
 
         assert response.status_code == 200
@@ -130,7 +130,7 @@ class TestLoginLogs:
         """Test successful login is logged"""
         before_count = AdminLoginLog.query.count()
 
-        response = client.post("/login", data={"username": "accel", "password": "universe"}, follow_redirects=False)
+        response = client.post("/login", data={"username": "admin", "password": "admin"}, follow_redirects=False)
 
         assert response.status_code in [200, 302]  # Success or redirect
 
@@ -140,7 +140,7 @@ class TestLoginLogs:
 
         log = AdminLoginLog.query.order_by(AdminLoginLog.created_at.desc()).first()
         assert log is not None
-        assert log.username == "accel"
+        assert log.username == "admin"
         assert log.is_success is True
         assert log.ip_address == "127.0.0.1"
 
@@ -148,7 +148,7 @@ class TestLoginLogs:
         """Test failed login is logged"""
         before_count = AdminLoginLog.query.count()
 
-        response = client.post("/login", data={"username": "accel", "password": "wrong"}, follow_redirects=False)
+        response = client.post("/login", data={"username": "admin", "password": "wrong"}, follow_redirects=False)
 
         # Login page returns 200 with error message in HTML
         assert response.status_code == 200
@@ -159,7 +159,7 @@ class TestLoginLogs:
 
         log = AdminLoginLog.query.order_by(AdminLoginLog.created_at.desc()).first()
         assert log is not None
-        assert log.username == "accel"
+        assert log.username == "admin"
         assert log.is_success is False
         assert "password" in log.failure_reason.lower()
 
@@ -177,7 +177,7 @@ class TestLoginLogs:
 
         before_count = AdminLoginLog.query.count()
 
-        response = client.post("/login", data={"username": "accel", "password": "universe"}, follow_redirects=False)
+        response = client.post("/login", data={"username": "admin", "password": "admin"}, follow_redirects=False)
 
         # Login page returns 200 with error message in HTML
         assert response.status_code == 200
@@ -254,14 +254,14 @@ class TestSecurityAPIEndpoints:
         """Test GET /api/admin/login-logs"""
         # Create some test logs
         log1 = AdminLoginLog(
-            username="accel",
+            username="admin",
             ip_address="127.0.0.1",
             user_agent="test",
             is_success=True,
             created_at=datetime.now(UTC).replace(tzinfo=None),
         )
         log2 = AdminLoginLog(
-            username="accel",
+            username="admin",
             ip_address="127.0.0.1",
             user_agent="test",
             is_success=False,

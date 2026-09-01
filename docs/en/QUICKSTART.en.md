@@ -22,8 +22,9 @@ Once you see `Default admin user created`, the server is ready.
    certificate warning — choose "Advanced" → "Proceed" to continue. Caddy reverse-proxies
    the request, so port 5000 itself is not published to the host)
 2. Login:
-   - ID: `accel`
-   - Password: `universe`
+
+- ID: `admin`
+- Password: `admin`
 
 ## 3. Create Test Service (2 minutes)
 

@@ -246,7 +246,7 @@ def _capture_language_pass(app, base, username, mcp_service_id, browser, *, loca
     # 2. Log in (only the very first login triggers the forced credential-change
     # redirect; by the second pass it's already completed).
     page.fill('input[name="username"]', username)
-    page.fill('input[name="password"]', "universe")
+    page.fill('input[name="password"]', "admin")
     with page.expect_navigation():
         page.click('button[type="submit"]')
     page.wait_for_load_state("networkidle")

@@ -106,7 +106,7 @@ class TestMultiAdminLogin:
     def test_bootstrap_env_fallback_when_table_empty(self, client, db):
         """With zero AdminCredentials rows, login falls back to env-configured credentials."""
         assert AdminCredentials.query.count() == 0
-        resp = _login(client, "accel", "universe")
+        resp = _login(client, "admin", "admin")
         assert resp.status_code == 200
 
 

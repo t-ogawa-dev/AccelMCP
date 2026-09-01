@@ -39,8 +39,8 @@ If you started directly with `python run.py` (no Docker), use `http://localhost:
 
 **Default Administrator Account:**
 
-- Login ID: `accel`
-- Password: `universe`
+- Login ID: `admin`
+- Password: `admin`
 
 **Note**: The admin UI is routed by path, so `https://localhost/`, `https://lvh.me/`, and
 `https://admin.lvh.me/` all show the same screen. Only MCP services are distinguished by subdomain.

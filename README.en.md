@@ -58,8 +58,8 @@ local development. To remove the warning, trust Caddy's local CA in your OS foll
 steps in [Scaling & Containers](docs/en/SCALING.en.md#https).
 
 - Default Administrator
-  - ID: `accel`
-  - Password: `universe`
+  - ID: `admin`
+  - Password: `admin`
 
 ### When started directly with `python run.py` (no Docker)
 

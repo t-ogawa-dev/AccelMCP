@@ -103,8 +103,8 @@ Caddy がリバースプロキシとして 443/80 番ポートを受け、`web`/
 Caddy のローカル CA をOSに信頼させてください。
 
 - デフォルト管理者
-  - ID: `accel`
-  - パスワード: `universe`
+  - ID: `admin`
+  - パスワード: `admin`
 
 ### Docker を使わず `python run.py` で直接起動した場合
 

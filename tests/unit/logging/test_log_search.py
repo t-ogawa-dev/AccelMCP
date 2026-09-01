@@ -15,7 +15,7 @@ def test_connection_logs_api_requires_auth(client, db):
 def test_connection_logs_api_with_auth(client, db):
     """Test that connection logs API works with authentication"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Should return JSON
     response = client.get("/api/connection-logs")
@@ -27,7 +27,7 @@ def test_connection_logs_api_with_auth(client, db):
 def test_connection_logs_api_search_parameter(client, db):
     """Test that search parameter is accepted"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Search with parameter
     response = client.get("/api/connection-logs?search=test")
@@ -40,7 +40,7 @@ def test_connection_logs_api_search_parameter(client, db):
 def test_connection_logs_api_empty_search(client, db):
     """Test with empty search parameter"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Empty search
     response = client.get("/api/connection-logs?search=")
@@ -53,7 +53,7 @@ def test_connection_logs_api_empty_search(client, db):
 def test_connection_logs_api_returns_json_list(client, db):
     """Test that API returns proper JSON list"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     response = client.get("/api/connection-logs")
 

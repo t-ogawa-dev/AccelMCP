@@ -45,7 +45,7 @@ def test_capability(db):
 def test_test_execution_endpoint_exists(client, db, test_capability):
     """Test that test execution endpoint exists"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Test endpoint should accept POST
     response = client.post(f"/api/capabilities/{test_capability.id}/test", json={"params": {}})
@@ -58,7 +58,7 @@ def test_test_execution_endpoint_exists(client, db, test_capability):
 def test_test_execution_success(mock_post, client, db, test_capability):
     """Test successful capability execution"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Mock successful API response
     mock_response = MagicMock()
@@ -82,7 +82,7 @@ def test_test_execution_success(mock_post, client, db, test_capability):
 def test_test_execution_timeout_error(mock_post, client, db, test_capability):
     """Test capability execution with timeout error"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Mock timeout exception
     import httpx
@@ -103,7 +103,7 @@ def test_test_execution_timeout_error(mock_post, client, db, test_capability):
 def test_test_execution_http_error(mock_post, client, db, test_capability):
     """Test capability execution with HTTP error"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Mock HTTP error
     import httpx
@@ -130,7 +130,7 @@ def test_test_execution_http_error(mock_post, client, db, test_capability):
 def test_test_execution_invalid_capability_id(client, db):
     """Test execution with invalid capability ID"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Try to test non-existent capability
     response = client.post("/api/capabilities/99999/test", json={"params": {}})
@@ -149,7 +149,7 @@ def test_test_execution_requires_login(client, db, test_capability):
 def test_test_execution_empty_params(client, db, test_capability):
     """Test execution with empty parameters"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Execute without params
     response = client.post(f"/api/capabilities/{test_capability.id}/test", json={})
@@ -162,7 +162,7 @@ def test_test_execution_empty_params(client, db, test_capability):
 def test_test_execution_uses_capability_timeout(mock_post, client, db):
     """Test that execution uses capability's timeout setting"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Create capability with custom timeout
     mcp_service = McpService(name="Test Service", identifier="test", routing_type="subdomain")

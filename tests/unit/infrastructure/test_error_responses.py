@@ -43,7 +43,7 @@ def test_capability_for_errors(db):
 def test_timeout_error_structure(mock_post, client, db, test_capability_for_errors):
     """Test timeout error has proper structure"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Mock timeout exception
     import httpx
@@ -70,7 +70,7 @@ def test_timeout_error_structure(mock_post, client, db, test_capability_for_erro
 def test_http_404_error_structure(mock_post, client, db, test_capability_for_errors):
     """Test HTTP 404 error has proper structure"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Mock 404 response
     import httpx
@@ -104,7 +104,7 @@ def test_http_404_error_structure(mock_post, client, db, test_capability_for_err
 def test_http_500_error_structure(mock_post, client, db, test_capability_for_errors):
     """Test HTTP 500 error has proper structure"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Mock 500 response
     import httpx
@@ -136,7 +136,7 @@ def test_http_500_error_structure(mock_post, client, db, test_capability_for_err
 def test_http_401_error_structure(mock_post, client, db, test_capability_for_errors):
     """Test HTTP 401 error has proper structure"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Mock 401 response
     import httpx
@@ -168,7 +168,7 @@ def test_http_401_error_structure(mock_post, client, db, test_capability_for_err
 def test_connection_error_structure(mock_post, client, db, test_capability_for_errors):
     """Test connection error has proper structure"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Mock connection error
     import httpx
@@ -192,7 +192,7 @@ def test_connection_error_structure(mock_post, client, db, test_capability_for_e
 def test_error_includes_details(mock_post, client, db, test_capability_for_errors):
     """Test that error responses include details field"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Mock timeout
     import httpx
@@ -213,7 +213,7 @@ def test_error_includes_details(mock_post, client, db, test_capability_for_error
 def test_timeout_error_includes_timeout_value(mock_post, client, db, test_capability_for_errors):
     """Test that timeout error includes the timeout value"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Update timeout
     test_capability_for_errors.timeout_seconds = 60
@@ -238,7 +238,7 @@ def test_timeout_error_includes_timeout_value(mock_post, client, db, test_capabi
 def test_http_error_includes_status_and_body(mock_post, client, db, test_capability_for_errors):
     """Test that HTTP error includes status code and response body"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Mock 400 with custom error message
     import httpx
@@ -267,7 +267,7 @@ def test_http_error_includes_status_and_body(mock_post, client, db, test_capabil
 def test_error_response_json_serializable(client, db, test_capability_for_errors):
     """Test that all error responses are JSON serializable"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     with patch("app.services.mcp_handler.httpx.post") as mock_post:
         import httpx

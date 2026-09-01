@@ -13,9 +13,9 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "sqlite:///mcp.db")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # Admin authentication (Built by Accel Universe branding)
-    ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "accel")
-    ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "universe")
+    # Admin authentication
+    ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
+    ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin")
 
     # Admin MCP API key (Bearer token for /admin/mcp endpoint)
     ADMIN_API_KEY = os.getenv("ACCELMCP_ADMIN_API_KEY", "")

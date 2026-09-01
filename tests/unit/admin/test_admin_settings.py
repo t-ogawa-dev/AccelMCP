@@ -209,7 +209,7 @@ class TestSettingsIntegration:
 
         for i in range(4):
             response = client.post(
-                "/login", data=json.dumps({"username": "accel", "password": "wrong"}), content_type="application/json"
+                "/login", data=json.dumps({"username": "admin", "password": "wrong"}), content_type="application/json"
             )
 
             if i < 3:

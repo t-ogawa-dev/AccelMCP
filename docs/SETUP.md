@@ -40,8 +40,8 @@ Docker を使わず `python run.py` で直接起動した場合は `http://local
 
 **デフォルト管理者アカウント:**
 
-- ログイン ID: `accel`
-- パスワード: `universe`
+- ログイン ID: `admin`
+- パスワード: `admin`
 
 **注意**: 管理画面はパスで振り分けられるため、`https://localhost/` ・`https://lvh.me/` ・
 `https://admin.lvh.me/` のどれでアクセスしても同じ画面が表示されます。MCP サービスのみ

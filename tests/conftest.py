@@ -18,8 +18,8 @@ class TestConfig(Config):
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     WTF_CSRF_ENABLED = False
     SECRET_KEY = "test-secret-key"
-    ADMIN_USERNAME = "accel"
-    ADMIN_PASSWORD = "universe"
+    ADMIN_USERNAME = "admin"
+    ADMIN_PASSWORD = "admin"
 
 
 @pytest.fixture(scope="session")

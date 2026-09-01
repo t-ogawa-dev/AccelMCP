@@ -11,7 +11,7 @@ from app.models.models import Capability, McpService, Service
 def test_get_capabilities_for_service_integration(client, db):
     """Test GET /api/apps/<service_id>/capabilities with real database"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Create MCP Service
     mcp_service = McpService(name="Integration Test Service", identifier="integration-test", routing_type="subdomain")
@@ -83,7 +83,7 @@ def test_get_capabilities_for_service_integration(client, db):
 def test_get_capabilities_non_existent_service_returns_json_404(client, db):
     """Test that 404 error is returned as JSON, not HTML"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Request capabilities for non-existent service
     response = client.get("/api/apps/999/capabilities")
@@ -104,7 +104,7 @@ def test_get_capabilities_non_existent_service_returns_json_404(client, db):
 def test_get_capabilities_nan_service_id_returns_json_404(client, db):
     """Test that /api/apps/NaN/capabilities returns JSON 404, not HTML"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Request capabilities with NaN as service ID (simulates JS parseInt failure)
     response = client.get("/api/apps/NaN/capabilities")
@@ -124,7 +124,7 @@ def test_get_capabilities_nan_service_id_returns_json_404(client, db):
 def test_get_capabilities_invalid_string_service_id_returns_json_404(client, db):
     """Test that /api/apps/abc/capabilities returns JSON 404, not HTML"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Request capabilities with string as service ID
     response = client.get("/api/apps/abc/capabilities")
@@ -140,7 +140,7 @@ def test_get_capabilities_invalid_string_service_id_returns_json_404(client, db)
 def test_create_capability_via_api_integration(client, db):
     """Test POST /api/apps/<service_id>/capabilities with real database"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Create MCP Service
     mcp_service = McpService(name="Create Test Service", identifier="create-test", routing_type="subdomain")
@@ -193,7 +193,7 @@ def test_create_capability_via_api_integration(client, db):
 def test_update_capability_via_api_integration(client, db):
     """Test PUT /api/capabilities/<capability_id> with real database"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Create MCP Service and Service
     mcp_service = McpService(name="Update Test Service", identifier="update-test", routing_type="subdomain")
@@ -316,7 +316,7 @@ def test_capability_to_dict_without_service_relationship(db):
 def test_invalid_service_id_returns_json_error(client, db):
     """Test that invalid service IDs return JSON error, not HTML"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Test with string "NaN" (simulating JavaScript parseInt failure)
     response = client.get("/api/apps/NaN/capabilities")
@@ -339,7 +339,7 @@ def test_invalid_service_id_returns_json_error(client, db):
 def test_invalid_service_id_zero_returns_json_error(client, db):
     """Test that service ID 0 returns JSON error"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Test with 0 (invalid ID)
     response = client.get("/api/apps/0/capabilities")

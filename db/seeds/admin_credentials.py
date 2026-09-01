@@ -22,8 +22,8 @@ def seed_admin_credentials(app):
     with app.app_context():
         # --- AdminCredentials ---
         if AdminCredentials.query.count() == 0:
-            username = os.getenv("ADMIN_USERNAME", "accel")
-            password = os.getenv("ADMIN_PASSWORD", "universe")
+            username = os.getenv("ADMIN_USERNAME", "admin")
+            password = os.getenv("ADMIN_PASSWORD", "admin")
 
             cred = AdminCredentials(is_initialized=False)
             cred.username = username

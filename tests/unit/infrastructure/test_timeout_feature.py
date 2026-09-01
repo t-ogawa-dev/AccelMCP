@@ -86,7 +86,7 @@ def test_data(db):
 def test_capability_creation_with_timeout(client, db):
     """Test creating capability with custom timeout"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Create MCP Service and App first
     mcp_response = client.post(
@@ -124,7 +124,7 @@ def test_capability_creation_with_timeout(client, db):
 def test_capability_default_timeout(client, db):
     """Test capability uses default timeout when not specified"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Create MCP Service and App
     mcp_response = client.post(
@@ -160,7 +160,7 @@ def test_capability_default_timeout(client, db):
 def test_capability_update_timeout(client, db, test_data):
     """Test updating capability timeout"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     capability = test_data["capability_with_default_timeout"]
 
@@ -196,7 +196,7 @@ def test_capability_to_dict_includes_timeout(db, test_data):
 def test_timeout_validation_min_max(client, db):
     """Test timeout value validation (1-300 seconds)"""
     # Login
-    client.post("/login", data={"username": "accel", "password": "universe"})
+    client.post("/login", data={"username": "admin", "password": "admin"})
 
     # Create MCP Service and App
     mcp_response = client.post(

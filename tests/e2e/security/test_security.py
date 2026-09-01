@@ -11,8 +11,8 @@ from playwright.sync_api import Page, expect
 def logged_in_page(page: Page):
     """ログイン済みのページ"""
     page.goto("http://localhost:5100/login")
-    page.fill('input[name="username"]', "accel")
-    page.fill('input[name="password"]', "universe")
+    page.fill('input[name="username"]', "admin")
+    page.fill('input[name="password"]', "admin")
     page.click('button[type="submit"]')
     page.wait_for_url("http://localhost:5100/")
     return page
@@ -27,13 +27,13 @@ class TestLoginBruteForceProtection:
 
         # Fail 5 times
         for _i in range(5):
-            page.fill('input[name="username"]', "accel")
+            page.fill('input[name="username"]', "admin")
             page.fill('input[name="password"]', "wrongpassword")
             page.click('button[type="submit"]')
             page.wait_for_timeout(500)
 
         # Next attempt should show lock message
-        page.fill('input[name="username"]', "accel")
+        page.fill('input[name="username"]', "admin")
         page.fill('input[name="password"]', "wrongpassword")
         page.click('button[type="submit"]')
 
@@ -49,8 +49,8 @@ class TestLoginBruteForceProtection:
 
         # The lock expiration is tested in unit tests
         # Here we just verify login works normally
-        page.fill('input[name="username"]', "accel")
-        page.fill('input[name="password"]', "universe")
+        page.fill('input[name="username"]', "admin")
+        page.fill('input[name="password"]', "admin")
         page.click('button[type="submit"]')
 
         expect(page).to_have_url("http://localhost:5100/")
