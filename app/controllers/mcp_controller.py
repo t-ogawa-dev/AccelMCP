@@ -274,14 +274,15 @@ def mcp_subdomain_endpoint():
         )
         return jsonify(error_response), 400
 
-    # Validate session for StreamableHTTP non-initialize requests (spec: SHOULD return 400)
-    if _is_streamable_http_request(request) and mcp_request.get("method") != "initialize":
+    # 2026-07-28 stateless clients omit Mcp-Session-Id entirely; only reject stale/forged IDs.
+    _stateless_methods = {"initialize", "server/discover"}
+    if _is_streamable_http_request(request) and mcp_request.get("method") not in _stateless_methods:
         incoming_session_id = request.headers.get("Mcp-Session-Id")
-        if not incoming_session_id or not _is_valid_session(incoming_session_id):
+        if incoming_session_id and not _is_valid_session(incoming_session_id):
             error_response = {
                 "jsonrpc": "2.0",
                 "id": request_id,
-                "error": {"code": -32600, "message": "Invalid or missing Mcp-Session-Id"},
+                "error": {"code": -32600, "message": "Invalid Mcp-Session-Id"},
             }
             log_mcp_request(
                 current_app._get_current_object(),
@@ -290,7 +291,7 @@ def mcp_subdomain_endpoint():
                 status_code=400,
                 is_success=False,
                 error_code=-32600,
-                error_message="Invalid or missing Mcp-Session-Id",
+                error_message="Invalid Mcp-Session-Id",
             )
             return jsonify(error_response), 400
 
@@ -459,14 +460,15 @@ def mcp_path_endpoint(path_identifier):
         )
         return jsonify(error_response), 400
 
-    # Validate session for StreamableHTTP non-initialize requests (spec: SHOULD return 400)
-    if _is_streamable_http_request(request) and mcp_request.get("method") != "initialize":
+    # 2026-07-28 stateless clients omit Mcp-Session-Id entirely; only reject stale/forged IDs.
+    _stateless_methods = {"initialize", "server/discover"}
+    if _is_streamable_http_request(request) and mcp_request.get("method") not in _stateless_methods:
         incoming_session_id = request.headers.get("Mcp-Session-Id")
-        if not incoming_session_id or not _is_valid_session(incoming_session_id):
+        if incoming_session_id and not _is_valid_session(incoming_session_id):
             error_response = {
                 "jsonrpc": "2.0",
                 "id": request_id,
-                "error": {"code": -32600, "message": "Invalid or missing Mcp-Session-Id"},
+                "error": {"code": -32600, "message": "Invalid Mcp-Session-Id"},
             }
             log_mcp_request(
                 current_app._get_current_object(),
@@ -475,7 +477,7 @@ def mcp_path_endpoint(path_identifier):
                 status_code=400,
                 is_success=False,
                 error_code=-32600,
-                error_message="Invalid or missing Mcp-Session-Id",
+                error_message="Invalid Mcp-Session-Id",
             )
             return jsonify(error_response), 400
 

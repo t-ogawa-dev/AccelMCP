@@ -2,7 +2,7 @@
 AccelMCP Test Coverage Report
 ===========================================
 Generated: 2026-01-09
-Updated: 2026-01-15 (All 131 unit tests passing)
+Updated: 2026-09-01 (MCP 2026-07-28 ステートレス対応テストを追加)
 
 ===========================================
 1. UNIT TESTS (tests/)
@@ -560,6 +560,28 @@ Updated: 2026-01-15 (All 131 unit tests passing)
 
 詳細レポート: tests/reports/ADMIN_USERS_TESTS.md
 
+## test_mcp_stateless.py (tests/unit/mcp/, NEW - 2026-09-01 追加)
+## MCP 2026-07-28 ステートレス対応 + 後方互換
+✅ TestStatelessClientNoSession (新仕様: initialize なしでリクエスト可能)
+  - test_tools_list_without_initialize
+  - test_tools_list_via_sse_without_session
+  - test_tools_list_meta_protocol_version
+
+✅ TestServerDiscover (新仕様: server/discover RPC)
+  - test_server_discover_returns_protocol_versions
+  - test_server_discover_returns_capabilities
+  - test_server_discover_returns_no_session_id
+  - test_server_discover_via_sse_without_session
+
+✅ TestLegacyInitializeFlow (旧仕様後方互換: initialize → sessionId)
+  - test_initialize_returns_session_id
+  - test_initialize_protocol_version_backward_compat
+
+✅ TestInvalidSessionRejected (不正セッション ID は依然 400)
+  - test_stale_session_id_rejected
+
+詳細レポート: tests/reports/MCP_STATELESS_TESTS.md
+
 ===========================================
 3. E2E TESTS (NEW - 2026-01-09 追加)
 ===========================================
@@ -806,5 +828,11 @@ Coverage by Module (最終):
   - Capability自動検出 (discover_stdio_mcp_capabilities)
   - Variables変数置換 (args/env両方)
   - 未解決変数エラーチェック
+
+✅ MCP 2026-07-28 ステートレス対応 (2026-09-01 追加)
+  - ステートレスリクエスト (Mcp-Session-Id なしで tools/list 等を直接呼び出し可能)
+  - server/discover RPC (protocolVersions: ["2026-07-28", "2024-11-05"] を返す)
+  - 旧仕様 initialize → sessionId フローの後方互換維持
+  - 不正な Mcp-Session-Id の拒否は継続
 
 ===========================================

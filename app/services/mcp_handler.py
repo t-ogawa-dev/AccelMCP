@@ -109,6 +109,9 @@ class MCPHandler:
         if method == "initialize":
             return self._handle_initialize_for_mcp_service(account, mcp_service, mcp_request)
 
+        elif method == "server/discover":
+            return self._handle_server_discover_for_mcp_service(account, mcp_service, mcp_request)
+
         elif method == "tools/list":
             return self._handle_tools_list_for_mcp_service(account, mcp_service, mcp_request)
 
@@ -358,6 +361,9 @@ class MCPHandler:
         if method == "initialize":
             return self._handle_initialize(account, service, mcp_request)
 
+        elif method == "server/discover":
+            return self._handle_server_discover(account, service, mcp_request)
+
         elif method == "tools/list":
             return self._handle_tools_list(account, service)
 
@@ -430,6 +436,47 @@ class MCPHandler:
                 "serverInfo": {"name": f"Octopus MCP Proxy - {mcp_service.name}", "version": "1.0.0"},
                 "instructions": mcp_service.description or "",
                 "sessionId": str(uuid.uuid4()),
+            },
+        }
+
+    def _handle_server_discover_for_mcp_service(self, account, mcp_service, mcp_request: dict[str, Any]) -> dict[str, Any]:
+        """Handle MCP 2026-07-28 server/discover at MCP Service level (stateless, no session)."""
+        from app.models.models import Capability, Service
+
+        apps = self.db.session.query(Service).filter(Service.mcp_service_id == mcp_service.id, Service.is_enabled).all()
+
+        has_tools = has_resources = has_prompts = False
+        for app in apps:
+            for (cap_type,) in (
+                self.db.session.query(Capability.capability_type)
+                .filter(Capability.app_id == app.id, Capability.is_enabled)
+                .distinct()
+                .all()
+            ):
+                if cap_type in ("tool", "mcp_tool"):
+                    has_tools = True
+                elif cap_type == "resource":
+                    has_resources = True
+                elif cap_type == "prompt":
+                    has_prompts = True
+
+        capabilities: dict[str, Any] = {}
+        if has_tools:
+            capabilities["tools"] = {}
+        if has_resources:
+            capabilities["resources"] = {}
+        if has_prompts:
+            capabilities["prompts"] = {}
+
+        return {
+            "jsonrpc": "2.0",
+            "id": mcp_request.get("id") or 0,
+            "result": {
+                # Advertise both spec versions so clients can pick the newest they support
+                "protocolVersions": ["2026-07-28", "2024-11-05"],
+                "capabilities": capabilities,
+                "serverInfo": {"name": f"Octopus MCP Proxy - {mcp_service.name}", "version": "1.0.0"},
+                "instructions": mcp_service.description or "",
             },
         }
 
@@ -673,6 +720,46 @@ class MCPHandler:
                 "serverInfo": {"name": f"Octopus MCP Proxy - {service.name}", "version": "1.0.0"},
                 "instructions": service.description or "",
                 "sessionId": str(uuid.uuid4()),
+            },
+        }
+
+    def _handle_server_discover(self, account, service, mcp_request: dict[str, Any]) -> dict[str, Any]:
+        """Handle MCP 2026-07-28 server/discover at service level (stateless, no session)."""
+        from app.models.models import Capability
+
+        mcp_service = service.mcp_service
+        capability_types = (
+            self.db.session.query(Capability.capability_type)
+            .filter(Capability.app_id == service.id, Capability.is_enabled)
+            .distinct()
+            .all()
+        )
+
+        has_tools = has_resources = has_prompts = False
+        for (cap_type,) in capability_types:
+            if cap_type in ("tool", "mcp_tool"):
+                has_tools = True
+            elif cap_type == "resource":
+                has_resources = True
+            elif cap_type == "prompt":
+                has_prompts = True
+
+        capabilities: dict[str, Any] = {}
+        if has_tools:
+            capabilities["tools"] = {}
+        if has_resources:
+            capabilities["resources"] = {}
+        if has_prompts:
+            capabilities["prompts"] = {}
+
+        return {
+            "jsonrpc": "2.0",
+            "id": mcp_request.get("id") or 0,
+            "result": {
+                "protocolVersions": ["2026-07-28", "2024-11-05"],
+                "capabilities": capabilities,
+                "serverInfo": {"name": f"Octopus MCP Proxy - {service.name}", "version": "1.0.0"},
+                "instructions": service.description or "",
             },
         }
 
