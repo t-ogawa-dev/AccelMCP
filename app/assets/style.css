@@ -33,6 +33,18 @@ body {
     color: #333;
 }
 
+.brand-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.header-logo {
+    width: 36px;
+    height: 28px;
+    object-fit: contain;
+}
+
 .header h1 a {
     color: #333;
     text-decoration: none;
